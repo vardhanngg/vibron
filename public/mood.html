@@ -1,20 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" type="image/x-icon" href="v.ico" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vibron - Mood Player</title>
-  <link rel="stylesheet" href="mood.css" />
+  <link rel="icon" type="image/x-icon" href="/v.ico" />
+  <!-- Correct CSS path -->
+  <link rel="stylesheet" href="/css/mood.css" />
 </head>
 <body> 
   <!-- Top bar with branding and switch button -->
   <header class="top-bar">
     <div class="branding">
-      <img src="v.ico" alt="Vibron Logo" class="logo" />
+      <img src="/v.ico" alt="Vibron Logo" class="logo" />
       <span class="brand-name">Vibron</span>
     </div>
-    <button class="switch-btn" onclick="window.location.href='normal.html'">
+    <button class="switch-btn" onclick="window.location.href='/normal.html'">
       🎵 Switch to Normal Player
     </button>
   </header>
@@ -74,8 +75,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
-  <!-- Your scripts -->
-  <script src="script.js"></script>
-  <script src="shared.js"></script>
+  <!-- Correct JS paths -->
+  <script src="/script.js"></script>
+  <script src="/shared.js"></script>
 </body>
 </html>

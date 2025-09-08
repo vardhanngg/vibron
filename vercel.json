@@ -24,12 +24,20 @@
       "dest": "/api/ui.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+      "src": "/normal",
+      "dest": "/public/normal.html"
+    },
+    {
+      "src": "/mood",
+      "dest": "/public/mood.html"
     },
     {
       "src": "/",
-      "dest": "/public/index.html"
+      "dest": "/public/normal.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
     }
   ]
 }

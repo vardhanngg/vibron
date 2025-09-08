@@ -1,31 +1,38 @@
 import express from 'express';
+import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Use JSON parser for API requests
+// Parse JSON for APIs
 app.use(express.json());
 
-// Serve static files
-app.use(express.static('public'));
+// Serve public folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 // API routes
-app.use('/api/songByMood', require('./songByMood'));
-app.use('/api/search', require('./search'));
+app.use('/api/songByMood', require('./api/songByMood'));
+app.use('/api/search', require('./api/search'));
 
-// Example route
+// Serve HTML pages
 app.get('/', (req, res) => {
-  res.send('Hello, Mood Music Player!');
+  res.sendFile(path.join(__dirname, 'public', 'normal.html'));
 });
 
-// Error-handling middleware
-app.use((err, req, res, next) => {
+app.get('/normal', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'normal.html'));
+});
+
+app.get('/mood', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'mood.html'));
+});
+
+// Error handling
+app.use((err: any, req: any, res: any, next: any) => {
   console.error(`[server] Unhandled error: ${err.message}`);
-  res.setHeader('Content-Type', 'application/json');
   res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
