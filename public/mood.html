@@ -1,29 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!--<link rel="icon" type="image/png" href="v.png" /> -->
   <link rel="icon" type="image/x-icon" href="v.ico" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title> Vibron </title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Vibron - Mood Player</title>
+  <link rel="stylesheet" href="mood.css" />
 </head>
 <body> 
-  <div class="container">
+  <!-- Top bar with branding and switch button -->
+  <header class="top-bar">
     <div class="branding">
-  <img src="v.ico" alt="Vibron Logo" class="logo" />
-  <span class="brand-name">Vibron</span>
-</div>
-    <!---->
+      <img src="v.ico" alt="Vibron Logo" class="logo" />
+      <span class="brand-name">Vibron</span>
+    </div>
+    <button class="switch-btn" onclick="window.location.href='normal.html'">
+      🎵 Switch to Normal Player
+    </button>
+  </header>
 
-
-
-
-
-
-    <!---->
-
-    <h1>🎵 Mood-based-Music-Player 🎵</h1>
+  <div class="container">
+    <h1>🎵 Mood-based Music Player 🎵</h1>
     <button class="primary" id="startBtn">Use Camera</button>
 
     <div class="stage">
@@ -71,39 +68,14 @@
     <div class="hint">
       If camera fails or models aren’t present, choose a test mood to play music anyway.
     </div>
-   <!-- <button id="showFormBtn">Give Feedback</button>
-<div id="suggestion-form-container" style="display:none;">
-  <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSedknk6eJxyXbHGkXWMJLbLQnLJOFX0br-4gc8Trp1_OdN2mA/viewform?usp=header?embedded=true" width="640" height="800" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
-</div>
-    <script>
-  const btn = document.getElementById('showFormBtn');
-  const formContainer = document.getElementById('suggestion-form-container');
-
-  btn.addEventListener('click', () => {
-    if (formContainer.style.display === 'none') {
-      formContainer.style.display = 'block';
-      btn.textContent = 'Hide Feedback Form';
-    } else {
-      formContainer.style.display = 'none';
-      btn.textContent = 'Give Feedback';
-    }
-  });
-</script>>--->
-
-    <!--<canvas id="visualizer"></canvas>-->
   </div>
 
-  <!-- ✅ Use TensorFlow.js v1.7.4 for face-api.js compatibility -->
+  <!-- TensorFlow.js v1.7.4 for face-api.js -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
-  <script>
-    console.log('Using TensorFlow.js v1.7.4 for face-api.js compatibility');
-  </script>
-
-  <!-- ✅ face-api.js (must be v0.22.2 for best compatibility) -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
-  <!-- ✅ Your own logic using local models in script.js -->
+  <!-- Your scripts -->
   <script src="script.js"></script>
+  <script src="shared.js"></script>
 </body>
 </html>
-  
