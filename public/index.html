@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--<link rel="icon" type="image/png" href="v.png" /> -->
+  <link rel="icon" type="image/x-icon" href="v.ico" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title> Vibron </title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body> 
+  <div class="container">
+    <div class="branding">
+  <img src="v.ico" alt="Vibron Logo" class="logo" />
+  <span class="brand-name">Vibron</span>
+</div>
+    <!---->
+
+
+
+
+
+
+    <!---->
+
+    <h1>🎵 Mood-based-Music-Player 🎵</h1>
+    <button class="primary" id="startBtn">Use Camera</button>
+
+    <div class="stage">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+
+    <div class="emotion-display" id="emotion-display"></div>
+
+    <div class="controls">
+      <button class="secondary" id="prevSongBtn">Previous Song</button>
+      <button class="secondary" id="changeSongBtn">Change Song</button>
+
+      <div>
+        <label for="testMood">Test Mood:</label>
+        <select id="testMood">
+          <option value="auto">Auto (from face)</option>
+          <option value="happy">happy → party</option>
+          <option value="sad">sad → sad</option>
+          <option value="angry">angry → item</option>
+          <option value="neutral">neutral → love</option>
+          <option value="surprised">surprised → mass</option>
+          <option value="disgusted">disgusted → instrumental</option>
+          <option value="fearful">fearful → romantic</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="languageSelect">Language:</label>
+        <select id="languageSelect">
+          <option value="english">English</option>
+          <option value="hindi">Hindi</option>
+          <option value="kannada">Kannada</option>
+          <option value="malayalam">Malayalam</option>
+          <option value="marathi">Marathi</option>
+          <option value="punjabi">Punjabi</option>
+          <option value="tamil">Tamil</option>
+          <option value="telugu">Telugu</option>
+        </select>
+      </div>
+    </div>
+
+    <audio id="musicPlayer" controls></audio>
+
+    <div class="hint">
+      If camera fails or models aren’t present, choose a test mood to play music anyway.
+    </div>
+   <!-- <button id="showFormBtn">Give Feedback</button>
+<div id="suggestion-form-container" style="display:none;">
+  <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSedknk6eJxyXbHGkXWMJLbLQnLJOFX0br-4gc8Trp1_OdN2mA/viewform?usp=header?embedded=true" width="640" height="800" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
+</div>
+    <script>
+  const btn = document.getElementById('showFormBtn');
+  const formContainer = document.getElementById('suggestion-form-container');
+
+  btn.addEventListener('click', () => {
+    if (formContainer.style.display === 'none') {
+      formContainer.style.display = 'block';
+      btn.textContent = 'Hide Feedback Form';
+    } else {
+      formContainer.style.display = 'none';
+      btn.textContent = 'Give Feedback';
+    }
+  });
+</script>>--->
+
+    <!--<canvas id="visualizer"></canvas>-->
+  </div>
+
+  <!-- ✅ Use TensorFlow.js v1.7.4 for face-api.js compatibility -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
+  <script>
+    console.log('Using TensorFlow.js v1.7.4 for face-api.js compatibility');
+  </script>
+
+  <!-- ✅ face-api.js (must be v0.22.2 for best compatibility) -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+  <!-- ✅ Your own logic using local models in script.js -->
+  <script src="script.js"></script>
+</body>
+</html>
+  
