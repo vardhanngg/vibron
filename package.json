@@ -1,0 +1,29 @@
+{
+  "name": "vibron",
+  "version": "1.0.0",
+  "description": "Node.js + TypeScript backend for Vibron",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "nodemon --exec ts-node index.ts",
+    "start": "ts-node index.ts",
+    "build": "tsc"
+  },
+  "author": "G Vardhan",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.16",
+    "nodemon": "^3.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3",
+    "vercel": "^46.1.1"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "dotenv": "^17.2.1",
+    "express": "^4.19.2",
+    "googleapis": "^121.0.0",
+    "open": "^10.2.0",
+    "ws": "^8.18.3"
+  }
+}
