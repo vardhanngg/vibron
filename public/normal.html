@@ -2,99 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vibron - Normal Player</title>
-  <link rel="icon" type="image/x-icon" href="/v.ico" />
-  <!-- Correct CSS path -->
-  <link rel="stylesheet" href="/css/normal.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vibron - Normal Mode</title>
+  <link rel="stylesheet" href="css/normal.css" />
 </head>
 <body>
-
-  <!-- Top bar -->
-  <header class="top-bar">
-    <div class="branding">
-      <img src="/v.ico" alt="Vibron Logo" class="logo" />
-      <span class="brand-name">Vibron</span>
-    </div>
-    <button class="switch-btn" onclick="window.location.href='/mood.html'">
-      🎵 Switch to Mood Player
-    </button>
+  <header>
+    <h1>Vibron</h1>
+    <p class="subtitle">Search and play any song instantly</p>
   </header>
 
-  <div class="container">
-    <h1>🎵 Normal Music Player 🎵</h1>
-
-    <!-- Search bar -->
+  <main>
     <div class="search-container">
-      <div class="box-search">
-        <input type="text" id="searchInput" placeholder="Search for songs..." />
-        <i class="fas fa-search icon-search" onclick="searchSongs()"></i>
+      <input type="text" id="searchInput" placeholder="Search for songs..." />
+      <button onclick="searchSongs()">Search</button>
+    </div>
+
+    <div id="song-list" class="song-list"></div>
+    <button id="more" class="load-more">Load More</button>
+  </main>
+
+  <footer id="player-bar">
+    <div class="player-info">
+      <img id="album-art" src="default.png" alt="Album Art" />
+      <div>
+        <div id="now-playing">Not Playing</div>
+        <div id="artist-name">---</div>
       </div>
     </div>
 
-    <!-- Song cards -->
-    <div class="song-container">
-      <div class="cards" id="song-list">
-        <!-- Songs will be dynamically added here -->
-      </div>
-      <span id="more" class="more" onclick="loadMoreSongs()">more...</span>
+    <div class="player-controls">
+      <button onclick="playPause()">⏯</button>
+      <button onclick="playNext()">⏭</button>
+      <button onclick="toggleLoop()" id="loop-btn">
+        🔁 <span id="loop-btn-icon"></span>
+      </button>
     </div>
 
-    <!-- Audio player -->
-    <div class="player-container">
-      <div id="player-box" class="player-box">
-        <img id="album-art" src="/default.png" class="album-image-player" />
-        <div class="song-details">
-          <span id="now-playing" class="song-name">Song Name</span>
-          <span class="artist-name artist-name-vanish" id="artist-name">Artist Name</span>
-        </div>
-        <div class="player-btn-holder">
-          <div class="player-play-btn" onclick="playPause()">
-            <i id="play-icon" class="fa-solid fa-play"></i>
-          </div>
-          <div class="player-play-next-btn" onclick="playNext()">
-            <i class="fas fa-forward"></i>
-          </div>
-          <div id="loop-btn" class="player-loop-btn" onclick="toggleLoop()">
-            <i id="loop-btn-icon" class="fas fa-repeat"></i>
-          </div>
-        </div>
-        <div class="progress-tracker-holder" onclick="seek(event)">
-          <div class="progress-tracker">
-            <div id="progress" class="progress-tracker-update"></div>
-            <div id="progress-circle" class="progress-circle"></div>
-          </div>
-        </div>
-        <div class="time">
-          <span id="current-time">0:00</span> / <span id="duration">0:00</span>
-        </div>
-      </div>
+    <div class="player-progress" onclick="seek(event)">
+      <div id="progress" class="progress-bar"></div>
+      <div id="progress-circle" class="progress-circle"></div>
     </div>
 
-    <audio id="audio-player" ontimeupdate="updateProgress()" onloadedmetadata="updateDuration()"></audio>
-  </div>
+    <audio id="audio-player"></audio>
+    <div class="time-display">
+      <span id="current-time">0:00</span> / <span id="duration">0:00</span>
+    </div>
+  </footer>
 
-  <!-- Correct JS path -->
-  <script src="/normal.js"></script>
-  <script>
-    // Sample JS functions for demo
-    function searchSongs() {
-      alert("Search functionality will be implemented here!");
-    }
-    function loadMoreSongs() {
-      alert("Load more songs!");
-    }
-    function playPause() {
-      const player = document.getElementById('audio-player');
-      if (player.paused) player.play();
-      else player.pause();
-    }
-    function playNext() { alert("Play next song"); }
-    function toggleLoop() { alert("Toggle loop"); }
-    function updateProgress() { /* Update progress UI */ }
-    function updateDuration() { /* Update duration UI */ }
-    function seek(e) { /* Seek in song */ }
-  </script>
+  <script src="normal.js"></script>
 </body>
 </html>

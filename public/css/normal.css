@@ -1,208 +1,176 @@
 :root {
-  --bg: #111218;
-  --panel: #191b24;
-  --text: #e7e9ee;
-  --muted: #a6adbb;
-  --accent: #ff4081;
-  --accent-2: #6a5acd;
+  --bg: #0e0e0e;
+  --card: #1a1a1a;
+  --accent: #ff477e;
+  --text: #ffffff;
+  --muted: #888888;
 }
 
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  background: var(--bg);
+  font-family: 'Poppins', sans-serif;
   color: var(--text);
-  background-color: var(--bg);
-}
-
-.top-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  z-index: 1000;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-.branding {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-}
-
-.brand-name {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--text);
-  text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
-}
-
-.switch-btn {
-  border: 0;
-  border-radius: 12px;
-  padding: 10px 16px;
-  font-weight: 600;
-  cursor: pointer;
-  background: linear-gradient(45deg, var(--accent-2), var(--accent));
-  color: white;
-  box-shadow: 0 6px 18px rgba(255, 64, 129, 0.25);
-  transition: transform 0.05s ease, box-shadow 0.2s ease;
-}
-.switch-btn:hover {
-  transform: translateY(-1px);
-}
-
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 80px 20px 60px;
+header {
   text-align: center;
+  padding: 1.5rem 1rem;
 }
 
-h1 {
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  margin-bottom: 14px;
-  color: white;
-  text-shadow: -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black, 1px 1px 0 black;
+header h1 {
+  font-size: 2rem;
+  color: var(--accent);
 }
 
-/* Search bar */
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .search-container {
-  margin: 20px 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
 }
-.box-search {
-  position: relative;
-  display: inline-block;
-  width: 90%;
-  max-width: 500px;
-}
-.box-search input {
-  width: 100%;
-  padding: 10px 40px 10px 14px;
-  border-radius: 12px;
+
+.search-container input {
+  padding: 0.6rem;
+  border-radius: 6px;
   border: none;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
+  outline: none;
+  width: 60%;
+  background: var(--card);
+  color: var(--text);
 }
-.box-search input::placeholder {
+
+.search-container button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.song-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.song-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 0.5rem;
+  text-align: center;
+  transition: transform 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+}
+
+.song-card:hover {
+  transform: translateY(-4px);
+  background: #222;
+}
+
+.song-card img {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+}
+
+.song-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.song-artist {
+  font-size: 0.8rem;
   color: var(--muted);
 }
-.box-search .icon-search {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+
+.load-more {
+  background: none;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 0.5rem 1rem;
+  margin: 1rem auto;
+  display: block;
+  border-radius: 6px;
   cursor: pointer;
-  color: var(--text);
 }
 
-/* Song cards */
-.song-container {
-  margin-top: 20px;
-}
-.cards {
+footer#player-bar {
+  background: var(--card);
+  padding: 0.6rem 1rem;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-}
-.cards .song-card {
-  background: var(--panel);
-  border-radius: 12px;
-  padding: 12px;
-  width: 160px;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.2s ease;
-}
-.cards .song-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 64, 129, 0.25);
-}
-.cards .song-card img {
-  width: 100%;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  flex-direction: column;
+  gap: 0.4rem;
+  position: sticky;
+  bottom: 0;
 }
 
-/* Player container */
-.player-container {
-  margin-top: 24px;
-  background: var(--panel);
-  border-radius: 16px;
-  padding: 16px;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  color: var(--text);
-}
-.album-image-player {
-  width: 100%;
-  border-radius: 12px;
-  margin-bottom: 12px;
-}
-.song-details {
-  text-align: center;
-  margin-bottom: 12px;
-}
-.player-btn-holder {
+.player-info {
   display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 0.8rem;
 }
-.player-btn-holder i {
-  font-size: 1.5rem;
+
+.player-info img {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+}
+
+.player-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.player-controls button {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1.2rem;
   cursor: pointer;
 }
-.progress-tracker-holder {
+
+.player-progress {
+  height: 4px;
+  background: #444;
   position: relative;
-  height: 8px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 4px;
   cursor: pointer;
-  margin-bottom: 8px;
 }
-.progress-tracker-update {
+
+.progress-bar {
   height: 100%;
-  width: 0%;
   background: var(--accent);
-  border-radius: 4px;
+  width: 0%;
 }
-.time {
+
+.progress-circle {
+  position: absolute;
+  top: -4px;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  left: 0%;
+}
+
+.time-display {
+  font-size: 0.75rem;
+  color: var(--muted);
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-bottom: 12px;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  .box-search input {
-    font-size: 0.9rem;
-  }
-  .player-btn-holder i {
-    font-size: 1.2rem;
-  }
-  .cards .song-card {
-    width: 120px;
-  }
 }
