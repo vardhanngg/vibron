@@ -78,7 +78,7 @@ h1 {
   left: 0;
   right: 0;
   height: 60px;
-  background: rgba(25, 27, 36, 0.85);
+  background:transparent;
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
