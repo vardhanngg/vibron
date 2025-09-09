@@ -7,26 +7,21 @@
   <link rel="icon" type="image/x-icon" href="/v.ico" />
   <link rel="stylesheet" href="css/normal.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" onload="console.log('Font Awesome loaded')" onerror="console.error('Font Awesome failed to load')" />
-  <!-- PWA Manifest (create public/manifest.json for Hayasaka-like install) -->
   <link rel="manifest" href="/manifest.json" />
 </head>
 <body>
-  <!-- Fixed Top Bar -->
   <header class="top-bar">
     <div class="branding">
       <img src="/v.ico" alt="Vibron Logo" class="logo" />
       <span class="brand-name">Vibron</span>
     </div>
-    <!-- Mobile sidebar toggle - positioned under Vibron name -->
     <button id="sidebar-toggle" class="sidebar-toggle" onclick="toggleSidebar()">
       <i class="fa-solid fa-bars"></i>
       <span class="fallback-text">Menu</span>
     </button>
-    <!-- Switch button pulled to right -->
     <a href="mood.html" class="switch-btn">🎵 Switch to Mood Player</a>
   </header>
 
-  <!-- Sidebar Navigation -->
   <nav class="sidebar" id="sidebar">
     <ul>
       <li onclick="focusSearch()"><i class="fa-solid fa-home"></i> Home</li>
@@ -34,18 +29,8 @@
       <li onclick="loadFavorites()"><i class="fa-solid fa-heart"></i> Favorites</li>
       <li onclick="loadPlaylists()"><i class="fa-solid fa-list"></i> Playlists</li>
     </ul>
-    <div id="favorites-list" class="sidebar-section">
-      <h4>Favorites</h4>
-      <!-- Dynamically populated -->
-    </div>
-    <div id="playlists-list" class="sidebar-section">
-      <h4>Playlists</h4>
-      <button onclick="createPlaylist()">+ New Playlist</button>
-      <!-- Dynamically populated -->
-    </div>
   </nav>
 
-  <!-- Main Content -->
   <main>
     <header class="glass-header">
       <h1>Vibron</h1>
@@ -57,16 +42,11 @@
       <button onclick="searchSongs()" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
     </div>
 
-    <!-- Favorites/Playlists View (toggles with sidebar clicks) -->
-    <div id="library-view" style="display: none; width: 90%; max-width: 1000px; margin: 1rem auto;">
-      <!-- Populated by JS -->
-    </div>
-
+    <div id="library-view" style="display: none; width: 90%; max-width: 1000px; margin: 1rem auto;"></div>
     <div id="song-list" class="song-list"></div>
-    <button id="more" class="load-more" style="display: none;">Load More</button>
+    <button id="more" class="load-more" style="display: none;" onclick="loadMoreSongs()">Load More</button>
   </main>
 
-  <!-- Queue Section -->
   <div class="queue-holder">
     <div class="q-open-btn" onclick="dropQueue()">Q</div>
     <div class="queue-container" id="queue-container">
@@ -81,7 +61,6 @@
     </div>
   </div>
 
-  <!-- Player -->
   <footer id="player-bar">
     <div class="player-info">
       <img id="album-art" src="default.png" alt="Album Art" class="album-art" />
@@ -94,6 +73,7 @@
       <button onclick="playPrevious()" title="Previous"><i class="fa-solid fa-backward"></i></button>
       <button onclick="playPause()" id="play-pause-btn" title="Play/Pause"><i class="fa-solid fa-play-pause"></i></button>
       <button onclick="playNext()" title="Next"><i class="fa-solid fa-forward"></i></button>
+      <button onclick="addToFavoritesFromPlayer()" id="fav-btn" title="Add to Favorites"><i class="fa-solid fa-heart"></i></button>
       <button onclick="toggleLoop()" id="loop-btn" title="Toggle Loop"><i class="fa-solid fa-repeat"></i></button>
     </div>
     <div class="player-progress" onclick="seek(event)">
