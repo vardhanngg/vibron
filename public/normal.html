@@ -4,39 +4,75 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vibron - Normal Mode</title>
+  <link rel="icon" type="image/x-icon" href="/v.ico" />
   <link rel="stylesheet" href="css/normal.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
 </head>
 <body>
-  <header>
-    <h1>Vibron</h1>
-    <p class="subtitle">Search and play any song instantly</p>
+  <!-- Fixed Top Bar -->
+  <header class="top-bar">
+    <div class="branding">
+      <img src="/v.ico" alt="Vibron Logo" class="logo" />
+      <span class="brand-name">Vibron</span>
+    </div>
+    <a href="mood.html" class="switch-btn">🎵 Switch to Mood Player</a>
   </header>
 
+  <!-- Header -->
+  <header class="glass-header">
+    <h1>Vibron</h1>
+    <p class="subtitle">Search, stream, and enjoy your music</p>
+  </header>
+
+  <!-- Search -->
   <main>
-    <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Search for songs..." />
-      <button onclick="searchSongs()">Search</button>
+    <div class="search-container glass-card">
+      <input type="text" id="searchInput" placeholder="Search songs, artists, albums..." />
+      <button onclick="searchSongs()" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
     </div>
 
-    <div id="song-list" class="song-list"></div>
+    <!-- Favorites Section -->
+    <div class="favorites-container glass-card">
+      <h3>Favorites</h3>
+      <div id="favorites-list" class="favorites-list">
+        <span>No favorites yet</span>
+      </div>
+    </div>
+
+    <!-- Song List -->
+    <div id="song-list" class="song-list glass-card"></div>
     <button id="more" class="load-more">Load More</button>
   </main>
 
-  <footer id="player-bar">
+  <!-- Queue Section -->
+  <div class="queue-holder">
+    <div class="q-open-btn" onclick="dropQueue()">Q</div>
+    <div class="queue-container glass-card">
+      <div class="queue-header-holder">
+        <h3 class="queue-title">Queue</h3>
+        <button class="player-play-btn" onclick="playNext()"><i class="fa-solid fa-play"></i></button>
+      </div>
+      <div id="queue-list" class="queue-list">
+        <span>No songs in queue</span>
+      </div>
+      <div class="auto-queue-hint">Auto-adding similar songs...</div>
+    </div>
+  </div>
+
+  <!-- Player -->
+  <footer id="player-bar" class="glass-footer">
     <div class="player-info">
       <img id="album-art" src="default.png" alt="Album Art" />
-      <div>
+      <div class="song-details">
         <div id="now-playing">Not Playing</div>
         <div id="artist-name">---</div>
       </div>
     </div>
 
     <div class="player-controls">
-      <button onclick="playPause()">⏯</button>
-      <button onclick="playNext()">⏭</button>
-      <button onclick="toggleLoop()" id="loop-btn">
-        🔁 <span id="loop-btn-icon"></span>
-      </button>
+      <button onclick="playPause()" title="Play/Pause"><i class="fa-solid fa-play-pause"></i></button>
+      <button onclick="playNext()" title="Next Song"><i class="fa-solid fa-forward"></i></button>
+      <button onclick="toggleLoop()" id="loop-btn" title="Toggle Loop"><i class="fa-solid fa-repeat"></i></button>
     </div>
 
     <div class="player-progress" onclick="seek(event)">
