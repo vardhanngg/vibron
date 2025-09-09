@@ -37,7 +37,7 @@ body {
   right: 0;
   height: 60px;
   background: rgba(25, 27, 36, 0.95); /* Slightly more opaque for better contrast */
-  backdrop-filter: blur(12px); /* Stronger blur for premium feel */
+  backdrop-filter: blur(2px); /* Stronger blur for premium feel */
   display: flex;
   align-items: center;
   justify-content: flex-start; /* Changed: Left-align branding + toggle */
