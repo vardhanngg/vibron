@@ -1,0 +1,16 @@
+{
+  "name": "Vibron",
+  "short_name": "Vibron",
+  "description": "Search, stream, and enjoy your music",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#ff4081",
+  "icons": [
+    {
+      "src": "/v.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
