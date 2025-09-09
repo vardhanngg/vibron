@@ -97,7 +97,7 @@ function displaySongs(songs) {
       <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
       <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></button>
     `;
-    card.addEventListener('click', () => playSong(song));
+    card.addEventListener('click', () => playSong(song, true));
     songList.appendChild(card);
 
     if (!songHistory.some(s => s.id === song.id)) songHistory.push(song);
@@ -121,7 +121,7 @@ function loadSongWithoutPlaying(song) {
   saveState();
 }
 
-function playSong(song) {
+function playSong(song, fromSearch = false) {
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
     songHistory.push(song);
@@ -142,9 +142,14 @@ function playSong(song) {
   isPlaying = true;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
 
-  addToQueue(song.id); // Auto-add to queue
-
-  if (queue.length < 5) autoAddSimilar(song); // Auto-queue similar songs
+  if (fromSearch) {
+    queue = []; // Clear queue when playing a searched song
+    addToQueue(song.id); // Auto-add current song to queue
+    autoAddSimilar(song); // Add similar songs based on current song
+  } else {
+    addToQueue(song.id); // Auto-add to queue
+    if (queue.length < 5) autoAddSimilar(song); // Add similar songs if queue is short
+  }
 
   saveState();
 }
@@ -165,10 +170,10 @@ function playPause() {
 function playNext() {
   if (queue.length > 0) {
     const nextSong = queue.shift();
-    playSong(nextSong);
+    playSong(nextSong, false);
   } else if (currentSongIndex < songHistory.length - 1) {
     currentSongIndex++;
-    playSong(songHistory[currentSongIndex]);
+    playSong(songHistory[currentSongIndex], false);
   } else {
     showNotification('No next song. Try searching more!');
   }
@@ -179,7 +184,7 @@ function playNext() {
 function playPrevious() {
   if (currentSongIndex > 0) {
     currentSongIndex--;
-    playSong(songHistory[currentSongIndex]);
+    playSong(songHistory[currentSongIndex], false);
   }
 }
 
@@ -196,7 +201,7 @@ function addToQueue(songId) {
 
 async function autoAddSimilar(currentSong) {
   try {
-    const similarQuery = `${currentSong.artist} similar songs`;
+    const similarQuery = `${currentSong.artist} ${currentSong.genre || ''} similar songs`;
     const response = await fetch(`/api/search?q=${encodeURIComponent(similarQuery)}&page=0&limit=3`);
     const data = await response.json();
 
@@ -218,7 +223,7 @@ function renderQueue() {
 
   queueList.innerHTML = queue.map((song, idx) => `
     <div class="queue-item">
-      <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'})">
+      <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)">
         ${song.title} - ${song.artist}
       </span>
       <button onclick="removeFromQueue(${idx})"><i class="fa-solid fa-trash"></i></button>
@@ -317,6 +322,18 @@ function addToFavorites(songId) {
   }
 }
 
+function removeFromFavorites(songId) {
+  const index = favorites.findIndex(f => f.id === songId);
+  if (index !== -1) {
+    favorites.splice(index, 1);
+    saveState();
+    if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Favorites</h4>')) {
+      loadFavorites();
+    }
+    showNotification('Removed from favorites!');
+  }
+}
+
 function addToFavoritesFromPlayer() {
   if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
     addToFavorites(songHistory[currentSongIndex].id);
@@ -337,7 +354,7 @@ function playAllFavorites(shuffle = false) {
       queue.push(song);
     }
   });
-  playSong(songsToQueue[0]);
+  playSong(songsToQueue[0], false);
   renderQueue();
   saveState();
 }
@@ -351,7 +368,8 @@ function loadFavorites() {
     <button onclick="playAllFavorites(true)" ${favorites.length === 0 ? 'disabled' : ''}>Shuffle All</button>
     ${favorites.length ? favorites.map(song => `
       <div class="playlist-item">
-        <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'})">${song.title} - ${song.artist}</span>
+        <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)">${song.title} - ${song.artist}</span>
+        <button class="remove-fav" onclick="event.stopPropagation(); removeFromFavorites('${song.id}')"><i class="fa-solid fa-trash"></i></button>
       </div>`).join('') : '<span>No favorites yet</span>'}
   `;
   moreBtn.style.display = 'none';
@@ -386,6 +404,29 @@ function addToPlaylist(playlistIdx, songId) {
   }
 }
 
+function removeFromPlaylist(playlistIdx, songId) {
+  const playlist = playlists[playlistIdx];
+  const songIndex = playlist.songs.findIndex(s => s.id === songId);
+  if (songIndex !== -1) {
+    playlist.songs.splice(songIndex, 1);
+    saveState();
+    if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
+      loadPlaylists();
+    }
+    showNotification('Removed from playlist!');
+  }
+}
+
+function deletePlaylist(playlistIdx) {
+  const playlistName = playlists[playlistIdx].name;
+  playlists.splice(playlistIdx, 1);
+  saveState();
+  if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
+    loadPlaylists();
+  }
+  showNotification(`Playlist "${playlistName}" deleted!`);
+}
+
 function loadPlaylists() {
   libraryView.style.display = 'block';
   songList.style.display = 'none';
@@ -395,8 +436,12 @@ function loadPlaylists() {
     ${playlists.map((pl, idx) => `
       <div class="playlist-item">
         <h5>${pl.name} (${pl.songs.length})</h5>
+        <button class="delete-playlist" onclick="event.stopPropagation(); deletePlaylist(${idx})"><i class="fa-solid fa-trash"></i></button>
         ${pl.songs.map(song => `
-          <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'})">${song.title}</span>
+          <div class="playlist-song">
+            <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)">${song.title} - ${song.artist}</span>
+            <button class="remove-from-playlist" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${song.id}')"><i class="fa-solid fa-trash"></i></button>
+          </div>
         `).join('')}
         <button onclick="createSongPickerModal(${idx})">+ Add Song</button>
       </div>
