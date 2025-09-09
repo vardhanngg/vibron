@@ -597,6 +597,27 @@ body {
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(255, 64, 129, 0.4);
 }
+/* .empty-queue (Empty Queue Button) */
+.empty-queue {
+  padding: 10px 15px;
+  background-color: var(--accent); /* Accent color */
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.empty-queue:hover {
+  background-color: darken(var(--accent), 10%);
+  transform: scale(1.05);
+}
+
+.empty-queue:focus {
+  outline: none;
+}
+
 
 .queue-container {
   display: none;

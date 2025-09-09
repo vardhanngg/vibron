@@ -358,6 +358,20 @@ function playAllFavorites(shuffle = false) {
   renderQueue();
   saveState();
 }
+function emptyQueue() {
+  // Clear the queue array
+  queue = [];
+  
+  // Update the queue UI
+  renderQueue();
+  
+  // Save the new state to localStorage
+  saveState();
+  
+  // Show a notification to inform the user
+  showNotification('Queue has been emptied!');
+}
+
 
 function loadFavorites() {
   libraryView.style.display = 'block';
