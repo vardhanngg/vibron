@@ -31,7 +31,7 @@ window.addEventListener('load', () => {
   renderQueue();
 
   if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
-    playSong(songHistory[currentSongIndex]); // Resume persisted song
+    loadSongWithoutPlaying(songHistory[currentSongIndex]); // Load but don't play
   }
 
   // Auto-save state every 5 seconds
@@ -50,7 +50,7 @@ function saveState() {
 // ==== Search & Fetch ====
 async function searchSongs() {
   const query = searchInput.value.trim();
-  if (!query) return alert('Please enter a search term.');
+  if (!query) return showNotification('Please enter a search term.');
 
   currentQuery = query;
   currentPage = 0;
@@ -69,7 +69,7 @@ async function fetchSongs() {
     const data = await response.json();
 
     if (!data.songs?.results?.length) {
-      alert('No more songs found');
+      showNotification('No more songs found');
       moreBtn.style.display = 'none';
       return;
     }
@@ -78,7 +78,7 @@ async function fetchSongs() {
     currentPage++;
   } catch (err) {
     console.error(err);
-    alert('Error fetching songs');
+    showNotification('Error fetching songs');
   }
 }
 
@@ -105,6 +105,22 @@ function displaySongs(songs) {
 }
 
 // ==== Playback ====
+function loadSongWithoutPlaying(song) {
+  currentSongIndex = songHistory.findIndex(s => s.id === song.id);
+  if (currentSongIndex === -1) {
+    songHistory.push(song);
+    currentSongIndex = songHistory.length - 1;
+  }
+  audioPlayer.src = song.audioUrl;
+  albumArt.src = song.image || 'default.png';
+  nowPlaying.textContent = song.title;
+  artistName.textContent = song.artist;
+  playerBar.classList.add('playing');
+  isPlaying = false; // Ensure paused state
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  saveState();
+}
+
 function playSong(song) {
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
@@ -115,7 +131,7 @@ function playSong(song) {
   audioPlayer.src = song.audioUrl;
   audioPlayer.play().catch(err => {
     console.error('Playback error:', err);
-    alert('Failed to play song. Check console.');
+    showNotification('Failed to play song. Check console.');
   });
 
   albumArt.src = song.image || 'default.png';
@@ -154,7 +170,7 @@ function playNext() {
     currentSongIndex++;
     playSong(songHistory[currentSongIndex]);
   } else {
-    alert('No next song. Try searching more!');
+    showNotification('No next song. Try searching more!');
   }
   renderQueue();
   saveState();
@@ -221,6 +237,73 @@ function dropQueue() {
 }
 
 // ==== Favorites & Playlists ====
+function createSongPickerModal(playlistIdx) {
+  const modal = document.createElement('div');
+  modal.className = 'song-picker-modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h4>Select a Song</h4>
+      <input type="text" id="song-picker-search" placeholder="Search songs..." oninput="filterSongPicker(this.value)">
+      <div id="song-picker-list" class="song-picker-list" data-playlist-idx="${playlistIdx}">
+        ${songHistory.length ? songHistory.map(song => `
+          <div class="song-picker-item" onclick="addToPlaylist(${playlistIdx}, '${song.id}')">
+            ${song.title} - ${song.artist}
+          </div>
+        `).join('') : '<span>No songs available</span>'}
+      </div>
+      <button onclick="closeSongPickerModal()">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function filterSongPicker(query) {
+  const songPickerList = document.getElementById('song-picker-list');
+  const lowerQuery = query.toLowerCase();
+  songPickerList.innerHTML = songHistory
+    .filter(song => song.title.toLowerCase().includes(lowerQuery) || song.artist.toLowerCase().includes(lowerQuery))
+    .map(song => `
+      <div class="song-picker-item" onclick="addToPlaylist(${songPickerList.dataset.playlistIdx}, '${song.id}')">
+        ${song.title} - ${song.artist}
+      </div>
+    `).join('') || '<span>No matching songs</span>';
+  songPickerList.dataset.playlistIdx = songPickerList.dataset.playlistIdx; // Preserve playlistIdx
+}
+
+function closeSongPickerModal() {
+  const modal = document.querySelector('.song-picker-modal');
+  if (modal) modal.remove();
+}
+
+function createPlaylistModal() {
+  const modal = document.createElement('div');
+  modal.className = 'song-picker-modal'; // Reuse song-picker-modal for consistent styling
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h4>Create Playlist</h4>
+      <input type="text" id="playlist-name-input" placeholder="Enter playlist name..." />
+      <div class="modal-buttons">
+        <button onclick="createPlaylist(document.getElementById('playlist-name-input').value)">Create</button>
+        <button onclick="closePlaylistModal()">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closePlaylistModal() {
+  const modal = document.querySelector('.song-picker-modal');
+  if (modal) modal.remove();
+}
+
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'notification';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  setTimeout(() => notification.remove(), 3000);
+}
+
 function addToFavorites(songId) {
   const song = songHistory.find(s => s.id === songId);
   if (song && !favorites.some(f => f.id === songId)) {
@@ -230,7 +313,7 @@ function addToFavorites(songId) {
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Favorites</h4>')) {
       loadFavorites();
     }
-    alert('Added to favorites!');
+    showNotification('Added to favorites!');
   }
 }
 
@@ -238,13 +321,13 @@ function addToFavoritesFromPlayer() {
   if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
     addToFavorites(songHistory[currentSongIndex].id);
   } else {
-    alert('No song is currently playing.');
+    showNotification('No song is currently playing.');
   }
 }
 
 function playAllFavorites(shuffle = false) {
   if (favorites.length === 0) {
-    alert('No songs in favorites.');
+    showNotification('No songs in favorites.');
     return;
   }
   queue = [];
@@ -274,15 +357,18 @@ function loadFavorites() {
   moreBtn.style.display = 'none';
 }
 
-function createPlaylist() {
-  const name = prompt('Playlist name:');
-  if (name) {
+function createPlaylist(name) {
+  if (name.trim()) {
     playlists.push({ name, songs: [] });
     saveState();
     // Update libraryView if currently showing Playlists
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
       loadPlaylists();
     }
+    showNotification('Playlist created!');
+    closePlaylistModal();
+  } else {
+    showNotification('Please enter a valid playlist name.');
   }
 }
 
@@ -295,7 +381,8 @@ function addToPlaylist(playlistIdx, songId) {
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
       loadPlaylists();
     }
-    alert('Added to playlist!');
+    showNotification('Added to playlist!');
+    closeSongPickerModal();
   }
 }
 
@@ -304,14 +391,14 @@ function loadPlaylists() {
   songList.style.display = 'none';
   libraryView.innerHTML = `
     <h4>Playlists</h4>
-    <button onclick="createPlaylist()">+ New</button>
+    <button onclick="createPlaylistModal()">+ New</button>
     ${playlists.map((pl, idx) => `
       <div class="playlist-item">
         <h5>${pl.name} (${pl.songs.length})</h5>
         ${pl.songs.map(song => `
           <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'})">${song.title}</span>
         `).join('')}
-        <button onclick="addToPlaylist(${idx}, prompt('Song ID:'))">+ Add Song</button>
+        <button onclick="createSongPickerModal(${idx})">+ Add Song</button>
       </div>
     `).join('')}
   `;
