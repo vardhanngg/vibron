@@ -146,6 +146,7 @@ body {
   max-width: 90%;
   box-shadow: var(--shadow-light);
 }
+
 /* .remove-fav (Remove from Favorites) button */
 .remove-fav {
   position: relative;
@@ -251,7 +252,6 @@ body {
   margin-left: 10px;
   cursor: pointer;
 }
-
 
 .glass-header h1 {
   font-size: 2.5rem;
@@ -408,6 +408,10 @@ body {
 
 .add-queue { right: 10px; }
 .add-fav { right: 50px; }
+.add-fav.favorited {
+  background: #ff2a4a; /* Filled heart for favorited state */
+  color: white;
+}
 
 /* =================== */
 /* Load More Button */
@@ -597,6 +601,7 @@ body {
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(255, 64, 129, 0.4);
 }
+
 /* .empty-queue (Empty Queue Button) */
 .empty-queue {
   padding: 10px 15px;
@@ -617,7 +622,6 @@ body {
 .empty-queue:focus {
   outline: none;
 }
-
 
 .queue-container {
   display: none;

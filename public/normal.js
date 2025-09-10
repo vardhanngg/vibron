@@ -26,15 +26,14 @@ let isPlaying = false;
 
 // ==== Initialization ====
 window.addEventListener('load', () => {
-  libraryView.style.display = 'none'; // Ensure libraryView is hidden on load
-  songList.style.display = 'grid'; // Show search results area
+  libraryView.style.display = 'none';
+  songList.style.display = 'grid';
   renderQueue();
 
   if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
-    loadSongWithoutPlaying(songHistory[currentSongIndex]); // Load but don't play
+    loadSongWithoutPlaying(songHistory[currentSongIndex]);
   }
 
-  // Auto-save state every 5 seconds
   setInterval(saveState, 5000);
 });
 
@@ -64,9 +63,10 @@ async function searchSongs() {
 async function fetchSongs() {
   try {
     const response = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`);
-    if (!response.ok) throw new Error('Search failed');
+    if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
 
     const data = await response.json();
+    console.log('[client] Fetch songs response:', data);
 
     if (!data.songs?.results?.length) {
       showNotification('No more songs found');
@@ -75,10 +75,11 @@ async function fetchSongs() {
     }
 
     displaySongs(data.songs.results);
+    moreBtn.style.display = data.songs.next ? 'block' : 'none';
     currentPage++;
   } catch (err) {
-    console.error(err);
-    showNotification('Error fetching songs');
+    console.error('[client] Error fetching songs:', err);
+    showNotification('Error fetching songs. Check console.');
   }
 }
 
@@ -88,20 +89,22 @@ function loadMoreSongs() {
 
 function displaySongs(songs) {
   songs.forEach(song => {
-    const card = document.createElement('div');
-    card.classList.add('song-card');
-    card.innerHTML = `
-      <img src="${song.image || 'default.png'}" alt="${song.title}" />
-      <div class="song-title">${song.title}</div>
-      <div class="artist-name">${song.artist}</div>
-      <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
-      <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></button>
-    `;
-    card.addEventListener('click', () => playSong(song, true));
-    songList.appendChild(card);
-
-    if (!songHistory.some(s => s.id === song.id)) songHistory.push(song);
+    if (!songHistory.some(s => s.id === song.id)) {
+      songHistory.push(song);
+      const card = document.createElement('div');
+      card.classList.add('song-card');
+      card.innerHTML = `
+        <img src="${song.image || 'default.png'}" alt="${song.title}" />
+        <div class="song-title">${song.title}</div>
+        <div class="artist-name">${song.artist}</div>
+        <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
+        <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === song.id) ? ' favorited' : ''}"></i></button>
+      `;
+      card.addEventListener('click', () => playSong(song, true));
+      songList.appendChild(card);
+    }
   });
+  saveState();
 }
 
 // ==== Playback ====
@@ -116,8 +119,10 @@ function loadSongWithoutPlaying(song) {
   nowPlaying.textContent = song.title;
   artistName.textContent = song.artist;
   playerBar.classList.add('playing');
-  isPlaying = false; // Ensure paused state
+  isPlaying = false;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  updateBackground(song);
+  updateFavoriteButton();
   saveState();
 }
 
@@ -141,17 +146,53 @@ function playSong(song, fromSearch = false) {
   playerBar.classList.add('playing');
   isPlaying = true;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  updateBackground(song);
+  updateFavoriteButton();
 
   if (fromSearch) {
-    queue = []; // Clear queue when playing a searched song
-    addToQueue(song.id); // Auto-add current song to queue
-    autoAddSimilar(song); // Add similar songs based on current song
+    queue = [];
+    addToQueue(song.id);
+    autoAddSimilar(song);
   } else {
-    addToQueue(song.id); // Auto-add to queue
-    if (queue.length < 5) autoAddSimilar(song); // Add similar songs if queue is short
+    addToQueue(song.id);
+    if (queue.length < 5) autoAddSimilar(song);
   }
 
   saveState();
+}
+
+function updateBackground(song) {
+  const artistLower = song.artist.toLowerCase();
+  const titleLower = song.title.toLowerCase();
+  const moodMap = {
+    happy: ['party', 'dance', 'upbeat'],
+    sad: ['sad', 'melancholy'],
+    angry: ['item', 'rock', 'metal'],
+    neutral: ['love', 'chill'],
+    surprised: ['mass', 'energetic'],
+    disgusted: ['instrumental', 'classical'],
+    fearful: ['romantic', 'ballad']
+  };
+  let mood = 'neutral';
+  for (const [moodKey, keywords] of Object.entries(moodMap)) {
+    if (keywords.some(k => artistLower.includes(k) || titleLower.includes(k))) {
+      mood = moodKey;
+      break;
+    }
+  }
+  const moodToImage = {
+    happy: 'party.gif',
+    sad: 'sad.gif',
+    angry: 'item.gif',
+    neutral: 'love.gif',
+    surprised: 'mass.gif',
+    disgusted: 'instruments.gif',
+    fearful: 'romantic.gif'
+  };
+  const imageName = moodToImage[mood] || 'love.gif';
+  document.body.style.background = `url('/public/${imageName}') no-repeat center center fixed`;
+  document.body.style.backgroundSize = 'cover';
+  document.body.style.backgroundColor = 'transparent';
 }
 
 function playPause() {
@@ -241,6 +282,13 @@ function dropQueue() {
   queueContainer.classList.toggle('open');
 }
 
+function emptyQueue() {
+  queue = [];
+  renderQueue();
+  saveState();
+  showNotification('Queue has been emptied!');
+}
+
 // ==== Favorites & Playlists ====
 function createSongPickerModal(playlistIdx) {
   const modal = document.createElement('div');
@@ -272,7 +320,7 @@ function filterSongPicker(query) {
         ${song.title} - ${song.artist}
       </div>
     `).join('') || '<span>No matching songs</span>';
-  songPickerList.dataset.playlistIdx = songPickerList.dataset.playlistIdx; // Preserve playlistIdx
+  songPickerList.dataset.playlistIdx = songPickerList.dataset.playlistIdx;
 }
 
 function closeSongPickerModal() {
@@ -282,7 +330,7 @@ function closeSongPickerModal() {
 
 function createPlaylistModal() {
   const modal = document.createElement('div');
-  modal.className = 'song-picker-modal'; // Reuse song-picker-modal for consistent styling
+  modal.className = 'song-picker-modal';
   modal.innerHTML = `
     <div class="modal-content">
       <h4>Create Playlist</h4>
@@ -314,11 +362,11 @@ function addToFavorites(songId) {
   if (song && !favorites.some(f => f.id === songId)) {
     favorites.push(song);
     saveState();
-    // Update libraryView if currently showing Favorites
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Favorites</h4>')) {
       loadFavorites();
     }
     showNotification('Added to favorites!');
+    updateFavoriteButton();
   }
 }
 
@@ -331,6 +379,7 @@ function removeFromFavorites(songId) {
       loadFavorites();
     }
     showNotification('Removed from favorites!');
+    updateFavoriteButton();
   }
 }
 
@@ -339,6 +388,20 @@ function addToFavoritesFromPlayer() {
     addToFavorites(songHistory[currentSongIndex].id);
   } else {
     showNotification('No song is currently playing.');
+  }
+}
+
+function updateFavoriteButton() {
+  const favBtn = document.getElementById('fav-btn');
+  const currentSong = songHistory[currentSongIndex];
+  if (currentSong && favorites.some(f => f.id === currentSong.id)) {
+    favBtn.classList.add('favorited');
+    favBtn.querySelector('i').classList.add('fa-solid');
+    favBtn.querySelector('i').classList.remove('fa-regular');
+  } else {
+    favBtn.classList.remove('favorited');
+    favBtn.querySelector('i').classList.add('fa-regular');
+    favBtn.querySelector('i').classList.remove('fa-solid');
   }
 }
 
@@ -358,20 +421,6 @@ function playAllFavorites(shuffle = false) {
   renderQueue();
   saveState();
 }
-function emptyQueue() {
-  // Clear the queue array
-  queue = [];
-  
-  // Update the queue UI
-  renderQueue();
-  
-  // Save the new state to localStorage
-  saveState();
-  
-  // Show a notification to inform the user
-  showNotification('Queue has been emptied!');
-}
-
 
 function loadFavorites() {
   libraryView.style.display = 'block';
@@ -393,7 +442,6 @@ function createPlaylist(name) {
   if (name.trim()) {
     playlists.push({ name, songs: [] });
     saveState();
-    // Update libraryView if currently showing Playlists
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
       loadPlaylists();
     }
@@ -409,7 +457,6 @@ function addToPlaylist(playlistIdx, songId) {
   if (song) {
     playlists[playlistIdx].songs.push(song);
     saveState();
-    // Update libraryView if currently showing Playlists
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
       loadPlaylists();
     }
@@ -528,16 +575,24 @@ function formatTime(seconds) {
 // ==== Event Listeners ====
 moreBtn.addEventListener('click', loadMoreSongs);
 audioPlayer.addEventListener('timeupdate', updateProgress);
-audioPlayer.addEventListener('loadedmetadata', updateDuration);
+audioPlayer
+
+.addEventListener('loadedmetadata', updateDuration);
 audioPlayer.addEventListener('ended', playNext);
 audioPlayer.addEventListener('play', () => {
   isPlaying = true;
   playerBar.classList.add('playing');
+  if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
+    updateBackground(songHistory[currentSongIndex]);
+  }
 });
 audioPlayer.addEventListener('pause', () => {
   isPlaying = false;
   playerBar.classList.remove('playing');
+  document.body.style.background = `url('/public/pause.gif') no-repeat center center fixed`;
+  document.body.style.backgroundSize = 'cover';
+  document.body.style.backgroundColor = 'transparent';
 });
 searchInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') searchSongs();
-});
+}); 
