@@ -25,7 +25,7 @@ let currentPage = 0;
 let isPlaying = false;
 
 // Set static background
-document.body.style.background = `url('/public/normal.png') no-repeat center center fixed`;
+document.body.style.background = `url('/public/default.png') no-repeat center center fixed`;
 document.body.style.backgroundSize = 'cover';
 document.body.style.backgroundColor = 'transparent';
 
