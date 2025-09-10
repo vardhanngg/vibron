@@ -1,4 +1,3 @@
-
 // ==== State ====
 let songHistory = JSON.parse(localStorage.getItem('songHistory') || '[]');
 let currentSongIndex = parseInt(localStorage.getItem('currentSongIndex') || '-1');
@@ -50,7 +49,7 @@ function saveState() {
 // ==== Search & Fetch ====
 async function searchSongs() {
   const query = searchInput.value.trim();
-  if (!query) return showNotification('Please enter a search term.');
+  if (!query) return;
 
   currentQuery = query;
   currentPage = 0;
@@ -67,10 +66,8 @@ async function fetchResults() {
     if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
 
     const data = await response.json();
-    console.log('[client] Fetch results response:', data);
 
     if (!data.songs?.results?.length && !data.artists?.results?.length && !data.albums?.results?.length) {
-      showNotification('No more results found');
       moreBtn.style.display = 'none';
       return;
     }
@@ -79,8 +76,82 @@ async function fetchResults() {
     moreBtn.style.display = data.songs.next || data.artists.next || data.albums.next ? 'block' : 'none';
     currentPage++;
   } catch (err) {
-    console.error('[client] Error fetching results:', err);
-    showNotification('Error fetching results. Check console.');
+    moreBtn.style.display = 'none';
+    return;
+  }
+}
+
+async function fetchArtistSongs(artistId, artistName) {
+  try {
+    const response = await fetch(`/api/artist/${encodeURIComponent(artistId)}`);
+    if (!response.ok) throw new Error(`Artist fetch failed: ${response.statusText}`);
+
+    const data = await response.json();
+    resultsList.innerHTML = '';
+    libraryView.style.display = 'none';
+    searchInput.value = `Songs by ${artistName}`;
+    moreBtn.style.display = 'none'; // No pagination for artist songs
+
+    if (data.songs?.results?.length) {
+      data.songs.results.forEach(song => {
+        if (!songHistory.some(s => s.id === song.id)) {
+          songHistory.push(song);
+        }
+        const card = document.createElement('div');
+        card.classList.add('song-card');
+        card.innerHTML = `
+          <img src="${song.image || 'default.png'}" alt="${song.title}" />
+          <div class="song-title">${song.title}</div>
+          <div class="artist-name">${song.artist}</div>
+          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
+          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === song.id) ? ' favorited' : ''}"></i></button>
+        `;
+        card.addEventListener('click', () => playSong(song, true));
+        resultsList.appendChild(card);
+      });
+    } else {
+      resultsList.innerHTML = '<span>No songs found for this artist.</span>';
+    }
+    saveState();
+  } catch (err) {
+    resultsList.innerHTML = '<span>Error loading artist songs.</span>';
+  }
+}
+
+async function fetchAlbumSongs(albumId, albumTitle) {
+  try {
+    const response = await fetch(`/api/album/${encodeURIComponent(albumId)}`);
+    if (!response.ok) throw new Error(`Album fetch failed: ${response.statusText}`);
+
+    const data = await response.json();
+    resultsList.innerHTML = '';
+    libraryView.style.display = 'none';
+    searchInput.value = `Songs from ${albumTitle}`;
+    moreBtn.style.display = 'none'; // No pagination for album songs
+
+    if (data.songs?.results?.length) {
+      data.songs.results.forEach(song => {
+        if (!songHistory.some(s => s.id === song.id)) {
+          songHistory.push(song);
+        }
+        const card = document.createElement('div');
+        card.classList.add('song-card');
+        card.innerHTML = `
+          <img src="${song.image || 'default.png'}" alt="${song.title}" />
+          <div class="song-title">${song.title}</div>
+          <div class="artist-name">${song.artist}</div>
+          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
+          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === song.id) ? ' favorited' : ''}"></i></button>
+        `;
+        card.addEventListener('click', () => playSong(song, true));
+        resultsList.appendChild(card);
+      });
+    } else {
+      resultsList.innerHTML = '<span>No songs found in this album.</span>';
+    }
+    saveState();
+  } catch (err) {
+    resultsList.innerHTML = '<span>Error loading album songs.</span>';
   }
 }
 
@@ -116,10 +187,7 @@ function displayResults(data) {
       <div class="artist-title">${artist.name}</div>
       <div class="artist-role">${artist.role}</div>
     `;
-    card.addEventListener('click', () => {
-      searchInput.value = artist.name;
-      searchSongs();
-    });
+    card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
     resultsList.appendChild(card);
   });
 
@@ -133,10 +201,7 @@ function displayResults(data) {
       <div class="album-artists">${album.primaryArtists}</div>
       <div class="album-year">${album.year} (${album.songCount} songs)</div>
     `;
-    card.addEventListener('click', () => {
-      searchInput.value = album.title;
-      searchSongs();
-    });
+    card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
     resultsList.appendChild(card);
   });
 
@@ -170,10 +235,7 @@ function playSong(song, fromSearch = false) {
   }
 
   audioPlayer.src = song.audioUrl;
-  audioPlayer.play().catch(err => {
-    console.error('Playback error:', err);
-    showNotification('Failed to play song. Check console.');
-  });
+  audioPlayer.play().catch(() => {});
 
   albumArt.src = song.image || 'default.png';
   nowPlaying.textContent = song.title;
@@ -237,7 +299,7 @@ function playPause() {
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
     playerBar.classList.remove('playing');
   } else {
-    audioPlayer.play().catch(err => console.error(err));
+    audioPlayer.play().catch(() => {});
     playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
     playerBar.classList.add('playing');
   }
@@ -272,7 +334,6 @@ function addToQueue(songId) {
     queue.push(song);
     renderQueue();
     saveState();
-    console.log('Added to queue:', song.title);
   }
 }
 
@@ -288,7 +349,7 @@ async function autoAddSimilar(currentSong) {
       }
     });
   } catch (err) {
-    console.error('Auto-add failed:', err);
+    // Silently fail
   }
 }
 
