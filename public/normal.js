@@ -83,30 +83,41 @@ async function fetchResults() {
 
 async function fetchArtistSongs(artistId, artistName) {
   try {
-    const response = await fetch(`/api/artist/${encodeURIComponent(artistId)}`);
+    const response = await fetch(`/api/artists/${encodeURIComponent(artistId)}/songs?page=0&sortBy=popularity&sortOrder=desc`);
     if (!response.ok) throw new Error(`Artist fetch failed: ${response.statusText}`);
 
     const data = await response.json();
+    const songs = data.data?.songs || [];
+
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
     searchInput.value = `Songs by ${artistName}`;
-    moreBtn.style.display = 'none'; // No pagination for artist songs
+    moreBtn.style.display = 'none';
 
-    if (data.songs?.results?.length) {
-      data.songs.results.forEach(song => {
-        if (!songHistory.some(s => s.id === song.id)) {
-          songHistory.push(song);
+    if (songs.length) {
+      songs.forEach(song => {
+        const normalizedSong = {
+          id: song.id,
+          title: song.name,
+          artist: song.artists?.primary?.map(a => a.name).join(', ') || 'Unknown',
+          image: song.image?.[0]?.url || 'default.png',
+          audioUrl: song.downloadUrl?.[0]?.url || ''
+        };
+
+        if (!songHistory.some(s => s.id === normalizedSong.id)) {
+          songHistory.push(normalizedSong);
         }
+
         const card = document.createElement('div');
         card.classList.add('song-card');
         card.innerHTML = `
-          <img src="${song.image || 'default.png'}" alt="${song.title}" />
-          <div class="song-title">${song.title}</div>
-          <div class="artist-name">${song.artist}</div>
-          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
-          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === song.id) ? ' favorited' : ''}"></i></button>
+          <img src="${normalizedSong.image}" alt="${normalizedSong.title}" />
+          <div class="song-title">${normalizedSong.title}</div>
+          <div class="artist-name">${normalizedSong.artist}</div>
+          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${normalizedSong.id}')"><i class="fa-solid fa-plus"></i></button>
+          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${normalizedSong.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === normalizedSong.id) ? ' favorited' : ''}"></i></button>
         `;
-        card.addEventListener('click', () => playSong(song, true));
+        card.addEventListener('click', () => playSong(normalizedSong, true));
         resultsList.appendChild(card);
       });
     } else {
@@ -115,35 +126,48 @@ async function fetchArtistSongs(artistId, artistName) {
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading artist songs.</span>';
+    console.error(err);
   }
 }
 
+
 async function fetchAlbumSongs(albumId, albumTitle) {
   try {
-    const response = await fetch(`/api/album/${encodeURIComponent(albumId)}`);
+    const response = await fetch(`/api/albums/${encodeURIComponent(albumId)}`);
     if (!response.ok) throw new Error(`Album fetch failed: ${response.statusText}`);
 
     const data = await response.json();
+    const songs = data.data?.songs || [];
+
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
     searchInput.value = `Songs from ${albumTitle}`;
-    moreBtn.style.display = 'none'; // No pagination for album songs
+    moreBtn.style.display = 'none';
 
-    if (data.songs?.results?.length) {
-      data.songs.results.forEach(song => {
-        if (!songHistory.some(s => s.id === song.id)) {
-          songHistory.push(song);
+    if (songs.length) {
+      songs.forEach(song => {
+        const normalizedSong = {
+          id: song.id,
+          title: song.name,
+          artist: song.artists?.primary?.map(a => a.name).join(', ') || 'Unknown',
+          image: song.image?.[0]?.url || 'default.png',
+          audioUrl: song.downloadUrl?.[0]?.url || ''
+        };
+
+        if (!songHistory.some(s => s.id === normalizedSong.id)) {
+          songHistory.push(normalizedSong);
         }
+
         const card = document.createElement('div');
         card.classList.add('song-card');
         card.innerHTML = `
-          <img src="${song.image || 'default.png'}" alt="${song.title}" />
-          <div class="song-title">${song.title}</div>
-          <div class="artist-name">${song.artist}</div>
-          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
-          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === song.id) ? ' favorited' : ''}"></i></button>
+          <img src="${normalizedSong.image}" alt="${normalizedSong.title}" />
+          <div class="song-title">${normalizedSong.title}</div>
+          <div class="artist-name">${normalizedSong.artist}</div>
+          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${normalizedSong.id}')"><i class="fa-solid fa-plus"></i></button>
+          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${normalizedSong.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === normalizedSong.id) ? ' favorited' : ''}"></i></button>
         `;
-        card.addEventListener('click', () => playSong(song, true));
+        card.addEventListener('click', () => playSong(normalizedSong, true));
         resultsList.appendChild(card);
       });
     } else {
@@ -152,6 +176,7 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading album songs.</span>';
+    console.error(err);
   }
 }
 
