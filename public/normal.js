@@ -24,6 +24,11 @@ let currentQuery = '';
 let currentPage = 0;
 let isPlaying = false;
 
+// Set static background
+document.body.style.background = `url('/public/normal.png') no-repeat center center fixed`;
+document.body.style.backgroundSize = 'cover';
+document.body.style.backgroundColor = 'transparent';
+
 // ==== Initialization ====
 window.addEventListener('load', () => {
   libraryView.style.display = 'none';
@@ -129,7 +134,6 @@ async function fetchArtistSongs(artistId, artistName) {
     console.error(err);
   }
 }
-
 
 async function fetchAlbumSongs(albumId, albumTitle) {
   try {
@@ -247,8 +251,7 @@ function loadSongWithoutPlaying(song) {
   playerBar.classList.add('playing');
   isPlaying = false;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  //updateBackground(song);
-  //updateFavoriteButton();
+  updateFavoriteButton();
   saveState();
 }
 
@@ -269,7 +272,6 @@ function playSong(song, fromSearch = false) {
   playerBar.classList.add('playing');
   isPlaying = true;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-  //updateBackground(song);
   updateFavoriteButton();
 
   if (fromSearch) {
@@ -282,40 +284,6 @@ function playSong(song, fromSearch = false) {
   }
 
   saveState();
-}
-
-function updateBackground(song) {
-  const artistLower = song.artist.toLowerCase();
-  const titleLower = song.title.toLowerCase();
-  const moodMap = {
-    happy: ['party', 'dance', 'upbeat'],
-    sad: ['sad', 'melancholy'],
-    angry: ['item', 'rock', 'metal'],
-    neutral: ['love', 'chill'],
-    surprised: ['mass', 'energetic'],
-    disgusted: ['instrumental', 'classical'],
-    fearful: ['romantic', 'ballad']
-  };
-  let mood = 'neutral';
-  for (const [moodKey, keywords] of Object.entries(moodMap)) {
-    if (keywords.some(k => artistLower.includes(k) || titleLower.includes(k))) {
-      mood = moodKey;
-      break;
-    }
-  }
-  const moodToImage = {
-    happy: 'party.gif',
-    sad: 'sad.gif',
-    angry: 'item.gif',
-    neutral: 'love.gif',
-    surprised: 'mass.gif',
-    disgusted: 'instruments.gif',
-    fearful: 'romantic.gif'
-  };
-  const imageName = moodToImage[mood] || 'love.gif';
-  document.body.style.background = `url('/public/${imageName}') no-repeat center center fixed`;
-  document.body.style.backgroundSize = 'cover';
-  document.body.style.backgroundColor = 'transparent';
 }
 
 function playPause() {
@@ -702,16 +670,10 @@ audioPlayer.addEventListener('ended', playNext);
 audioPlayer.addEventListener('play', () => {
   isPlaying = true;
   playerBar.classList.add('playing');
-  if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
-    updateBackground(songHistory[currentSongIndex]);
-  }
 });
 audioPlayer.addEventListener('pause', () => {
   isPlaying = false;
   playerBar.classList.remove('playing');
-  document.body.style.background = `url('/public/pause.gif') no-repeat center center fixed`;
-  document.body.style.backgroundSize = 'cover';
-  document.body.style.backgroundColor = 'transparent';
 });
 searchInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') searchSongs();
