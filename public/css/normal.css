@@ -283,6 +283,18 @@ body {
   margin: 1rem auto;
   animation: fadeIn 0.5s ease-out;
 }
+#song-list h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 1.5rem 0 0.5rem;
+  grid-column: 1 / -1; /* Span all grid columns */
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 0.25rem;
+}
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }

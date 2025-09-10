@@ -189,10 +189,19 @@ function loadMoreResults() {
 }
 
 function displayResults(data) {
-  // Display songs
-  data.songs.results.forEach(song => {
-    if (!songHistory.some(s => s.id === song.id)) {
-      songHistory.push(song);
+  // Clear previous results
+  resultsList.innerHTML = '';
+
+  // Songs Section
+  if (data.songs.results.length > 0) {
+    const songsHeader = document.createElement('h3');
+    songsHeader.textContent = 'Songs';
+    resultsList.appendChild(songsHeader);
+
+    data.songs.results.forEach(song => {
+      if (!songHistory.some(s => s.id === song.id)) {
+        songHistory.push(song);
+      }
       const card = document.createElement('div');
       card.classList.add('song-card');
       card.innerHTML = `
@@ -204,35 +213,52 @@ function displayResults(data) {
       `;
       card.addEventListener('click', () => playSong(song, true));
       resultsList.appendChild(card);
-    }
-  });
+    });
+  }
 
-  // Display artists
-  data.artists.results.forEach(artist => {
-    const card = document.createElement('div');
-    card.classList.add('artist-card');
-    card.innerHTML = `
-      <img src="${artist.image || 'default.png'}" alt="${artist.name}" />
-      <div class="artist-title">${artist.name}</div>
-      <div class="artist-role">${artist.role}</div>
-    `;
-    card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
-    resultsList.appendChild(card);
-  });
+  // Artists Section
+  if (data.artists.results.length > 0) {
+    const artistsHeader = document.createElement('h3');
+    artistsHeader.textContent = 'Artists';
+    resultsList.appendChild(artistsHeader);
 
-  // Display albums
-  data.albums.results.forEach(album => {
-    const card = document.createElement('div');
-    card.classList.add('album-card');
-    card.innerHTML = `
-      <img src="${album.image || 'default.png'}" alt="${album.title}" />
-      <div class="album-title">${album.title}</div>
-      <div class="album-artists">${album.primaryArtists}</div>
-      <div class="album-year">${album.year} (${album.songCount} songs)</div>
-    `;
-    card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
-    resultsList.appendChild(card);
-  });
+    data.artists.results.forEach(artist => {
+      const card = document.createElement('div');
+      card.classList.add('artist-card');
+      card.innerHTML = `
+        <img src="${artist.image || 'default.png'}" alt="${artist.name}" />
+        <div class="artist-title">${artist.name}</div>
+        <div class="artist-role">${artist.role}</div>
+      `;
+      card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
+      resultsList.appendChild(card);
+    });
+  }
+
+  // Albums Section
+  if (data.albums.results.length > 0) {
+    const albumsHeader = document.createElement('h3');
+    albumsHeader.textContent = 'Albums';
+    resultsList.appendChild(albumsHeader);
+
+    data.albums.results.forEach(album => {
+      const card = document.createElement('div');
+      card.classList.add('album-card');
+      card.innerHTML = `
+        <img src="${album.image || 'default.png'}" alt="${album.title}" />
+        <div class="album-title">${album.title}</div>
+        <div class="album-artists">${album.primaryArtists}</div>
+        <div class="album-year">${album.year} (${album.songCount} songs)</div>
+      `;
+      card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
+      resultsList.appendChild(card);
+    });
+  }
+
+  // Show message if no results
+  if (!data.songs.results.length && !data.artists.results.length && !data.albums.results.length) {
+    resultsList.innerHTML = '<span>No results found.</span>';
+  }
 
   saveState();
 }
