@@ -247,8 +247,8 @@ function loadSongWithoutPlaying(song) {
   playerBar.classList.add('playing');
   isPlaying = false;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  updateBackground(song);
-  updateFavoriteButton();
+  //updateBackground(song);
+  //updateFavoriteButton();
   saveState();
 }
 
@@ -269,7 +269,7 @@ function playSong(song, fromSearch = false) {
   playerBar.classList.add('playing');
   isPlaying = true;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-  updateBackground(song);
+  //updateBackground(song);
   updateFavoriteButton();
 
   if (fromSearch) {
