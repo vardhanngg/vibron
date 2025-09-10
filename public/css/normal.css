@@ -15,7 +15,7 @@
 
 body {
   margin: 0;
-  padding: 60px 0 90px 0; /* Adjusted for player height */
+  padding: 60px 0 90px 0; /* Adjusted for top bar and player height */
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   background-image: url('/public/default.png');
   background-size: cover;
@@ -24,7 +24,7 @@ body {
   background-attachment: fixed;
   color: var(--text);
   overflow-x: hidden;
-  -webkit-font-smoothing: antialiased; /* Better text rendering */
+  -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
 }
 
@@ -36,11 +36,11 @@ body {
   left: 0;
   right: 0;
   height: 60px;
-  background: transparent; /* Slightly more opaque for better contrast */
-  backdrop-filter: blur(2px); /* Stronger blur for premium feel */
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* Changed: Left-align branding + toggle */
+  justify-content: flex-start;
   padding: 0 20px;
   z-index: 1000;
   box-shadow: var(--shadow-light);
@@ -57,7 +57,7 @@ body {
   width: 36px;
   height: 36px;
   object-fit: contain;
-  transition: transform 0.2s ease; /* Subtle animation */
+  transition: transform 0.2s ease;
 }
 
 .logo:hover {
@@ -78,7 +78,7 @@ body {
 .switch-btn {
   background: linear-gradient(45deg, var(--accent-2), var(--accent));
   color: white;
-  border-radius: 20px; /* More pill-shaped for minimalism */
+  border-radius: 20px;
   padding: 8px 16px;
   font-weight: 600;
   font-size: 0.9rem;
@@ -86,7 +86,7 @@ body {
   box-shadow: 0 4px 12px rgba(255, 64, 129, 0.3);
   text-decoration: none;
   transition: all 0.2s ease;
-  margin-left: auto; /* Pull switch button to the right */
+  margin-left: auto;
 }
 
 .switch-btn:hover {
@@ -105,7 +105,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-left: 10px; /* Space under Vibron name */
+  margin-left: 10px;
   transition: all 0.2s ease;
 }
 
@@ -116,7 +116,7 @@ body {
 }
 
 .sidebar-toggle .fallback-text {
-  display: none; /* Hidden if icon loads */
+  display: none;
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -125,7 +125,6 @@ body {
   display: inline-block;
 }
 
-/* If Font Awesome fails, show fallback text */
 .sidebar-toggle.no-icon .fallback-text {
   display: inline-block;
 }
@@ -135,129 +134,80 @@ body {
 }
 
 /* =================== */
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 60px;
+  bottom: 90px;
+  width: 220px;
+  background: rgba(25, 27, 36, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 1rem;
+  overflow-y: auto;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4);
+  z-index: 900;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem 0;
+}
+
+.sidebar li {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar li:hover {
+  background: rgba(255, 64, 129, 0.1);
+  color: var(--accent);
+}
+
+.sidebar-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--glass-bg);
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+
+.sidebar-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* =================== */
 /* Header */
 .glass-header {
   text-align: center;
-  padding: 2rem 1rem 1.5rem 1rem; /* Slightly more bottom space */
-  backdrop-filter: blur(2px);
-  background: transparent;
+  padding: 2rem 1rem 1.5rem 1rem;
+  backdrop-filter: blur(12px);
+  background: var(--glass-bg);
   border-radius: 20px;
   margin: 1rem auto;
   max-width: 90%;
   box-shadow: var(--shadow-light);
 }
 
-/* .remove-fav (Remove from Favorites) button */
-.remove-fav {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2); /* Glassmorphism */
-  backdrop-filter: blur(10px); /* Glass effect */
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 16px;
-  opacity: 0.7;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.remove-fav:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-.remove-fav:before {
-  content: "\f1f8"; /* Trash icon (FontAwesome) */
-  font-family: "FontAwesome";
-  font-size: 20px;
-}
-
-/* .remove-from-playlist (Remove from Playlist) button */
-.remove-from-playlist {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2); /* Glassmorphism */
-  backdrop-filter: blur(10px); /* Glass effect */
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 16px;
-  opacity: 0.7;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.remove-from-playlist:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-.remove-from-playlist:before {
-  content: "\f1f8"; /* Trash icon (FontAwesome) */
-  font-family: "FontAwesome";
-  font-size: 20px;
-}
-
-/* .delete-playlist (Delete Playlist) button */
-.delete-playlist {
-  padding: 10px 15px;
-  background-color: var(--accent); /* Accent color */
-  color: #fff;
-  font-weight: bold;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.delete-playlist:hover {
-  background-color: darken(var(--accent), 10%);
-}
-
-.delete-playlist:focus {
-  outline: none;
-}
-
-/* .playlist-song (Wrapper for each song in loadPlaylists) */
-.playlist-song {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.1); /* Light background for song item */
-  border-radius: 6px;
-  margin-bottom: 10px;
-  transition: background 0.3s ease;
-}
-
-.playlist-song:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.playlist-song .remove-from-playlist {
-  margin-left: 10px;
-  cursor: pointer;
-}
-
-.playlist-song .remove-fav {
-  margin-left: 10px;
-  cursor: pointer;
-}
-
 .glass-header h1 {
   font-size: 2.5rem;
   margin: 0;
   letter-spacing: 1px;
-  background: linear-gradient(45deg, var(--accent), var(--accent-2)); /* Gradient text for flair */
+  background: linear-gradient(45deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -279,7 +229,7 @@ body {
   backdrop-filter: blur(15px);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: 25px; /* Softer, pill-like */
+  border-radius: 25px;
   padding: 0.5rem;
   box-shadow: var(--shadow-light);
   transition: all 0.3s ease;
@@ -323,15 +273,15 @@ body {
 }
 
 /* =================== */
-/* Song List */
+/* Song, Artist, and Album Cards */
 #song-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* Slightly larger for better touch targets */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1.5rem;
   width: 90%;
   max-width: 1000px;
   margin: 1rem auto;
-  animation: fadeIn 0.5s ease-out; /* Subtle entry animation */
+  animation: fadeIn 0.5s ease-out;
 }
 
 @keyframes fadeIn {
@@ -339,7 +289,7 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.song-card {
+.song-card, .artist-card, .album-card {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
@@ -348,39 +298,38 @@ body {
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  position: relative; /* For buttons */
+  position: relative;
 }
 
-.song-card:hover {
+.song-card:hover, .artist-card:hover, .album-card:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow: var(--shadow-glow);
   border-color: var(--accent);
 }
 
-.song-card img {
+.song-card img, .artist-card img, .album-card img {
   width: 100%;
-  height: 120px; /* Fixed height for uniformity */
+  height: 120px;
   object-fit: cover;
   border-radius: 10px;
   transition: transform 0.3s ease;
 }
 
-.song-card:hover img {
+.song-card:hover img, .artist-card:hover img, .album-card:hover img {
   transform: scale(1.05);
 }
 
-.song-card .song-title {
+.song-title, .artist-title, .album-title {
   font-size: 0.9rem;
   margin: 0.75rem 0 0.25rem 0;
   font-weight: 500;
 }
 
-.song-card .artist-name {
+.artist-name, .artist-role, .album-artists, .album-year {
   font-size: 0.8rem;
   color: var(--muted);
 }
 
-/* Buttons in cards (e.g., add to queue/fav) */
 .add-queue, .add-fav {
   position: absolute;
   top: 10px;
@@ -392,7 +341,7 @@ body {
   padding: 0.5rem;
   border-radius: 50%;
   transition: all 0.2s ease;
-  opacity: 0; /* Hidden by default, show on hover */
+  opacity: 0;
 }
 
 .song-card:hover .add-queue,
@@ -409,7 +358,7 @@ body {
 .add-queue { right: 10px; }
 .add-fav { right: 50px; }
 .add-fav.favorited {
-  background: #ff2a4a; /* Filled heart for favorited state */
+  background: #ff2a4a;
   color: white;
 }
 
@@ -435,17 +384,17 @@ body {
 }
 
 /* =================== */
-/* Player Footer (Enhanced for Hayasaka-like horizontal layout) */
+/* Player Footer */
 #player-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 90px; /* Taller for better touch */
+  height: 90px;
   background: rgba(25, 27, 36, 0.95);
   backdrop-filter: blur(20px);
   display: flex;
-  flex-direction: row; /* Horizontal on desktop */
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   padding: 0 1rem;
@@ -466,8 +415,8 @@ body {
   height: 50px;
   border-radius: 8px;
   margin-right: 1rem;
-  transition: transform 0.3s ease; /* Rotate on play */
-  animation: rotate 20s linear infinite paused; /* Vinyl spin */
+  transition: transform 0.3s ease;
+  animation: rotate 20s linear infinite paused;
 }
 
 @keyframes rotate {
@@ -523,11 +472,11 @@ body {
 }
 
 #fav-btn.favorited {
-  background: #ff2a4a; /* Filled heart when favorited */
+  background: #ff2a4a;
   color: white;
 }
 
-/* Progress Bar (Smoother with glow) */
+/* Progress Bar */
 .player-progress {
   position: relative;
   flex: 1;
@@ -569,12 +518,39 @@ body {
   text-align: center;
 }
 
+/* Volume Slider */
+#volume-slider {
+  width: 80px;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  height: 6px;
+  cursor: pointer;
+}
+
+#volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+#volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent);
+}
+
 /* =================== */
-/* Queue Section (Enhanced with animations) */
+/* Queue Section */
 .queue-holder {
   position: fixed;
   right: 1rem;
-  bottom: 100px; /* Adjusted for player height */
+  bottom: 100px;
   width: 300px;
   max-width: 90vw;
   z-index: 999;
@@ -592,35 +568,14 @@ body {
   font-size: 1.2rem;
   box-shadow: 0 4px 15px rgba(255, 64, 129, 0.3);
   transition: all 0.2s ease;
-  display: flex; /* Added for centering */
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .q-open-btn:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(255, 64, 129, 0.4);
-}
-
-/* .empty-queue (Empty Queue Button) */
-.empty-queue {
-  padding: 10px 15px;
-  background-color: var(--accent); /* Accent color */
-  color: #fff;
-  font-weight: bold;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.3s ease;
-}
-
-.empty-queue:hover {
-  background-color: darken(var(--accent), 10%);
-  transform: scale(1.05);
-}
-
-.empty-queue:focus {
-  outline: none;
 }
 
 .queue-container {
@@ -679,7 +634,7 @@ body {
   flex: 1;
 }
 
-.queue-item { /* For dynamic JS items */
+.queue-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -732,8 +687,28 @@ body {
   font-style: italic;
 }
 
+.empty-queue {
+  padding: 10px 15px;
+  background: var(--accent);
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.empty-queue:hover {
+  background: #ff2a4a;
+  transform: scale(1.05);
+}
+
+.empty-queue:focus {
+  outline: none;
+}
+
 /* =================== */
-/* Library View (Favorites and Playlists) */
+/* Library View */
 #library-view {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -798,140 +773,69 @@ body {
   opacity: 0.6;
 }
 
-/* =================== */
-/* Responsive (Mobile-First Refinements) */
-@media screen and (max-width: 768px) {
-  body {
-    padding-bottom: 120px; /* Extra for stacked player */
-  }
-
-  #song-list {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1rem;
-  }
-
-  .queue-holder {
-    width: 100%;
-    right: 0;
-    bottom: 90px; /* Align with player */
-    padding: 0 1rem;
-  }
-
-  .q-open-btn {
-    position: absolute;
-    right: 1rem;
-  }
-
-  .queue-container {
-    width: 100%;
-    max-width: none;
-  }
-
-  #player-bar {
-    flex-direction: column;
-    height: auto;
-    padding: 1rem;
-    gap: 0.5rem;
-  }
-
-  .player-info {
-    max-width: none;
-    justify-content: center;
-  }
-
-  .player-progress {
-    max-width: none;
-    margin: 0;
-    order: -1; /* Progress on top in mobile */
-    width: 100%;
-  }
-
-  .time-display {
-    order: 1;
-  }
-
-  .player-controls {
-    max-width: none;
-    order: 2;
-  }
-
-  .search-container {
-    width: 95%;
-  }
-
-  .glass-header h1 {
-    font-size: 2rem;
-  }
-
-  .sidebar-toggle {
-    padding: 0.5rem; /* Slightly smaller for mobile */
-    margin-left: 5px; /* Tighter spacing on mobile */
-  }
-
-  .switch-btn {
-    padding: 6px 12px; /* Smaller on mobile */
-    font-size: 0.8rem;
-  }
-}
-
-/* Sidebar (Hidden by default on all screens, aligns under hamburger) */
-.sidebar {
-  position: fixed;
-  left: 0;
-  top: 60px; /* Matches top bar height - Home appears just below hamburger */
-  bottom: 90px;
-  width: 220px;
-  background: rgba(25, 27, 36, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 1rem 1rem 1rem 1rem; /* Extra left padding to align under branding */
-  overflow-y: auto;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4);
-  z-index: 900;
-  transform: translateX(-100%); /* Hidden by default */
-  transition: transform 0.3s ease;
-}
-
-.sidebar.open {
-  transform: translateX(0);
-}
-
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1rem 0;
-}
-
-.sidebar li {
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  border-radius: 10px;
-  transition: all 0.2s ease;
+.playlist-song {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  transition: background 0.3s ease;
 }
 
-.sidebar li:hover {
-  background: rgba(255, 64, 129, 0.1);
-  color: var(--accent);
+.playlist-song:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.sidebar-section {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: var(--glass-bg);
-  border-radius: 10px;
-  border: 1px solid var(--glass-border);
+.remove-fav, .remove-from-playlist {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 16px;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.sidebar-section h4 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-  color: var(--muted);
+.remove-fav:hover, .remove-from-playlist:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
-.playlist-item {
-  margin-bottom: 0.75rem;
+.remove-fav::before, .remove-from-playlist::before {
+  content: "\f1f8";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.delete-playlist {
+  padding: 10px 15px;
+  background: var(--accent);
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.delete-playlist:hover {
+  background: #ff2a4a;
+  transform: scale(1.05);
+}
+
+.delete-playlist:focus {
+  outline: none;
 }
 
 /* =================== */
@@ -1017,6 +921,13 @@ body {
   transform: scale(1.05);
 }
 
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
 /* =================== */
 /* Notification */
 .notification {
@@ -1039,10 +950,77 @@ body {
 }
 
 /* =================== */
-/* Modal Buttons (for Playlist Creation Modal) */
-.modal-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+/* Responsive */
+@media screen and (max-width: 768px) {
+  body {
+    padding-bottom: 120px;
+  }
+
+  #song-list {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+  }
+
+  .queue-holder {
+    width: 100%;
+    right: 0;
+    bottom: 90px;
+    padding: 0 1rem;
+  }
+
+  .q-open-btn {
+    position: absolute;
+    right: 1rem;
+  }
+
+  .queue-container {
+    width: 100%;
+    max-width: none;
+  }
+
+  #player-bar {
+    flex-direction: column;
+    height: auto;
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  .player-info {
+    max-width: none;
+    justify-content: center;
+  }
+
+  .player-progress {
+    max-width: none;
+    margin: 0;
+    order: -1;
+    width: 100%;
+  }
+
+  .time-display {
+    order: 1;
+  }
+
+  .player-controls {
+    max-width: none;
+    order: 2;
+  }
+
+  .search-container {
+    width: 95%;
+  }
+
+  .glass-header h1 {
+    font-size: 2rem;
+  }
+
+  .sidebar-toggle {
+    padding: 0.5rem;
+    margin-left: 5px;
+  }
+
+  .switch-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
 }

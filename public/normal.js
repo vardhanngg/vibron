@@ -1,3 +1,4 @@
+
 // ==== State ====
 let songHistory = JSON.parse(localStorage.getItem('songHistory') || '[]');
 let currentSongIndex = parseInt(localStorage.getItem('currentSongIndex') || '-1');
@@ -6,7 +7,7 @@ let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 let playlists = JSON.parse(localStorage.getItem('playlists') || '[]');
 
 const searchInput = document.getElementById('searchInput');
-const songList = document.getElementById('song-list');
+const resultsList = document.getElementById('song-list');
 const libraryView = document.getElementById('library-view');
 const audioPlayer = document.getElementById('audio-player');
 const albumArt = document.getElementById('album-art');
@@ -27,7 +28,7 @@ let isPlaying = false;
 // ==== Initialization ====
 window.addEventListener('load', () => {
   libraryView.style.display = 'none';
-  songList.style.display = 'grid';
+  resultsList.style.display = 'grid';
   renderQueue();
 
   if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
@@ -53,42 +54,43 @@ async function searchSongs() {
 
   currentQuery = query;
   currentPage = 0;
-  songList.innerHTML = '';
+  resultsList.innerHTML = '';
   libraryView.style.display = 'none';
   moreBtn.style.display = 'block';
 
-  await fetchSongs();
+  await fetchResults();
 }
 
-async function fetchSongs() {
+async function fetchResults() {
   try {
     const response = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`);
     if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
 
     const data = await response.json();
-    console.log('[client] Fetch songs response:', data);
+    console.log('[client] Fetch results response:', data);
 
-    if (!data.songs?.results?.length) {
-      showNotification('No more songs found');
+    if (!data.songs?.results?.length && !data.artists?.results?.length && !data.albums?.results?.length) {
+      showNotification('No more results found');
       moreBtn.style.display = 'none';
       return;
     }
 
-    displaySongs(data.songs.results);
-    moreBtn.style.display = data.songs.next ? 'block' : 'none';
+    displayResults(data);
+    moreBtn.style.display = data.songs.next || data.artists.next || data.albums.next ? 'block' : 'none';
     currentPage++;
   } catch (err) {
-    console.error('[client] Error fetching songs:', err);
-    showNotification('Error fetching songs. Check console.');
+    console.error('[client] Error fetching results:', err);
+    showNotification('Error fetching results. Check console.');
   }
 }
 
-function loadMoreSongs() {
-  fetchSongs();
+function loadMoreResults() {
+  fetchResults();
 }
 
-function displaySongs(songs) {
-  songs.forEach(song => {
+function displayResults(data) {
+  // Display songs
+  data.songs.results.forEach(song => {
     if (!songHistory.some(s => s.id === song.id)) {
       songHistory.push(song);
       const card = document.createElement('div');
@@ -101,9 +103,43 @@ function displaySongs(songs) {
         <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === song.id) ? ' favorited' : ''}"></i></button>
       `;
       card.addEventListener('click', () => playSong(song, true));
-      songList.appendChild(card);
+      resultsList.appendChild(card);
     }
   });
+
+  // Display artists
+  data.artists.results.forEach(artist => {
+    const card = document.createElement('div');
+    card.classList.add('artist-card');
+    card.innerHTML = `
+      <img src="${artist.image || 'default.png'}" alt="${artist.name}" />
+      <div class="artist-title">${artist.name}</div>
+      <div class="artist-role">${artist.role}</div>
+    `;
+    card.addEventListener('click', () => {
+      searchInput.value = artist.name;
+      searchSongs();
+    });
+    resultsList.appendChild(card);
+  });
+
+  // Display albums
+  data.albums.results.forEach(album => {
+    const card = document.createElement('div');
+    card.classList.add('album-card');
+    card.innerHTML = `
+      <img src="${album.image || 'default.png'}" alt="${album.title}" />
+      <div class="album-title">${album.title}</div>
+      <div class="album-artists">${album.primaryArtists}</div>
+      <div class="album-year">${album.year} (${album.songCount} songs)</div>
+    `;
+    card.addEventListener('click', () => {
+      searchInput.value = album.title;
+      searchSongs();
+    });
+    resultsList.appendChild(card);
+  });
+
   saveState();
 }
 
@@ -424,7 +460,7 @@ function playAllFavorites(shuffle = false) {
 
 function loadFavorites() {
   libraryView.style.display = 'block';
-  songList.style.display = 'none';
+  resultsList.style.display = 'none';
   libraryView.innerHTML = `
     <h4>Favorites</h4>
     <button onclick="playAllFavorites()" ${favorites.length === 0 ? 'disabled' : ''}>Play All</button>
@@ -490,7 +526,7 @@ function deletePlaylist(playlistIdx) {
 
 function loadPlaylists() {
   libraryView.style.display = 'block';
-  songList.style.display = 'none';
+  resultsList.style.display = 'none';
   libraryView.innerHTML = `
     <h4>Playlists</h4>
     <button onclick="createPlaylistModal()">+ New</button>
@@ -526,7 +562,7 @@ function setVolume(value) {
 function focusSearch() {
   searchInput.focus();
   libraryView.style.display = 'none';
-  songList.style.display = 'grid';
+  resultsList.style.display = 'grid';
 }
 
 function toggleSidebar() {
@@ -573,11 +609,9 @@ function formatTime(seconds) {
 }
 
 // ==== Event Listeners ====
-moreBtn.addEventListener('click', loadMoreSongs);
+moreBtn.addEventListener('click', loadMoreResults);
 audioPlayer.addEventListener('timeupdate', updateProgress);
-audioPlayer
-
-.addEventListener('loadedmetadata', updateDuration);
+audioPlayer.addEventListener('loadedmetadata', updateDuration);
 audioPlayer.addEventListener('ended', playNext);
 audioPlayer.addEventListener('play', () => {
   isPlaying = true;
@@ -595,4 +629,4 @@ audioPlayer.addEventListener('pause', () => {
 });
 searchInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') searchSongs();
-}); 
+});
