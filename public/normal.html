@@ -31,21 +31,40 @@
     </ul>
   </nav>
 
-  <main>
-    <header class="glass-header">
-      <h1>Vibron</h1>
-      <p class="subtitle">Search, stream, and enjoy your music</p>
-    </header>
+<main>
+  <header class="glass-header">
+    <h1 id="greeting">Good afternoon</h1>
+    <p class="subtitle">Search, stream, and enjoy your music</p>
+  </header>
 
-    <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Search for songs, artists, or albums..." />
-      <button onclick="searchSongs()" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
-    </div>
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search for songs, artists, or albums..." />
+    <button onclick="searchSongs()" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+  </div>
 
-    <div id="library-view" style="display: none; width: 90%; max-width: 1000px; margin: 1rem auto;"></div>
-    <div id="song-list" class="song-list"></div>
-    <button id="more" class="load-more" style="display: none;" onclick="loadMoreResults()">Load More</button>
-  </main>
+  <div id="home-content" class="home-content">
+    <section id="listen-again" class="home-section">
+      <h3>Listen Again</h3>
+      <div class="section-list"></div>
+    </section>
+    <section id="trending" class="home-section">
+      <h3>Trending</h3>
+      <div class="section-list"></div>
+    </section>
+    <section id="top-charts" class="home-section">
+      <h3>Top Charts</h3>
+      <div class="section-list"></div>
+    </section>
+    <section id="new-releases" class="home-section">
+      <h3>New Releases</h3>
+      <div class="section-list"></div>
+    </section>
+  </div>
+
+  <div id="library-view" style="display: none; width: 90%; max-width: 1000px; margin: 1rem auto;"></div>
+  <div id="song-list" class="song-list" style="display: none;"></div>
+  <button id="more" class="load-more" style="display: none;" onclick="loadMoreResults()">Load More</button>
+</main>
 
   <div class="queue-holder">
     <div class="q-open-btn" onclick="dropQueue()">Q</div>

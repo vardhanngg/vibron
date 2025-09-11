@@ -1,4 +1,5 @@
-// ==== State ====
+/* =================== */
+/* State */
 let songHistory = JSON.parse(localStorage.getItem('songHistory') || '[]');
 let currentSongIndex = parseInt(localStorage.getItem('currentSongIndex') || '-1');
 let queue = JSON.parse(localStorage.getItem('queue') || '[]');
@@ -24,15 +25,284 @@ let currentQuery = '';
 let currentPage = 0;
 let isPlaying = false;
 
-// Set static background
-document.body.style.background = `url('/public/default.png') no-repeat center center fixed`;
-document.body.style.backgroundSize = 'cover';
-document.body.style.backgroundColor = 'transparent';
+/* =================== */
+/* Greeting */
+function setGreeting() {
+  const greetingElement = document.getElementById('greeting');
+  const hour = new Date().getHours();
+  let greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  greetingElement.textContent = greeting;
+}
 
-// ==== Initialization ====
-window.addEventListener('load', () => {
+/* =================== */
+/* Home Content */
+async function loadHomeContent() {
+  document.getElementById('home-content').style.display = 'block';
+  resultsList.style.display = 'none';
   libraryView.style.display = 'none';
-  resultsList.style.display = 'grid';
+  moreBtn.style.display = 'none';
+
+  await Promise.all([
+    loadListenAgain(),
+    loadTrending(),
+    loadTopCharts(),
+    loadNewReleases()
+  ]);
+}
+
+async function loadListenAgain() {
+  const sectionList = document.querySelector('#listen-again .section-list');
+  sectionList.innerHTML = '';
+
+  const recentSongs = [...new Set(songHistory.map(s => s.id))]
+    .slice(-4)
+    .map(id => songHistory.find(s => s.id === id))
+    .filter(s => s);
+
+  if (recentSongs.length) {
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    recentSongs.forEach(song => {
+      const card = createSongCard(song);
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    sectionList.appendChild(container);
+  } else {
+    sectionList.innerHTML = '<span>No recently played songs.</span>';
+  }
+}
+
+async function loadTrending() {
+  const sectionList = document.querySelector('#trending .section-list');
+  sectionList.innerHTML = '<span>Loading trending songs...</span>';
+  try {
+    const queries = ['trending songs', 'top hits', 'popular songs', 'top 50', 'english top songs'];
+    let data = null;
+    for (const query of queries) {
+      const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(query)}&limit=8`);
+      if (!response.ok) continue;
+      const result = await response.json();
+      if (result.success !== false && (result.songs?.results?.length > 0 || result.albums?.results?.length > 0)) {
+        data = result;
+        break;
+      }
+    }
+    if (!data || (!data.songs?.results?.length && !data.albums?.results?.length)) {
+      sectionList.innerHTML = '<span>No trending songs found. Try searching!</span>';
+      return;
+    }
+
+    const items = data.songs?.results || data.albums?.results || [];
+    sectionList.innerHTML = '';
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    items.forEach(item => {
+      const normalizedItem = normalizeSong(item);
+      if (!songHistory.some(s => s.id === normalizedItem.id)) {
+        songHistory.push(normalizedItem);
+      }
+      const card = createSongCard(normalizedItem);
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    sectionList.appendChild(container);
+  } catch (err) {
+    sectionList.innerHTML = '<span>Error loading trending songs. Try searching!</span>';
+    console.error('Error fetching trending:', err);
+  }
+}
+
+async function loadTopCharts() {
+  const sectionList = document.querySelector('#top-charts .section-list');
+  sectionList.innerHTML = '<span>Loading top charts...</span>';
+  try {
+    const queries = ['top charts', 'trending playlists', 'top english playlists', 'top 50', 'weekly top songs'];
+    let data = null;
+    for (const query of queries) {
+      const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(query)}&limit=6`);
+      if (!response.ok) continue;
+      const result = await response.json();
+      if (result.success !== false && (result.playlists?.results?.length > 0 || result.songs?.results?.length > 0 || result.albums?.results?.length > 0)) {
+        data = result;
+        break;
+      }
+    }
+    if (!data || (!data.playlists?.results?.length && !data.songs?.results?.length && !data.albums?.results?.length)) {
+      sectionList.innerHTML = '<span>No top charts found. Try searching!</span>';
+      return;
+    }
+
+    let items = data.playlists?.results || data.songs?.results || data.albums?.results || [];
+    sectionList.innerHTML = '';
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const normalizedItem = normalizeSong(item);
+      card.innerHTML = `
+        <img src="${item.image?.[2]?.url || item.image || 'default.png'}" alt="${item.title}" />
+        <div class="card-body">
+          <div class="song-name">${item.title}</div>
+          <div class="artist-name">${item.primaryArtists || item.language || 'Various'}</div>
+        </div>
+        <div class="play-down">
+          <div class="play-btn" onclick="event.stopPropagation(); searchInput.value = '${item.title}'; searchSongs();"><i class="fa-solid fa-play"></i></div>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        searchInput.value = item.title;
+        searchSongs();
+      });
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    sectionList.appendChild(container);
+  } catch (err) {
+    sectionList.innerHTML = '<span>Error loading top charts. Try searching!</span>';
+    console.error('Error fetching top charts:', err);
+  }
+}
+
+async function loadNewReleases() {
+  const sectionList = document.querySelector('#new-releases .section-list');
+  sectionList.innerHTML = '<span>Loading new releases...</span>';
+  try {
+    const queries = ['new releases', 'latest albums', 'new english songs', 'latest songs', 'new hindi songs'];
+    let data = null;
+    for (const query of queries) {
+      const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(query)}&limit=6`);
+      if (!response.ok) continue;
+      const result = await response.json();
+      if (result.success !== false && (result.albums?.results?.length > 0 || result.songs?.results?.length > 0)) {
+        data = result;
+        break;
+      }
+    }
+    if (!data || (!data.albums?.results?.length && !data.songs?.results?.length)) {
+      sectionList.innerHTML = '<span>No new releases found. Try searching!</span>';
+      return;
+    }
+
+    let items = data.albums?.results || data.songs?.results || [];
+    sectionList.innerHTML = '';
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const normalizedItem = normalizeSong(item);
+      card.innerHTML = `
+        <img src="${item.image?.[2]?.url || item.image || 'default.png'}" alt="${item.title}" />
+        <div class="card-body">
+          <div class="song-name">${item.title}</div>
+          <div class="artist-name">${item.primaryArtists || 'Various'}</div>
+        </div>
+        <div class="play-down">
+          <div class="play-btn" onclick="event.stopPropagation(); fetchAlbumSongs('${item.id}', '${item.title}')"><i class="fa-solid fa-play"></i></div>
+        </div>
+      `;
+      card.addEventListener('click', () => fetchAlbumSongs(item.id, item.title));
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    sectionList.appendChild(container);
+  } catch (err) {
+    sectionList.innerHTML = '<span>Error loading new releases. Try searching!</span>';
+    console.error('Error fetching new releases:', err);
+  }
+}
+
+async function fetchPlaylistSongs(playlistId, playlistTitle) {
+  try {
+    const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(playlistTitle)}&limit=10`);
+    if (!response.ok) throw new Error(`Playlist fetch failed: ${response.statusText}`);
+    const data = await response.json();
+    const songs = data.songs?.results || data.playlists?.results?.find(p => p.id === playlistId)?.songs || [];
+
+    resultsList.innerHTML = '';
+    libraryView.style.display = 'none';
+    searchInput.value = `Songs from ${playlistTitle}`;
+    moreBtn.style.display = 'none';
+
+    if (songs.length) {
+      const container = document.createElement('div');
+      container.className = 'song-container';
+      const cards = document.createElement('div');
+      cards.className = 'cards';
+      songs.forEach(song => {
+        const normalizedSong = normalizeSong(song);
+        if (!songHistory.some(s => s.id === normalizedSong.id)) {
+          songHistory.push(normalizedSong);
+        }
+        const card = createSongCard(normalizedSong);
+        cards.appendChild(card);
+      });
+      container.appendChild(cards);
+      resultsList.appendChild(container);
+    } else {
+      resultsList.innerHTML = '<span>No songs found in this playlist.</span>';
+    }
+    resultsList.style.display = 'block';
+    saveState();
+  } catch (err) {
+    resultsList.innerHTML = '<span>Error loading playlist songs.</span>';
+    console.error('Error fetching playlist songs:', err);
+  }
+}
+
+function normalizeSong(song) {
+  return {
+    id: song.id || song.encrypted_id || 'unknown',
+    title: song.name || song.title || 'Unknown',
+    artist: Array.isArray(song.artists?.primary)
+      ? song.artists.primary.map(a => a.name).join(', ')
+      : (song.primaryArtists || song.artist || 'Unknown'),
+    image: Array.isArray(song.image) && song.image.length
+      ? (song.image.find(img => img.quality === '500x500')?.url || song.image[song.image.length - 1]?.url || 'default.png')
+      : (song.image || 'default.png'),
+    audioUrl: Array.isArray(song.downloadUrl)
+      ? (song.downloadUrl.find(url => url.quality === '320kbps' || url.bitrate === '320')?.url || song.downloadUrl[0]?.url || '')
+      : (song.audioUrl || song.media_url || song.url || '')
+  };
+}
+
+function createSongCard(song) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <img src="${song.image || 'default.png'}" alt="${song.title}" />
+    <div class="card-body">
+      <div class="song-name">${song.title}</div>
+      <div class="artist-name">${song.artist}</div>
+    </div>
+    <div class="play-down">
+      <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, true)"><i class="fa-solid fa-play"></i></div>
+      <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
+      <div class="add-fav${favorites.some(f => f.id === song.id) ? ' favorited' : ''}" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></div>
+    </div>
+  `;
+  card.addEventListener('click', () => playSong(song, true));
+  return card;
+}
+
+/* =================== */
+/* Initialization */
+window.addEventListener('load', () => {
+  setGreeting();
+  loadHomeContent();
   renderQueue();
 
   if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
@@ -42,7 +312,8 @@ window.addEventListener('load', () => {
   setInterval(saveState, 5000);
 });
 
-// ==== Save State ====
+/* =================== */
+/* Save State */
 function saveState() {
   localStorage.setItem('songHistory', JSON.stringify(songHistory));
   localStorage.setItem('currentSongIndex', currentSongIndex.toString());
@@ -51,7 +322,8 @@ function saveState() {
   localStorage.setItem('playlists', JSON.stringify(playlists));
 }
 
-// ==== Search & Fetch ====
+/* =================== */
+/* Search & Fetch */
 async function searchSongs() {
   const query = searchInput.value.trim();
   if (!query) return;
@@ -60,7 +332,9 @@ async function searchSongs() {
   currentPage = 0;
   resultsList.innerHTML = '';
   libraryView.style.display = 'none';
+  document.getElementById('home-content').style.display = 'none';
   moreBtn.style.display = 'block';
+  resultsList.style.display = 'block';
 
   await fetchResults();
 }
@@ -74,6 +348,7 @@ async function fetchResults() {
 
     if (!data.songs?.results?.length && !data.artists?.results?.length && !data.albums?.results?.length) {
       moreBtn.style.display = 'none';
+      resultsList.innerHTML = '<span>No results found.</span>';
       return;
     }
 
@@ -82,9 +357,11 @@ async function fetchResults() {
     currentPage++;
   } catch (err) {
     moreBtn.style.display = 'none';
-    return;
+    resultsList.innerHTML = '<span>Error loading results.</span>';
+    console.error('Error fetching results:', err);
   }
 }
+
 async function fetchArtistSongs(artistId, artistName) {
   try {
     const response = await fetch(`https://apivibron.vercel.app/api/artists/${artistId}/songs`);
@@ -95,40 +372,26 @@ async function fetchArtistSongs(artistId, artistName) {
 
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
+    document.getElementById('home-content').style.display = 'none';
     searchInput.value = `Songs by ${artistName}`;
     moreBtn.style.display = 'none';
+    resultsList.style.display = 'block';
 
     if (songs.length > 0) {
+      const container = document.createElement('div');
+      container.className = 'song-container';
+      const cards = document.createElement('div');
+      cards.className = 'cards';
       songs.forEach(song => {
-        const normalizedSong = {
-  id: song.id,
-  title: song.name || 'Unknown',
-  artist: song.artists?.primary?.map(a => a.name).join(', ') || 'Unknown',
- // image: song.artists?.primary?.[0]?.image?.[0]?.url || 'default.png',
- image: Array.isArray(song.image) && song.image.length
-  ? song.image.find(img => img.quality === '500x500')?.url || song.image[0].url
-  : 'default.png',
-
-  audioUrl: Array.isArray(song.downloadUrl) ? song.downloadUrl[0]?.url || song.url : song.url || ''
-};
-
-
+        const normalizedSong = normalizeSong(song);
         if (!songHistory.some(s => s.id === normalizedSong.id)) {
           songHistory.push(normalizedSong);
         }
-
-        const card = document.createElement('div');
-        card.classList.add('song-card');
-        card.innerHTML = `
-          <img src="${normalizedSong.image}" alt="${normalizedSong.title}" />
-          <div class="song-title">${normalizedSong.title}</div>
-          <div class="artist-name">${normalizedSong.artist}</div>
-          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${normalizedSong.id}')"><i class="fa-solid fa-plus"></i></button>
-          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${normalizedSong.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === normalizedSong.id) ? ' favorited' : ''}"></i></button>
-        `;
-        card.addEventListener('click', () => playSong(normalizedSong, true));
-        resultsList.appendChild(card);
+        const card = createSongCard(normalizedSong);
+        cards.appendChild(card);
       });
+      container.appendChild(cards);
+      resultsList.appendChild(container);
     } else {
       resultsList.innerHTML = '<span>No songs found for this artist.</span>';
     }
@@ -139,70 +402,41 @@ async function fetchArtistSongs(artistId, artistName) {
   }
 }
 
-
-
 async function fetchAlbumSongs(albumId, albumTitle) {
   try {
-    // Fetch the album data from the API
-    //const response = await fetch(`/api/albums?id=${encodeURIComponent(albumId)}`);
     const response = await fetch(`https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`);
-
     if (!response.ok) throw new Error(`Album fetch failed: ${response.statusText}`);
 
     const data = await response.json();
     if (!data.success) throw new Error('API returned success: false');
 
-    // Get songs array from nested structure
     const songs = data.data?.songs || [];
 
-    // Clear current UI
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
+    document.getElementById('home-content').style.display = 'none';
     searchInput.value = `Songs from ${albumTitle}`;
     moreBtn.style.display = 'none';
+    resultsList.style.display = 'block';
 
     if (songs.length) {
+      const container = document.createElement('div');
+      container.className = 'song-container';
+      const cards = document.createElement('div');
+      cards.className = 'cards';
       songs.forEach(song => {
-        const normalizedSong = {
-          id: song.id,
-          title: song.name || song.title || 'Unknown',
-          artist: Array.isArray(song.artists?.primary)
-            ? song.artists.primary.map(a => a.name).join(', ')
-            : song.artist || 'Unknown',
-          image: Array.isArray(song.image) && song.image.length
-            ? song.image.find(img => img.quality === '500x500')?.url || song.image[0]?.url
-            : 'default.png',
-          audioUrl: Array.isArray(song.downloadUrl)
-            ? song.downloadUrl[0]?.url || ''
-            : song.audioUrl || ''
-        };
-
-        // Add to history if not already present
+        const normalizedSong = normalizeSong(song);
         if (!songHistory.some(s => s.id === normalizedSong.id)) {
           songHistory.push(normalizedSong);
         }
-
-        // Create song card
-        const card = document.createElement('div');
-        card.classList.add('song-card');
-        card.innerHTML = `
-          <img src="${normalizedSong.image}" alt="${normalizedSong.title}" />
-          <div class="song-title">${normalizedSong.title}</div>
-          <div class="artist-name">${normalizedSong.artist}</div>
-          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${normalizedSong.id}')">
-            <i class="fa-solid fa-plus"></i>
-          </button>
-          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${normalizedSong.id}')">
-            <i class="fa-solid fa-heart${favorites.some(f => f.id === normalizedSong.id) ? ' favorited' : ''}"></i>
-          </button>
-        `;
-        card.addEventListener('click', () => playSong(normalizedSong, true));
-        resultsList.appendChild(card);
+        const card = createSongCard(normalizedSong);
+        cards.appendChild(card);
       });
+      container.appendChild(cards);
+      resultsList.appendChild(container);
     } else {
       resultsList.innerHTML = '<span>No songs found in this album.</span>';
     }
-
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading album songs.</span>';
@@ -210,79 +444,92 @@ async function fetchAlbumSongs(albumId, albumTitle) {
   }
 }
 
-
 function loadMoreResults() {
   fetchResults();
 }
 
 function displayResults(data) {
-  // Clear previous results
   resultsList.innerHTML = '';
 
-  // Songs Section
   if (data.songs.results.length > 0) {
     const songsHeader = document.createElement('h3');
     songsHeader.textContent = 'Songs';
     resultsList.appendChild(songsHeader);
 
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
     data.songs.results.forEach(song => {
-      if (!songHistory.some(s => s.id === song.id)) {
-        songHistory.push(song);
+      const normalizedSong = normalizeSong(song);
+      if (!songHistory.some(s => s.id === normalizedSong.id)) {
+        songHistory.push(normalizedSong);
       }
-      const card = document.createElement('div');
-      card.classList.add('song-card');
-      card.innerHTML = `
-        <img src="${song.image || 'default.png'}" alt="${song.title}" />
-        <div class="song-title">${song.title}</div>
-        <div class="artist-name">${song.artist}</div>
-        <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></button>
-        <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === song.id) ? ' favorited' : ''}"></i></button>
-      `;
-      card.addEventListener('click', () => playSong(song, true));
-      resultsList.appendChild(card);
+      const card = createSongCard(normalizedSong);
+      cards.appendChild(card);
     });
+    container.appendChild(cards);
+    resultsList.appendChild(container);
   }
 
-  // Artists Section
   if (data.artists.results.length > 0) {
     const artistsHeader = document.createElement('h3');
     artistsHeader.textContent = 'Artists';
     resultsList.appendChild(artistsHeader);
 
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
     data.artists.results.forEach(artist => {
       const card = document.createElement('div');
-      card.classList.add('artist-card');
+      card.className = 'card';
       card.innerHTML = `
         <img src="${artist.image || 'default.png'}" alt="${artist.name}" />
-        <div class="artist-title">${artist.name}</div>
-        <div class="artist-role">${artist.role}</div>
+        <div class="card-body">
+          <div class="song-name">${artist.name}</div>
+          <div class="artist-name">${artist.role || 'Artist'}</div>
+        </div>
+        <div class="play-down">
+          <div class="play-btn" onclick="event.stopPropagation(); fetchArtistSongs('${artist.id}', '${artist.name}')"><i class="fa-solid fa-play"></i></div>
+        </div>
       `;
       card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
-      resultsList.appendChild(card);
+      cards.appendChild(card);
     });
+    container.appendChild(cards);
+    resultsList.appendChild(container);
   }
 
-  // Albums Section
   if (data.albums.results.length > 0) {
     const albumsHeader = document.createElement('h3');
     albumsHeader.textContent = 'Albums';
     resultsList.appendChild(albumsHeader);
 
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
     data.albums.results.forEach(album => {
       const card = document.createElement('div');
-      card.classList.add('album-card');
+      card.className = 'card';
       card.innerHTML = `
         <img src="${album.image || 'default.png'}" alt="${album.title}" />
-        <div class="album-title">${album.title}</div>
-        <div class="album-artists">${album.primaryArtists}</div>
-        <div class="album-year">${album.year} (${album.songCount} songs)</div>
+        <div class="card-body">
+          <div class="song-name">${album.title}</div>
+          <div class="artist-name">${album.primaryArtists} (${album.year})</div>
+        </div>
+        <div class="play-down">
+          <div class="play-btn" onclick="event.stopPropagation(); fetchAlbumSongs('${album.id}', '${album.title}')"><i class="fa-solid fa-play"></i></div>
+        </div>
       `;
       card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
-      resultsList.appendChild(card);
+      cards.appendChild(card);
     });
+    container.appendChild(cards);
+    resultsList.appendChild(container);
   }
 
-  // Show message if no results
   if (!data.songs.results.length && !data.artists.results.length && !data.albums.results.length) {
     resultsList.innerHTML = '<span>No results found.</span>';
   }
@@ -290,7 +537,8 @@ function displayResults(data) {
   saveState();
 }
 
-// ==== Playback ====
+/* =================== */
+/* Playback */
 function loadSongWithoutPlaying(song) {
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
@@ -373,7 +621,8 @@ function playPrevious() {
   }
 }
 
-// ==== Queue Management ====
+/* =================== */
+/* Queue Management */
 function addToQueue(songId) {
   const song = [...songHistory, ...queue].find(s => s.id === songId);
   if (song && !queue.some(q => q.id === songId)) {
@@ -432,7 +681,8 @@ function emptyQueue() {
   showNotification('Queue has been emptied!');
 }
 
-// ==== Favorites & Playlists ====
+/* =================== */
+/* Favorites & Playlists */
 function createSongPickerModal(playlistIdx) {
   const modal = document.createElement('div');
   modal.className = 'song-picker-modal';
@@ -568,15 +818,31 @@ function playAllFavorites(shuffle = false) {
 function loadFavorites() {
   libraryView.style.display = 'block';
   resultsList.style.display = 'none';
+  document.getElementById('home-content').style.display = 'none';
   libraryView.innerHTML = `
     <h4>Favorites</h4>
     <button onclick="playAllFavorites()" ${favorites.length === 0 ? 'disabled' : ''}>Play All</button>
     <button onclick="playAllFavorites(true)" ${favorites.length === 0 ? 'disabled' : ''}>Shuffle All</button>
-    ${favorites.length ? favorites.map(song => `
-      <div class="playlist-item">
-        <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)">${song.title} - ${song.artist}</span>
-        <button class="remove-fav" onclick="event.stopPropagation(); removeFromFavorites('${song.id}')"><i class="fa-solid fa-trash"></i></button>
-      </div>`).join('') : '<span>No favorites yet</span>'}
+    ${favorites.length ? `
+      <div class="song-container">
+        <div class="cards">
+          ${favorites.map(song => `
+            <div class="card">
+              <img src="${song.image || 'default.png'}" alt="${song.title}" />
+              <div class="card-body">
+                <div class="song-name">${song.title}</div>
+                <div class="artist-name">${song.artist}</div>
+              </div>
+              <div class="play-down">
+                <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
+                <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
+                <div class="add-fav" onclick="event.stopPropagation(); removeFromFavorites('${song.id}')"><i class="fa-solid fa-trash"></i></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : '<span>No favorites yet</span>'}
   `;
   moreBtn.style.display = 'none';
 }
@@ -634,6 +900,7 @@ function deletePlaylist(playlistIdx) {
 function loadPlaylists() {
   libraryView.style.display = 'block';
   resultsList.style.display = 'none';
+  document.getElementById('home-content').style.display = 'none';
   libraryView.innerHTML = `
     <h4>Playlists</h4>
     <button onclick="createPlaylistModal()">+ New</button>
@@ -641,12 +908,24 @@ function loadPlaylists() {
       <div class="playlist-item">
         <h5>${pl.name} (${pl.songs.length})</h5>
         <button class="delete-playlist" onclick="event.stopPropagation(); deletePlaylist(${idx})"><i class="fa-solid fa-trash"></i></button>
-        ${pl.songs.map(song => `
-          <div class="playlist-song">
-            <span onclick="playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)">${song.title} - ${song.artist}</span>
-            <button class="remove-from-playlist" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${song.id}')"><i class="fa-solid fa-trash"></i></button>
+        <div class="song-container">
+          <div class="cards">
+            ${pl.songs.map(song => `
+              <div class="card">
+                <img src="${song.image || 'default.png'}" alt="${song.title}" />
+                <div class="card-body">
+                  <div class="song-name">${song.title}</div>
+                  <div class="artist-name">${song.artist}</div>
+                </div>
+                <div class="play-down">
+                  <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
+                  <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
+                  <div class="add-fav" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${song.id}')"><i class="fa-solid fa-trash"></i></div>
+                </div>
+              </div>
+            `).join('')}
           </div>
-        `).join('')}
+        </div>
         <button onclick="createSongPickerModal(${idx})">+ Add Song</button>
       </div>
     `).join('')}
@@ -654,7 +933,8 @@ function loadPlaylists() {
   moreBtn.style.display = 'none';
 }
 
-// ==== Other Controls ====
+/* =================== */
+/* Other Controls */
 function toggleLoop() {
   audioPlayer.loop = !audioPlayer.loop;
   loopBtn.innerHTML = audioPlayer.loop
@@ -669,28 +949,30 @@ function setVolume(value) {
 function focusSearch() {
   searchInput.focus();
   libraryView.style.display = 'none';
-  resultsList.style.display = 'grid';
+  document.getElementById('home-content').style.display = 'none';
+  resultsList.style.display = 'block';
 }
 
 function toggleSidebar() {
   sidebar.classList.toggle('open');
 }
 
-// Close sidebar on outside clicks
+/* Close sidebar on outside clicks */
 document.addEventListener('click', (e) => {
   if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !e.target.closest('#sidebar-toggle')) {
     sidebar.classList.remove('open');
   }
 });
 
-// Close sidebar on Escape key
+/* Close sidebar on Escape key */
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && sidebar.classList.contains('open')) {
     sidebar.classList.remove('open');
   }
 });
 
-// ==== Progress & Events ====
+/* =================== */
+/* Progress & Events */
 function updateProgress() {
   if (!audioPlayer.duration) return;
   const percentage = (audioPlayer.currentTime / audioPlayer.duration) * 100;
@@ -715,7 +997,8 @@ function formatTime(seconds) {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// ==== Event Listeners ====
+/* =================== */
+/* Event Listeners */
 moreBtn.addEventListener('click', loadMoreResults);
 audioPlayer.addEventListener('timeupdate', updateProgress);
 audioPlayer.addEventListener('loadedmetadata', updateDuration);

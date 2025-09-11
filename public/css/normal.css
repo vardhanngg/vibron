@@ -51,6 +51,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  text-decoration: none;
 }
 
 .logo {
@@ -73,6 +74,7 @@ body {
      1px -1px 0 black,
     -1px  1px 0 black,
      1px  1px 0 black;
+  text-decoration: none;
 }
 
 .switch-btn {
@@ -273,22 +275,115 @@ body {
 }
 
 /* =================== */
-/* Song, Artist, and Album Cards */
+/* Song, Artist, and Album Lists */
+.song-container {
+  max-width: 600px;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  margin: 1rem auto;
+  padding-bottom: 100px;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.card {
+  display: flex;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  padding: 12px;
+  border-radius: 10px;
+  width: 100%;
+  height: 70px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  align-items: center;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--accent);
+}
+
+.card img {
+  border-radius: 8px;
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  padding-left: 12px;
+  flex-grow: 1;
+}
+
+.play-down {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.play-btn, .queue-btn, .add-fav {
+  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.play-btn:hover, .queue-btn:hover, .add-fav:hover {
+  background: #ff2a4a;
+  transform: scale(1.1);
+}
+
+.add-fav.favorited {
+  background: #ff2a4a;
+}
+
+.song-name {
+  color: var(--text);
+  font-size: 14px;
+  height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artist-name {
+  color: var(--muted);
+  font-size: 11px;
+  height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #song-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1.5rem;
   width: 90%;
-  max-width: 1000px;
+  max-width: 600px;
   margin: 1rem auto;
   animation: fadeIn 0.5s ease-out;
 }
+
 #song-list h3 {
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--text);
   margin: 1.5rem 0 0.5rem;
-  grid-column: 1 / -1; /* Span all grid columns */
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -296,86 +391,48 @@ body {
   padding-bottom: 0.25rem;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+#song-list p {
+  color: var(--text);
 }
 
-.song-card, .artist-card, .album-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: 15px;
-  padding: 1rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
+/* =================== */
+/* Home Content */
+.home-content {
+  width: 90%;
+  max-width: 1000px;
+  margin: 1rem auto;
 }
 
-.song-card:hover, .artist-card:hover, .album-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: var(--shadow-glow);
-  border-color: var(--accent);
+.home-section {
+  margin-bottom: 2rem;
 }
 
-.song-card img, .artist-card img, .album-card img {
-  width: auto;
-  max-width: 100%;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 10px;
-  transition: transform 0.3s ease;
-  display: block;
-  margin: 0 auto;
+.home-section h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 0.25rem;
 }
 
-
-.song-card:hover img, .artist-card:hover img, .album-card:hover img {
-  transform: scale(1.05);
+.section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 0.5rem;
 }
 
-.song-title, .artist-title, .album-title {
-  font-size: 0.9rem;
-  margin: 0.75rem 0 0.25rem 0;
-  font-weight: 500;
-}
-
-.artist-name, .artist-role, .album-artists, .album-year {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.add-queue, .add-fav {
-  position: absolute;
-  top: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 0.8rem;
-  padding: 0.5rem;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  opacity: 0;
-}
-
-.song-card:hover .add-queue,
-.song-card:hover .add-fav {
-  opacity: 1;
-}
-
-.add-queue:hover, .add-fav:hover {
-  background: var(--accent);
-  color: white;
-  transform: scale(1.1);
-}
-
-.add-queue { right: 10px; }
-.add-fav { right: 50px; }
-.add-fav.favorited {
-  background: #ff2a4a;
-  color: white;
+#greeting {
+  font-size: 2.5rem;
+  margin: 0;
+  letter-spacing: 1px;
+  background: linear-gradient(45deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* =================== */
@@ -732,7 +789,7 @@ body {
   border-radius: 15px;
   padding: 1rem;
   width: 90%;
-  max-width: 1000px;
+  max-width: 600px;
   margin: 1rem auto;
   animation: fadeIn 0.5s ease-out;
 }
@@ -972,9 +1029,9 @@ body {
     padding-bottom: 120px;
   }
 
-  #song-list {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1rem;
+  .song-container, #song-list, #library-view {
+    width: 95%;
+    max-width: 400px;
   }
 
   .queue-holder {
@@ -1038,5 +1095,36 @@ body {
   .switch-btn {
     padding: 6px 12px;
     font-size: 0.8rem;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .card {
+    flex-direction: column;
+    padding: 15px;
+    height: auto;
+    max-width: 300px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .card img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .card-body {
+    padding: 10px 0 0;
+    align-items: center;
+  }
+
+  .play-down {
+    padding-top: 10px;
+    justify-content: center;
+  }
+
+  .song-name, .artist-name {
+    width: 100%;
+    text-align: center;
   }
 }
