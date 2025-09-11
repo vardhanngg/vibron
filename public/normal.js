@@ -85,10 +85,9 @@ async function fetchResults() {
     return;
   }
 }
-
 async function fetchArtistSongs(artistId, artistName) {
   try {
-    const response = await fetch(`/api/artists/${encodeURIComponent(artistId)}/songs?page=0&sortBy=popularity&sortOrder=desc`);
+    const response = await fetch(`https://apivibron.vercel.app/api/artists/${artistId}/songs`);
     if (!response.ok) throw new Error(`Artist fetch failed: ${response.statusText}`);
 
     const data = await response.json();
@@ -99,15 +98,20 @@ async function fetchArtistSongs(artistId, artistName) {
     searchInput.value = `Songs by ${artistName}`;
     moreBtn.style.display = 'none';
 
-    if (songs.length) {
+    if (songs.length > 0) {
       songs.forEach(song => {
         const normalizedSong = {
-          id: song.id,
-          title: song.name,
-          artist: song.artists?.primary?.map(a => a.name).join(', ') || 'Unknown',
-          image: song.image?.[0]?.url || 'default.png',
-          audioUrl: song.downloadUrl?.[0]?.url || ''
-        };
+  id: song.id,
+  title: song.name || 'Unknown',
+  artist: song.artists?.primary?.map(a => a.name).join(', ') || 'Unknown',
+ // image: song.artists?.primary?.[0]?.image?.[0]?.url || 'default.png',
+ image: Array.isArray(song.image) && song.image.length
+  ? song.image.find(img => img.quality === '500x500')?.url || song.image[0].url
+  : 'default.png',
+
+  audioUrl: Array.isArray(song.downloadUrl) ? song.downloadUrl[0]?.url || song.url : song.url || ''
+};
+
 
         if (!songHistory.some(s => s.id === normalizedSong.id)) {
           songHistory.push(normalizedSong);
@@ -131,18 +135,27 @@ async function fetchArtistSongs(artistId, artistName) {
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading artist songs.</span>';
-    console.error(err);
+    console.error('Error fetching artist songs:', err);
   }
 }
 
+
+
 async function fetchAlbumSongs(albumId, albumTitle) {
   try {
-    const response = await fetch(`/api/albums/${encodeURIComponent(albumId)}`);
+    // Fetch the album data from the API
+    //const response = await fetch(`/api/albums?id=${encodeURIComponent(albumId)}`);
+    const response = await fetch(`https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`);
+
     if (!response.ok) throw new Error(`Album fetch failed: ${response.statusText}`);
 
     const data = await response.json();
+    if (!data.success) throw new Error('API returned success: false');
+
+    // Get songs array from nested structure
     const songs = data.data?.songs || [];
 
+    // Clear current UI
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
     searchInput.value = `Songs from ${albumTitle}`;
@@ -152,24 +165,36 @@ async function fetchAlbumSongs(albumId, albumTitle) {
       songs.forEach(song => {
         const normalizedSong = {
           id: song.id,
-          title: song.name,
-          artist: song.artists?.primary?.map(a => a.name).join(', ') || 'Unknown',
-          image: song.image?.[0]?.url || 'default.png',
-          audioUrl: song.downloadUrl?.[0]?.url || ''
+          title: song.name || song.title || 'Unknown',
+          artist: Array.isArray(song.artists?.primary)
+            ? song.artists.primary.map(a => a.name).join(', ')
+            : song.artist || 'Unknown',
+          image: Array.isArray(song.image) && song.image.length
+            ? song.image.find(img => img.quality === '500x500')?.url || song.image[0]?.url
+            : 'default.png',
+          audioUrl: Array.isArray(song.downloadUrl)
+            ? song.downloadUrl[0]?.url || ''
+            : song.audioUrl || ''
         };
 
+        // Add to history if not already present
         if (!songHistory.some(s => s.id === normalizedSong.id)) {
           songHistory.push(normalizedSong);
         }
 
+        // Create song card
         const card = document.createElement('div');
         card.classList.add('song-card');
         card.innerHTML = `
           <img src="${normalizedSong.image}" alt="${normalizedSong.title}" />
           <div class="song-title">${normalizedSong.title}</div>
           <div class="artist-name">${normalizedSong.artist}</div>
-          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${normalizedSong.id}')"><i class="fa-solid fa-plus"></i></button>
-          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${normalizedSong.id}')"><i class="fa-solid fa-heart${favorites.some(f => f.id === normalizedSong.id) ? ' favorited' : ''}"></i></button>
+          <button class="add-queue" onclick="event.stopPropagation(); addToQueue('${normalizedSong.id}')">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <button class="add-fav" onclick="event.stopPropagation(); addToFavorites('${normalizedSong.id}')">
+            <i class="fa-solid fa-heart${favorites.some(f => f.id === normalizedSong.id) ? ' favorited' : ''}"></i>
+          </button>
         `;
         card.addEventListener('click', () => playSong(normalizedSong, true));
         resultsList.appendChild(card);
@@ -177,12 +202,14 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     } else {
       resultsList.innerHTML = '<span>No songs found in this album.</span>';
     }
+
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading album songs.</span>';
-    console.error(err);
+    console.error('Error fetching album songs:', err);
   }
 }
+
 
 function loadMoreResults() {
   fetchResults();
