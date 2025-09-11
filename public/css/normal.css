@@ -349,6 +349,26 @@ body {
   background: #ff2a4a;
   transform: scale(1.1);
 }
+/* Update Song Container in Home Section */
+.home-section .song-container {
+  width: 90%;
+  max-width: 600px; /* Matches search-container */
+  align-items: stretch; /* Ensure cards stretch to fill width */
+  justify-content: initial; /* Remove centering */
+}
+
+/* Ensure Section List Fills Container */
+.home-section .section-list {
+  width: 100%; /* Fills song-container */
+}
+
+/* Update Responsive Media Query */
+@media screen and (max-width: 768px) {
+  .home-section .song-container {
+    width: 95%;
+    max-width: 400px; /* Matches search-container and #song-list */
+  }
+}
 
 .add-fav.favorited {
   background: #ff2a4a;
