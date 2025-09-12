@@ -44,9 +44,9 @@ async function loadHomeContent() {
 
   await Promise.all([
     loadListenAgain(),
-    loadTrending(),
-    loadTopCharts(),
-    loadNewReleases()
+    //loadTrending(),
+    //loadTopCharts(),
+    //loadNewReleases()
   ]);
 }
 
@@ -173,7 +173,7 @@ async function loadTopCharts() {
   }
 }
 
-async function loadNewReleases() {
+/*async function loadNewReleases() {
   const sectionList = document.querySelector('#new-releases .section-list');
   sectionList.innerHTML = '<span>Loading new releases...</span>';
   try {
@@ -223,7 +223,7 @@ async function loadNewReleases() {
     sectionList.innerHTML = '<span>Error loading new releases. Try searching!</span>';
     console.error('Error fetching new releases:', err);
   }
-}
+}*/
 
 async function fetchPlaylistSongs(playlistId, playlistTitle) {
   try {
