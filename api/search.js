@@ -11,25 +11,71 @@ module.exports = async function handler(req, res) {
   try {
     console.log(`[server] Searching JioSaavn for: ${q}, page: ${page}, limit: ${limit}`);
 
+    // Helper to safely get image URL (handles nested quality array or flat string)
+    const getImageUrl = (item) => {
+      if (!item?.image) return null;
+      if (typeof item.image === 'string') return item.image;  // Legacy flat
+      if (Array.isArray(item.image) && item.image.length >= 3) {
+        // Detailed: Prefer 500x500 (index 2), use .url or .link
+        const highRes = item.image[2];
+        return highRes?.url || highRes?.link || null;
+      }
+      return item.image[0]?.url || item.image[0]?.link || null;  // Fallback to first
+    };
+
+    // Helper to get audio URL (for songs only)
+    const getAudioUrl = (song) => {
+      if (!song?.downloadUrl) return null;
+      if (Array.isArray(song.downloadUrl)) {
+        // Detailed: Find 320kbps, use .url or .link
+        const highQuality = song.downloadUrl.find(url => url.quality === '320kbps');
+        if (highQuality) return highQuality.url || highQuality.link || null;
+        return song.downloadUrl[0]?.url || song.downloadUrl[0]?.link || null;
+      }
+      return song.downloadUrl;  // Legacy flat
+    };
+
+    // Helper to get primary artist(s)
+    const getPrimaryArtists = (item) => {
+      // Detailed song: From artists.primary
+      if (item.artists?.primary?.length > 0) {
+        return item.artists.primary.map(a => a.name).join(', ');
+      }
+      // Album/legacy: primaryArtists string or array
+      if (typeof item.primaryArtists === 'string') return item.primaryArtists;
+      if (Array.isArray(item.primaryArtists)) return item.primaryArtists.map(a => a.name || a).join(', ');
+      return 'Unknown';
+    };
+
     // Make parallel API calls for songs, artists, and albums
     const [songResponse, artistResponse, albumResponse] = await Promise.all([
       axios.get(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(q)}`)
-        .catch(() => ({ data: { data: { results: [], total: 0, start: 0 } } })),
-      axios.get(`https://apivibron.vercel.app/search/api/artists?query=${encodeURIComponent(q)}`)
-        .catch(() => ({ data: { data: { results: [], total: 0, start: 0 } } })),
-      axios.get(`https://apivibron.vercel.app/search/api/albums?query=${encodeURIComponent(q)}`)
-        .catch(() => ({ data: { data: { results: [], total: 0, start: 0 } } }))
+        .catch(() => ({ data: { results: [], total: 0, start: 0 } })),  // Flatten path for safety
+      axios.get(`https://apivibron.vercel.app/api/search/artists?query=${encodeURIComponent(q)}`)
+        .catch(() => ({ data: { results: [], total: 0, start: 0 } })),
+      axios.get(`https://apivibron.vercel.app/api/search/albums?query=${encodeURIComponent(q)}`)
+        .catch(() => ({ data: { results: [], total: 0, start: 0 } }))
     ]);
 
-    const songs = songResponse.data.data?.results || [];
-    const artists = artistResponse.data.data?.results || [];
-    const albums = albumResponse.data.data?.results || [];
-    const songTotal = songResponse.data.data?.total || 0;
-    const artistTotal = artistResponse.data.data?.total || 0;
-    const albumTotal = albumResponse.data.data?.total || 0;
-    const songStart = songResponse.data.data?.start || 0;
-    const artistStart = artistResponse.data.data?.start || 0;
-    const albumStart = albumResponse.data.data?.start || 0;
+    // Safer extraction: Handle single vs double 'data' nesting
+    const getData = (response, section) => {
+      let data = response.data;
+      if (data?.data) data = data.data;  // Double-nested (apivibron wrapper)
+      if (data?.[section]) data = data[section];  // If sectioned
+      return {
+        results: data?.results || [],
+        total: data?.total || 0,
+        start: data?.start || 0
+      };
+    };
+
+    const songData = getData(songResponse, 'songs');
+    const artistData = getData(artistResponse, 'artists');
+    const albumData = getData(albumResponse, 'albums');
+
+    const { results: songs, total: songTotal, start: songStart } = songData;
+    const { results: artists, total: artistTotal, start: artistStart } = artistData;
+    const { results: albums, total: albumTotal, start: albumStart } = albumData;
 
     // Check if any results were found
     if (songs.length === 0 && artists.length === 0 && albums.length === 0) {
@@ -37,47 +83,47 @@ module.exports = async function handler(req, res) {
     }
 
     // Server-side pagination
-    const start = (page - 1) * limit;
-    const end = start + limit;
+    const startIdx = (page - 1) * limit;
+    const endIdx = startIdx + limit;
 
     res.status(200).json({
       songs: {
-        results: songs.slice(start, end).map(song => ({
+        results: songs.slice(startIdx, endIdx).map(song => ({
           id: song.id,
-          title: song.name,
-          artist: typeof song.primaryArtists === 'string' ? song.primaryArtists : song.primaryArtists?.join(", ") || "Unknown",
-          image: song.image?.[2]?.link || null,
-          audioUrl: song.downloadUrl?.find(url => url.quality === '320kbps')?.link || song.downloadUrl?.[0]?.link || null,
+          title: song.name || song.title || 'Unknown',
+          artist: getPrimaryArtists(song),
+          image: getImageUrl(song),
+          audioUrl: getAudioUrl(song),
         })),
-        next: songStart + songs.length < songTotal ? page + 1 : null
+        next: (startIdx + limit < songTotal) ? page + 1 : null  // Fixed: Use total, not fetched length
       },
       artists: {
-        results: artists.slice(start, end).map(artist => ({
+        results: artists.slice(startIdx, endIdx).map(artist => ({
           id: artist.id,
           name: artist.name,
           url: artist.url,
-          image: artist.image?.[2]?.link || null,
+          image: getImageUrl(artist),
           role: artist.role,
           isRadioPresent: artist.isRadioPresent
         })),
-        next: artistStart + artists.length < artistTotal ? page + 1 : null
+        next: (startIdx + limit < artistTotal) ? page + 1 : null
       },
       albums: {
-        results: albums.slice(start, end).map(album => ({
+        results: albums.slice(startIdx, endIdx).map(album => ({
           id: album.id,
-          title: album.name,
+          title: album.name || album.title || 'Unknown',
           year: album.year,
           language: album.language,
-          songCount: album.songCount,
+          songCount: album.songCount || 0,
           url: album.url,
-          image: album.image?.[2]?.link || null,
-          primaryArtists: typeof album.primaryArtists === 'string' ? album.primaryArtists : album.primaryArtists?.map(a => a.name).join(", ") || "Unknown"
+          image: getImageUrl(album),
+          primaryArtists: getPrimaryArtists(album)  // Reuse helper
         })),
-        next: albumStart + albums.length < albumTotal ? page + 1 : null
+        next: (startIdx + limit < albumTotal) ? page + 1 : null
       }
     });
   } catch (err) {
-    console.error(`[server] JioSaavn search error: ${err.message}`);
+    console.error(`[server] JioSaavn search error: ${err.message}`, err.response?.data);  // More logging
     res.status(500).json({ error: "JioSaavn search failed" });
   }
 };
