@@ -463,10 +463,21 @@ async function fetchResults() {
 }
 
 async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
+  if (!artistId || artistId === 'undefined') {
+    resultsList.innerHTML = '<span>Invalid artist ID.</span>';
+    console.error('Invalid artistId:', artistId);
+    return;
+  }
+
   try {
-    // Assume API supports pagination like search (adjust if needed)
-    const response = await fetch(`https://apivibron.vercel.app/api/artists/${artistId}/songs?page=${page}&limit=10`);
-    if (!response.ok) throw new Error(`Artist fetch failed: ${response.statusText}`);
+    // Try without pagination parameters first
+    const url = `https://apivibron.vercel.app/api/artists/${artistId}/songs`;
+    console.log(`Fetching artist songs URL: ${url}`);
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Artist fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
+    }
 
     const data = await response.json();
     const songs = data.data?.songs || [];
@@ -476,7 +487,6 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       libraryView.style.display = 'none';
       document.getElementById('home-content').style.display = 'none';
       searchInput.value = `Songs by ${artistName}`;
-      moreBtn.style.display = 'none'; // Hide global load more
       resultsList.style.display = 'block';
       currentArtistId = artistId;
       artistPage = page;
@@ -484,7 +494,6 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
 
     let cards;
     if (!append) {
-      // Add header for new load
       const titleHeader = document.createElement('h3');
       titleHeader.textContent = `Songs by ${artistName}`;
       resultsList.appendChild(titleHeader);
@@ -496,7 +505,6 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       container.appendChild(cards);
       resultsList.appendChild(container);
     } else {
-      // Append to existing cards
       cards = resultsList.querySelector('.cards');
     }
 
@@ -513,7 +521,9 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       cards.appendChild(card);
     });
 
-    // Add "Load More" button if there might be more (assuming if full limit returned)
+    // Add "Load More" button (placeholder; enable if pagination is supported)
+    // If API supports pagination, uncomment and adjust:
+    /*
     if (songs.length === 10) {
       const moreArtistBtn = document.createElement('button');
       moreArtistBtn.id = 'artist-more-btn';
@@ -522,18 +532,30 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       moreArtistBtn.onclick = loadMoreArtistSongs;
       resultsList.appendChild(moreArtistBtn);
     }
+    */
 
     saveState();
   } catch (err) {
-    resultsList.innerHTML = '<span>Error loading artist songs.</span>';
-    console.error('Error fetching artist songs:', err);
+    resultsList.innerHTML = '<span>Error loading artist songs. Please try again.</span>';
+    console.error(`Error fetching artist songs for ID ${artistId}:`, err.message);
   }
 }
 
 async function fetchAlbumSongs(albumId, albumTitle) {
+  if (!albumId || albumId === 'undefined') {
+    resultsList.innerHTML = '<span>Invalid album ID.</span>';
+    console.error('Invalid albumId:', albumId);
+    return;
+  }
+
   try {
-    const response = await fetch(`https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`);
-    if (!response.ok) throw new Error(`Album fetch failed: ${response.statusText}`);
+    const url = `https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`;
+    console.log(`Fetching album songs URL: ${url}`);
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Album fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
+    }
 
     const data = await response.json();
     if (!data.success) throw new Error('API returned success: false');
@@ -544,7 +566,6 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     libraryView.style.display = 'none';
     document.getElementById('home-content').style.display = 'none';
     searchInput.value = `Songs from ${albumTitle}`;
-    moreBtn.style.display = 'none'; // Hide global load more
     resultsList.style.display = 'block';
 
     // Add header and download button
@@ -559,7 +580,7 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     header.appendChild(titleHeader);
 
     const downloadBtn = document.createElement('button');
-    downloadBtn.className = 'playlist-download-btn'; // Reuse styling from playlists
+    downloadBtn.className = 'playlist-download-btn';
     downloadBtn.textContent = 'Download Album';
     downloadBtn.disabled = songs.length === 0;
     downloadBtn.onclick = () => downloadPlaylist(songs.map(normalizeSong), albumTitle);
@@ -587,14 +608,14 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     }
     saveState();
   } catch (err) {
-    resultsList.innerHTML = '<span>Error loading album songs.</span>';
-    console.error('Error fetching album songs:', err);
+    resultsList.innerHTML = '<span>Error loading album songs. Please try again.</span>';
+    console.error(`Error fetching album songs for ID ${albumId}:`, err.message);
   }
 }
 async function loadMoreArtistSongs() {
   if (!currentArtistId) return;
   artistPage++;
-  await fetchArtistSongs(currentArtistId, searchInput.value.replace('Songs by ', ''), artistPage, true); // Append mode
+  await fetchArtistSongs(currentArtistId, searchInput.value.replace('Songs by ', ''), artistPage, true);
 }
 
 /*function loadMoreResults() {
