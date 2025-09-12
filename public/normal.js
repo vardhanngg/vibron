@@ -5,6 +5,8 @@ let currentSongIndex = parseInt(localStorage.getItem('currentSongIndex') || '-1'
 let queue = JSON.parse(localStorage.getItem('queue') || '[]');
 let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 let playlists = JSON.parse(localStorage.getItem('playlists') || '[]');
+let currentArtistId = '';
+let artistPage = 0;
 
 const searchInput = document.getElementById('searchInput');
 const resultsList = document.getElementById('song-list');
@@ -459,39 +461,67 @@ async function fetchResults() {
   }
 }
 
-async function fetchArtistSongs(artistId, artistName) {
+async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
   try {
-    const response = await fetch(`https://apivibron.vercel.app/api/artists/${artistId}/songs`);
+    // Assume API supports pagination like search (adjust if needed)
+    const response = await fetch(`https://apivibron.vercel.app/api/artists/${artistId}/songs?page=${page}&limit=10`);
     if (!response.ok) throw new Error(`Artist fetch failed: ${response.statusText}`);
 
     const data = await response.json();
     const songs = data.data?.songs || [];
 
-    resultsList.innerHTML = '';
-    libraryView.style.display = 'none';
-    document.getElementById('home-content').style.display = 'none';
-    searchInput.value = `Songs by ${artistName}`;
-    moreBtn.style.display = 'none';
-    resultsList.style.display = 'block';
+    if (!append) {
+      resultsList.innerHTML = '';
+      libraryView.style.display = 'none';
+      document.getElementById('home-content').style.display = 'none';
+      searchInput.value = `Songs by ${artistName}`;
+      moreBtn.style.display = 'none'; // Hide global load more
+      resultsList.style.display = 'block';
+      currentArtistId = artistId;
+      artistPage = page;
+    }
 
-    if (songs.length > 0) {
+    let cards;
+    if (!append) {
+      // Add header for new load
+      const titleHeader = document.createElement('h3');
+      titleHeader.textContent = `Songs by ${artistName}`;
+      resultsList.appendChild(titleHeader);
+
       const container = document.createElement('div');
       container.className = 'song-container';
-      const cards = document.createElement('div');
+      cards = document.createElement('div');
       cards.className = 'cards';
-      songs.forEach(song => {
-        const normalizedSong = normalizeSong(song);
-        if (!songHistory.some(s => s.id === normalizedSong.id)) {
-          songHistory.push(normalizedSong);
-        }
-        const card = createSongCard(normalizedSong);
-        cards.appendChild(card);
-      });
       container.appendChild(cards);
       resultsList.appendChild(container);
     } else {
-      resultsList.innerHTML = '<span>No songs found for this artist.</span>';
+      // Append to existing cards
+      cards = resultsList.querySelector('.cards');
     }
+
+    // Remove existing "Load More" button if any
+    const existingMoreBtn = document.getElementById('artist-more-btn');
+    if (existingMoreBtn) existingMoreBtn.remove();
+
+    songs.forEach(song => {
+      const normalizedSong = normalizeSong(song);
+      if (!songHistory.some(s => s.id === normalizedSong.id)) {
+        songHistory.push(normalizedSong);
+      }
+      const card = createSongCard(normalizedSong);
+      cards.appendChild(card);
+    });
+
+    // Add "Load More" button if there might be more (assuming if full limit returned)
+    if (songs.length === 10) {
+      const moreArtistBtn = document.createElement('button');
+      moreArtistBtn.id = 'artist-more-btn';
+      moreArtistBtn.className = 'load-more';
+      moreArtistBtn.textContent = 'Load More Songs';
+      moreArtistBtn.onclick = loadMoreArtistSongs;
+      resultsList.appendChild(moreArtistBtn);
+    }
+
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading artist songs.</span>';
@@ -513,8 +543,28 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     libraryView.style.display = 'none';
     document.getElementById('home-content').style.display = 'none';
     searchInput.value = `Songs from ${albumTitle}`;
-    moreBtn.style.display = 'none';
+    moreBtn.style.display = 'none'; // Hide global load more
     resultsList.style.display = 'block';
+
+    // Add header and download button
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '1rem';
+
+    const titleHeader = document.createElement('h3');
+    titleHeader.textContent = `Songs from ${albumTitle}`;
+    header.appendChild(titleHeader);
+
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'playlist-download-btn'; // Reuse styling from playlists
+    downloadBtn.textContent = 'Download Album';
+    downloadBtn.disabled = songs.length === 0;
+    downloadBtn.onclick = () => downloadPlaylist(songs.map(normalizeSong), albumTitle);
+    header.appendChild(downloadBtn);
+
+    resultsList.appendChild(header);
 
     if (songs.length) {
       const container = document.createElement('div');
@@ -539,6 +589,11 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     resultsList.innerHTML = '<span>Error loading album songs.</span>';
     console.error('Error fetching album songs:', err);
   }
+}
+async function loadMoreArtistSongs() {
+  if (!currentArtistId) return;
+  artistPage++;
+  await fetchArtistSongs(currentArtistId, searchInput.value.replace('Songs by ', ''), artistPage, true); // Append mode
 }
 
 function loadMoreResults() {
