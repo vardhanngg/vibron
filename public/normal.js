@@ -428,11 +428,12 @@ async function searchSongs() {
   if (!query) return;
 
   currentQuery = query;
-  currentPage = 0;
+  searchSongsPage = 0;
+  searchArtistsPage = 0;
+  searchAlbumsPage = 0;
   resultsList.innerHTML = '';
   libraryView.style.display = 'none';
   document.getElementById('home-content').style.display = 'none';
-  moreBtn.style.display = 'block';
   resultsList.style.display = 'block';
 
   await fetchResults();
@@ -596,9 +597,9 @@ async function loadMoreArtistSongs() {
   await fetchArtistSongs(currentArtistId, searchInput.value.replace('Songs by ', ''), artistPage, true); // Append mode
 }
 
-function loadMoreResults() {
+/*function loadMoreResults() {
   fetchResults();
-}
+}*/
 
 function displayResults(data) {
   resultsList.innerHTML = '';
@@ -1113,8 +1114,8 @@ function focusSearch() {
 }
 
 /* =================== */
-/* Event Listeners */
-moreBtn.addEventListener('click', loadMoreResults);
+/* Event Listeners 
+moreBtn.addEventListener('click', loadMoreResults);*/
 audioPlayer.addEventListener('play', () => {
   isPlaying = true;
   playerBar.classList.add('playing');
