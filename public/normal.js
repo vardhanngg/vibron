@@ -54,10 +54,11 @@ async function loadListenAgain() {
   const sectionList = document.querySelector('#listen-again .section-list');
   sectionList.innerHTML = '';
 
-  const recentSongs = [...new Set(songHistory.map(s => s.id))]
-    .slice(-4)
+  // Filter songs that have been played (have lastPlayed timestamp)
+  const recentSongs = [...new Set(songHistory.filter(s => s.lastPlayed).map(s => s.id))]
+    .slice(-4) // Get the last 4 unique songs
     .map(id => songHistory.find(s => s.id === id))
-    .filter(s => s);
+    .sort((a, b) => new Date(b.lastPlayed) - new Date(a.lastPlayed)); // Sort by most recent playback
 
   if (recentSongs.length) {
     const container = document.createElement('div');
@@ -655,8 +656,10 @@ function loadSongWithoutPlaying(song) {
 function playSong(song, fromSearch = false) {
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
-    songHistory.push(song);
+    songHistory.push({ ...song, lastPlayed: new Date().toISOString() });
     currentSongIndex = songHistory.length - 1;
+  } else {
+    songHistory[currentSongIndex] = { ...songHistory[currentSongIndex], lastPlayed: new Date().toISOString() };
   }
 
   audioPlayer.src = song.audioUrl;
