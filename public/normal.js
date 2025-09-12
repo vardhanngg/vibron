@@ -292,10 +292,73 @@ function createSongCard(song) {
       <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, true)"><i class="fa-solid fa-play"></i></div>
       <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
       <div class="add-fav${favorites.some(f => f.id === song.id) ? ' favorited' : ''}" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></div>
+      <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
     </div>
   `;
   card.addEventListener('click', () => playSong(song, true));
   return card;
+}
+
+/* =================== */
+/* Download Functions */
+function downloadSong(songId) {
+  const song = songHistory.find(s => s.id === songId);
+  if (song && song.audioUrl) {
+    fetch(song.audioUrl, { mode: 'cors' })
+      .then(response => {
+        if (!response.ok) throw new Error(`Failed to fetch song: ${response.statusText}`);
+        return response.blob();
+      })
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${song.title} - ${song.artist}.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showNotification(`Downloading ${song.title}`);
+      })
+      .catch(err => {
+        console.error('Download error:', err);
+        showNotification('Download failed. Please try again.');
+      });
+  } else {
+    showNotification('Download unavailable for this song.');
+  }
+}
+
+function downloadPlaylist(songs, playlistName) {
+  if (!songs.length) {
+    showNotification('No songs to download.');
+    return;
+  }
+  const zip = new JSZip();
+  Promise.all(
+    songs.map((song, index) =>
+      fetch(song.audioUrl, { mode: 'cors' })
+        .then(response => {
+          if (!response.ok) throw new Error(`Failed to fetch ${song.title}`);
+          return response.blob();
+        })
+        .then(blob => zip.file(`${index + 1}. ${song.title} - ${song.artist}.mp3`, blob))
+        .catch(err => console.error(`Failed to fetch ${song.title}:`, err))
+    )
+  ).then(() => {
+    zip.generateAsync({ type: 'blob' }).then(blob => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${playlistName || 'Favorites'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showNotification(`Downloading ${playlistName || 'Favorites'}`);
+    });
+  }).catch(err => {
+    showNotification('Error downloading playlist.');
+    console.error('Playlist download error:', err);
+  });
 }
 
 /* =================== */
@@ -310,7 +373,40 @@ window.addEventListener('load', () => {
   }
 
   setInterval(saveState, 5000);
+
+  // Progress and volume handling
+  audioPlayer.addEventListener('timeupdate', () => {
+    if (!audioPlayer.duration) return;
+    const percentage = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+    document.getElementById('progress').style.width = `${percentage}%`;
+    document.getElementById('progress-circle').style.left = `calc(${percentage}% - 6px)`;
+    document.getElementById('current-time').textContent = formatTime(audioPlayer.currentTime);
+    document.getElementById('duration').textContent = formatTime(audioPlayer.duration);
+  });
+
+  document.querySelector('.player-progress').addEventListener('click', (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const percent = (event.clientX - rect.left) / rect.width;
+    audioPlayer.currentTime = percent * audioPlayer.duration;
+  });
+
+  const volumeSlider = document.getElementById('volume-slider');
+  if (volumeSlider) {
+    volumeSlider.addEventListener('input', () => {
+      audioPlayer.volume = parseFloat(volumeSlider.value) / 100;
+    });
+  }
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+  });
 });
+
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 /* =================== */
 /* Save State */
@@ -460,7 +556,7 @@ function displayResults(data) {
     container.className = 'song-container';
     const cards = document.createElement('div');
     cards.className = 'cards';
-    data.songs.results.forEach(song => {
+    data.songs.results.slice(0, 4).forEach(song => {
       const normalizedSong = normalizeSong(song);
       if (!songHistory.some(s => s.id === normalizedSong.id)) {
         songHistory.push(normalizedSong);
@@ -481,7 +577,7 @@ function displayResults(data) {
     container.className = 'song-container';
     const cards = document.createElement('div');
     cards.className = 'cards';
-    data.artists.results.forEach(artist => {
+    data.artists.results.slice(0, 3).forEach(artist => {
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
@@ -510,7 +606,7 @@ function displayResults(data) {
     container.className = 'song-container';
     const cards = document.createElement('div');
     cards.className = 'cards';
-    data.albums.results.forEach(album => {
+    data.albums.results.slice(0, 2).forEach(album => {
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
@@ -660,6 +756,7 @@ function renderQueue() {
         ${song.title} - ${song.artist}
       </span>
       <button onclick="removeFromQueue(${idx})"><i class="fa-solid fa-trash"></i></button>
+      <button class="download-btn" onclick="downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></button>
     </div>
   `).join('');
 }
@@ -823,6 +920,7 @@ function loadFavorites() {
     <h4>Favorites</h4>
     <button onclick="playAllFavorites()" ${favorites.length === 0 ? 'disabled' : ''}>Play All</button>
     <button onclick="playAllFavorites(true)" ${favorites.length === 0 ? 'disabled' : ''}>Shuffle All</button>
+    <button class="favorites-download-btn" onclick="downloadPlaylist(favorites, 'Favorites')" ${favorites.length === 0 ? 'disabled' : ''}>Download All</button>
     ${favorites.length ? `
       <div class="song-container">
         <div class="cards">
@@ -837,6 +935,7 @@ function loadFavorites() {
                 <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
                 <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
                 <div class="add-fav" onclick="event.stopPropagation(); removeFromFavorites('${song.id}')"><i class="fa-solid fa-trash"></i></div>
+                <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
               </div>
             </div>
           `).join('')}
@@ -908,6 +1007,7 @@ function loadPlaylists() {
       <div class="playlist-item">
         <h5>${pl.name} (${pl.songs.length})</h5>
         <button class="delete-playlist" onclick="event.stopPropagation(); deletePlaylist(${idx})"><i class="fa-solid fa-trash"></i></button>
+        <button class="playlist-download-btn" onclick="downloadPlaylist(playlists[${idx}].songs, '${pl.name}')" ${pl.songs.length === 0 ? 'disabled' : ''}>Download Playlist</button>
         <div class="song-container">
           <div class="cards">
             ${pl.songs.map(song => `
@@ -921,6 +1021,7 @@ function loadPlaylists() {
                   <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
                   <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
                   <div class="add-fav" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${song.id}')"><i class="fa-solid fa-trash"></i></div>
+                  <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
                 </div>
               </div>
             `).join('')}
@@ -938,8 +1039,8 @@ function loadPlaylists() {
 function toggleLoop() {
   audioPlayer.loop = !audioPlayer.loop;
   loopBtn.innerHTML = audioPlayer.loop
-    ? '<i class="fa-solid fa-repeat" style="color: var(--accent);"></i>'
-    : '<i class="fa-solid fa-repeat"></i>';
+    ? '<i class="fa-solid fa-repeat"></i>'
+    : '<i class="fa-regular fa-repeat"></i>';
 }
 
 function setVolume(value) {
@@ -953,56 +1054,9 @@ function focusSearch() {
   resultsList.style.display = 'block';
 }
 
-function toggleSidebar() {
-  sidebar.classList.toggle('open');
-}
-
-/* Close sidebar on outside clicks */
-document.addEventListener('click', (e) => {
-  if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !e.target.closest('#sidebar-toggle')) {
-    sidebar.classList.remove('open');
-  }
-});
-
-/* Close sidebar on Escape key */
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-    sidebar.classList.remove('open');
-  }
-});
-
-/* =================== */
-/* Progress & Events */
-function updateProgress() {
-  if (!audioPlayer.duration) return;
-  const percentage = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-  document.getElementById('progress').style.width = `${percentage}%`;
-  document.getElementById('progress-circle').style.left = `calc(${percentage}% - 6px)`;
-  document.getElementById('current-time').textContent = formatTime(audioPlayer.currentTime);
-}
-
-function updateDuration() {
-  document.getElementById('duration').textContent = formatTime(audioPlayer.duration);
-}
-
-function seek(event) {
-  const rect = event.currentTarget.getBoundingClientRect();
-  const percent = (event.clientX - rect.left) / rect.width;
-  audioPlayer.currentTime = percent * audioPlayer.duration;
-}
-
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
 /* =================== */
 /* Event Listeners */
 moreBtn.addEventListener('click', loadMoreResults);
-audioPlayer.addEventListener('timeupdate', updateProgress);
-audioPlayer.addEventListener('loadedmetadata', updateDuration);
-audioPlayer.addEventListener('ended', playNext);
 audioPlayer.addEventListener('play', () => {
   isPlaying = true;
   playerBar.classList.add('playing');
@@ -1011,6 +1065,7 @@ audioPlayer.addEventListener('pause', () => {
   isPlaying = false;
   playerBar.classList.remove('playing');
 });
+audioPlayer.addEventListener('ended', playNext);
 searchInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') searchSongs();
 });

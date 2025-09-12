@@ -15,7 +15,7 @@
       <img src="/v.ico" alt="Vibron Logo" class="logo" />
       <span class="brand-name">Vibron</span>
     </div>
-    <button id="sidebar-toggle" class="sidebar-toggle" onclick="toggleSidebar()">
+    <button id="sidebar-toggle" class="sidebar-toggle">
       <i class="fa-solid fa-bars"></i>
       <span class="fallback-text">Menu</span>
     </button>
@@ -103,7 +103,7 @@
     <div class="time-display">
       <span id="current-time">0:00</span> / <span id="duration">0:00</span>
     </div>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" onchange="setVolume(this.value)" title="Volume" />
+    <input type="range" id="volume-slider" min="0" max="100" step="1" value="100" title="Volume" />
   </footer>
 
   <audio id="audio-player" preload="metadata"></audio>
