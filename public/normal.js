@@ -470,9 +470,8 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
   }
 
   try {
-    // Try without pagination parameters first
     const url = `https://apivibron.vercel.app/api/artists/${artistId}/songs`;
-    console.log(`Fetching artist songs URL: ${url}`);
+    console.log('Fetching artist songs:', url);
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) {
       const errorText = await response.text();
@@ -481,6 +480,7 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
 
     const data = await response.json();
     const songs = data.data?.songs || [];
+    console.log('Artist songs received:', songs.length, songs.map(s => s.id));
 
     if (!append) {
       resultsList.innerHTML = '';
@@ -508,31 +508,22 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       cards = resultsList.querySelector('.cards');
     }
 
-    // Remove existing "Load More" button if any
-    const existingMoreBtn = document.getElementById('artist-more-btn');
-    if (existingMoreBtn) existingMoreBtn.remove();
+    // Queue all songs for continuous playback
+    if (!append && songs.length) {
+      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
+      console.log('Artist queue updated:', queue.map(q => q.id));
+      renderQueue();
+    }
 
+    // Add songs to songHistory and create cards
     songs.forEach(song => {
       const normalizedSong = normalizeSong(song);
       if (!songHistory.some(s => s.id === normalizedSong.id)) {
         songHistory.push(normalizedSong);
       }
-      const card = createSongCard(normalizedSong);
+      const card = createSongCard(normalizedSong, true, false);
       cards.appendChild(card);
     });
-
-    // Add "Load More" button (placeholder; enable if pagination is supported)
-    // If API supports pagination, uncomment and adjust:
-    /*
-    if (songs.length === 10) {
-      const moreArtistBtn = document.createElement('button');
-      moreArtistBtn.id = 'artist-more-btn';
-      moreArtistBtn.className = 'load-more';
-      moreArtistBtn.textContent = 'Load More Songs';
-      moreArtistBtn.onclick = loadMoreArtistSongs;
-      resultsList.appendChild(moreArtistBtn);
-    }
-    */
 
     saveState();
   } catch (err) {
@@ -550,7 +541,7 @@ async function fetchAlbumSongs(albumId, albumTitle) {
 
   try {
     const url = `https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`;
-    console.log(`Fetching album songs URL: ${url}`);
+    console.log('Fetching album songs:', url);
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) {
       const errorText = await response.text();
@@ -561,6 +552,7 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     if (!data.success) throw new Error('API returned success: false');
 
     const songs = data.data?.songs || [];
+    console.log('Album songs received:', songs.length, songs.map(s => s.id));
 
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
@@ -598,14 +590,20 @@ async function fetchAlbumSongs(albumId, albumTitle) {
         if (!songHistory.some(s => s.id === normalizedSong.id)) {
           songHistory.push(normalizedSong);
         }
-        const card = createSongCard(normalizedSong);
+        const card = createSongCard(normalizedSong, false, true);
         cards.appendChild(card);
       });
       container.appendChild(cards);
       resultsList.appendChild(container);
+
+      // Queue all songs for continuous playback
+      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
+      console.log('Album queue updated:', queue.map(q => q.id));
+      renderQueue();
     } else {
       resultsList.innerHTML = '<span>No songs found in this album.</span>';
     }
+
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading album songs. Please try again.</span>';
@@ -730,7 +728,8 @@ function loadSongWithoutPlaying(song) {
   saveState();
 }
 
-function playSong(song, fromSearch = false) {
+function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = false) {
+  console.log('playSong called:', song.id, song.title, { fromSearch, fromArtist, fromAlbum });
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
     songHistory.push({ ...song, lastPlayed: new Date().toISOString() });
@@ -739,8 +738,9 @@ function playSong(song, fromSearch = false) {
     songHistory[currentSongIndex] = { ...songHistory[currentSongIndex], lastPlayed: new Date().toISOString() };
   }
 
+  console.log('Setting audioPlayer.src:', song.audioUrl);
   audioPlayer.src = song.audioUrl;
-  audioPlayer.play().catch(() => {});
+  audioPlayer.play().catch(err => console.error('Playback error:', err));
 
   albumArt.src = song.image || 'default.png';
   nowPlaying.textContent = song.title;
@@ -752,14 +752,23 @@ function playSong(song, fromSearch = false) {
   updateFavoriteButton();
 
   if (fromSearch) {
+    console.log('Clearing queue for search');
     queue = [];
     addToQueue(song.id);
     autoAddSimilar(song);
+  } else if (fromArtist || fromAlbum) {
+    console.log('Preserving queue for artist/album:', queue.map(q => q.id));
+    if (!queue.some(q => q.id === song.id)) {
+      queue.unshift(song); // Ensure current song is at queue start
+      console.log('Added current song to queue:', song.id);
+      renderQueue();
+    }
   } else {
     addToQueue(song.id);
     if (queue.length < 5) autoAddSimilar(song);
   }
 
+  console.log('Final queue state:', queue.map(q => q.id));
   saveState();
 }
 
@@ -809,21 +818,47 @@ function addToQueue(songId) {
 }
 
 async function autoAddSimilar(currentSong) {
+  console.log('autoAddSimilar called for song:', currentSong.id, currentSong.title);
   try {
-    const similarQuery = `${currentSong.artist} ${currentSong.genre || ''} similar songs`;
-    const response = await fetch(`/api/search?q=${encodeURIComponent(similarQuery)}&page=0&limit=3`);
-    const data = await response.json();
+    const url = `https://apivibron.vercel.app/api/songs/${currentSong.id}/suggestions?limit=3`;
+    console.log('Fetching suggestions:', url);
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) throw new Error(`Suggestions fetch failed: ${response.statusText}`);
 
-    data.songs?.results?.forEach(similarSong => {
-      if (!queue.some(q => q.id === similarSong.id) && similarSong.id !== currentSong.id) {
-        addToQueue(similarSong.id);
+    const data = await response.json();
+    const similarSongs = data.data || [];
+    console.log('Suggestions received:', similarSongs.length, similarSongs.map(s => s.id));
+
+    if (!Array.isArray(similarSongs)) {
+      console.error('Invalid suggestions response:', data);
+      return;
+    }
+
+    similarSongs.forEach(similarSong => {
+      const normalizedSong = normalizeSong(similarSong);
+      console.log('Adding to songHistory:', normalizedSong.id);
+      if (!songHistory.some(s => s.id === normalizedSong.id)) {
+        songHistory.push(normalizedSong);
+      }
+      console.log('Checking queue for:', normalizedSong.id);
+      if (!queue.some(q => q.id === normalizedSong.id) && normalizedSong.id !== currentSong.id) {
+        console.log('Adding to queue:', normalizedSong.id, normalizedSong.title);
+        queue.push(normalizedSong);
       }
     });
+
+    console.log('Queue after adding similar songs:', queue.map(q => q.id));
+    if (similarSongs.length > 0) {
+      showNotification(`Added ${similarSongs.length} similar songs to queue`);
+      renderQueue();
+      saveState();
+    } else {
+      console.log('No similar songs to add');
+    }
   } catch (err) {
-    // Silently fail
+    console.error('Error in autoAddSimilar:', err.message);
   }
 }
-
 function renderQueue() {
   if (queue.length === 0) {
     queueList.innerHTML = '<span>No songs in queue</span>';
@@ -860,24 +895,25 @@ function emptyQueue() {
 
 /* =================== */
 /* Favorites & Playlists */
-function createSongPickerModal(playlistIdx) {
-  const modal = document.createElement('div');
-  modal.className = 'song-picker-modal';
-  modal.innerHTML = `
-    <div class="modal-content">
-      <h4>Select a Song</h4>
-      <input type="text" id="song-picker-search" placeholder="Search songs..." oninput="filterSongPicker(this.value)">
-      <div id="song-picker-list" class="song-picker-list" data-playlist-idx="${playlistIdx}">
-        ${songHistory.length ? songHistory.map(song => `
-          <div class="song-picker-item" onclick="addToPlaylist(${playlistIdx}, '${song.id}')">
-            ${song.title} - ${song.artist}
-          </div>
-        `).join('') : '<span>No songs available</span>'}
-      </div>
-      <button onclick="closeSongPickerModal()">Cancel</button>
+function createSongCard(song, fromArtist = false, fromAlbum = false) {
+  console.log('Creating card for song:', song.id, fromArtist, fromAlbum);
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <img src="${song.image || 'default.png'}" alt="${song.title}" />
+    <div class="card-body">
+      <div class="song-name">${song.title}</div>
+      <div class="artist-name">${song.artist}</div>
+    </div>
+    <div class="play-down">
+      <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>
+      <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
+      <div class="add-fav${favorites.some(f => f.id === song.id) ? ' favorited' : ''}" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></div>
+      <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
     </div>
   `;
-  document.body.appendChild(modal);
+  card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
+  return card;
 }
 
 function filterSongPicker(query) {
