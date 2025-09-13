@@ -404,10 +404,13 @@ body {
 }
 
 /* Back Button */
+/* Back Button */
 .back-btn {
-  display: none;
+  position: fixed;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
   padding: 0.5rem 1rem;
-  margin: 0.5rem 0;
   background: var(--accent);
   color: white;
   border: none;
@@ -415,14 +418,15 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  text-align: center;
+  z-index: 1000;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(255, 64, 129, 0.2);
+  display: none;
 }
 
 .back-btn:hover {
   background: #ff2a4a;
-  transform: translateY(-2px) scale(1.05);
+  transform: translateY(-50%) scale(1.05);
   box-shadow: 0 4px 12px rgba(255, 42, 74, 0.3);
 }
 
