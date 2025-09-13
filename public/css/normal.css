@@ -454,23 +454,37 @@ body {
 }
 
 /* Load More Button */
-.load-more {
+.load-more-btn {
   display: block;
-  margin: 1rem auto 2rem auto;
   padding: 0.75rem 2rem;
+  margin: 1rem auto;
+  background: var(--accent);
+  color: white;
+  border: none;
   border-radius: 25px;
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid var(--glass-border);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  font-weight: bold;
+  text-align: center;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(255, 64, 129, 0.2);
 }
 
-.load-more:hover {
-  background: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glow);
+.load-more-btn:hover {
+  background: #ff2a4a;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(255, 42, 74, 0.3);
+}
+
+.load-more-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3);
+}
+
+.load-more-btn:disabled {
+  background: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* Player Footer */
@@ -1133,6 +1147,11 @@ body {
     font-size: 0.8rem;
   }
 
+  .load-more-btn {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.8rem;
+  }
+
   #library-view .playlist-item {
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -1181,5 +1200,10 @@ body {
     padding: 6px 10px;
     font-size: 0.7rem;
     margin-left: 5px;
+  }
+
+  .load-more-btn {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.7rem;
   }
 }

@@ -7,6 +7,14 @@ let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 let playlists = JSON.parse(localStorage.getItem('playlists') || '[]');
 let currentArtistId = '';
 let artistPage = 0;
+let visibleSongCount = 4; // Start with 4 songs as before
+let lastSongResults = [];
+let searchSongsPage=0;
+let visibleArtistSongCount = 10;
+let lastArtistSongs = [];
+
+let visibleAlbumSongCount = 10;
+let lastAlbumSongs = [];
 
 const searchInput = document.getElementById('searchInput');
 const resultsList = document.getElementById('song-list');
@@ -428,6 +436,7 @@ async function searchSongs() {
   if (!query) return;
 
   currentQuery = query;
+  visibleSongCount = 4; 
   searchSongsPage = 0;
   searchArtistsPage = 0;
   searchAlbumsPage = 0;
@@ -481,6 +490,45 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
     const data = await response.json();
     const songs = data.data?.songs || [];
     console.log('Artist songs received:', songs.length, songs.map(s => s.id));
+    lastArtistSongs = songs;
+visibleArtistSongCount = 10; // or whatever starting point you want
+
+function renderArtistSongs() {
+  // Clear song list, then render from lastArtistSongs.slice(0, visibleArtistSongCount)
+  // Add a "Load More" button if needed
+  // Similar logic as above
+  resultsList.innerHTML = '';
+  // ...add header, etc...
+  const container = document.createElement('div');
+  container.className = 'song-container';
+  const cards = document.createElement('div');
+  cards.className = 'cards';
+  lastArtistSongs.slice(0, visibleArtistSongCount).forEach(song => {
+    const normalizedSong = normalizeSong(song);
+    const card = createSongCard(normalizedSong, true, false);
+    cards.appendChild(card);
+  });
+  container.appendChild(cards);
+  resultsList.appendChild(container);
+
+  let loadMoreBtn = document.getElementById('artist-songs-load-more');
+  if (!loadMoreBtn) {
+    loadMoreBtn = document.createElement('button');
+    loadMoreBtn.id = 'artist-songs-load-more';
+    loadMoreBtn.className = 'load-more-btn';
+    loadMoreBtn.textContent = 'Load More';
+    resultsList.appendChild(loadMoreBtn);
+  }
+  if (lastArtistSongs.length > visibleArtistSongCount) {
+    loadMoreBtn.style.display = 'block';
+    loadMoreBtn.onclick = () => {
+      visibleArtistSongCount += 5;
+      renderArtistSongs();
+    };
+  } else {
+    loadMoreBtn.style.display = 'none';
+  }
+}
 
     if (!append) {
       resultsList.innerHTML = '';
@@ -623,7 +671,9 @@ async function loadMoreArtistSongs() {
 function displayResults(data) {
   resultsList.innerHTML = '';
 
-  if (data.songs.results.length > 0) {
+  // ----- SONGS -----
+  lastSongResults = data.songs.results || [];
+  if (lastSongResults.length > 0) {
     const songsHeader = document.createElement('h3');
     songsHeader.textContent = 'Songs';
     resultsList.appendChild(songsHeader);
@@ -632,7 +682,8 @@ function displayResults(data) {
     container.className = 'song-container';
     const cards = document.createElement('div');
     cards.className = 'cards';
-    data.songs.results.slice(0, 4).forEach(song => {
+    // Show only up to visibleSongCount
+    lastSongResults.slice(0, visibleSongCount).forEach(song => {
       const normalizedSong = normalizeSong(song);
       if (!songHistory.some(s => s.id === normalizedSong.id)) {
         songHistory.push(normalizedSong);
@@ -642,8 +693,28 @@ function displayResults(data) {
     });
     container.appendChild(cards);
     resultsList.appendChild(container);
+
+    // Load More button logic
+    let loadMoreBtn = document.getElementById('songs-load-more');
+    if (!loadMoreBtn) {
+      loadMoreBtn = document.createElement('button');
+      loadMoreBtn.id = 'songs-load-more';
+      loadMoreBtn.className = 'load-more-btn';
+      loadMoreBtn.textContent = 'Load More';
+      resultsList.appendChild(loadMoreBtn);
+    }
+    if (lastSongResults.length > visibleSongCount) {
+      loadMoreBtn.style.display = 'block';
+      loadMoreBtn.onclick = () => {
+        visibleSongCount += 5;
+        displayResults({songs: {results: lastSongResults}, artists: data.artists, albums: data.albums});
+      };
+    } else {
+      loadMoreBtn.style.display = 'none';
+    }
   }
 
+  // ----- ARTISTS -----
   if (data.artists.results.length > 0) {
     const artistsHeader = document.createElement('h3');
     artistsHeader.textContent = 'Artists';
@@ -673,6 +744,7 @@ function displayResults(data) {
     resultsList.appendChild(container);
   }
 
+  // ----- ALBUMS -----
   if (data.albums.results.length > 0) {
     const albumsHeader = document.createElement('h3');
     albumsHeader.textContent = 'Albums';
@@ -708,7 +780,6 @@ function displayResults(data) {
 
   saveState();
 }
-
 /* =================== */
 /* Playback */
 function loadSongWithoutPlaying(song) {
