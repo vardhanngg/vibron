@@ -7,14 +7,14 @@ let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 let playlists = JSON.parse(localStorage.getItem('playlists') || '[]');
 let currentArtistId = '';
 let artistPage = 0;
-let visibleSongCount = 4; // Start with 4 songs as before
+let visibleSongCount = 4;
 let lastSongResults = [];
-let searchSongsPage=0;
+let searchSongsPage = 0;
 let visibleArtistSongCount = 10;
 let lastArtistSongs = [];
-
 let visibleAlbumSongCount = 10;
 let lastAlbumSongs = [];
+let previousView = null; // Track previous view for back button
 
 const searchInput = document.getElementById('searchInput');
 const resultsList = document.getElementById('song-list');
@@ -45,18 +45,58 @@ function setGreeting() {
 }
 
 /* =================== */
+/* Back Button */
+function showBackButton() {
+  let backBtn = document.getElementById('back-btn');
+  if (!backBtn) {
+    backBtn = document.createElement('button');
+    backBtn.id = 'back-btn';
+    backBtn.className = 'back-btn';
+    backBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Back';
+    backBtn.onclick = goBack;
+    resultsList.prepend(backBtn);
+  }
+  backBtn.style.display = 'block';
+}
+
+function hideBackButton() {
+  const backBtn = document.getElementById('back-btn');
+  if (backBtn) {
+    backBtn.style.display = 'none';
+  }
+}
+
+function goBack() {
+  if (previousView) {
+    if (previousView.type === 'home') {
+      loadHomeContent();
+    } else if (previousView.type === 'search') {
+      searchInput.value = previousView.query;
+      currentQuery = previousView.query;
+      currentPage = previousView.page;
+      visibleSongCount = previousView.visibleSongCount;
+      lastSongResults = previousView.lastSongResults;
+      fetchResults();
+    }
+    previousView = null;
+    hideBackButton();
+  } else {
+    loadHomeContent();
+    hideBackButton();
+  }
+}
+
+/* =================== */
 /* Home Content */
 async function loadHomeContent() {
   document.getElementById('home-content').style.display = 'block';
   resultsList.style.display = 'none';
   libraryView.style.display = 'none';
   moreBtn.style.display = 'none';
+  hideBackButton();
 
   await Promise.all([
     loadListenAgain(),
-    //loadTrending(),
-    //loadTopCharts(),
-    //loadNewReleases()
   ]);
 }
 
@@ -64,11 +104,10 @@ async function loadListenAgain() {
   const sectionList = document.querySelector('#listen-again .section-list');
   sectionList.innerHTML = '';
 
-  // Filter songs that have been played (have lastPlayed timestamp)
   const recentSongs = [...new Set(songHistory.filter(s => s.lastPlayed).map(s => s.id))]
-    .slice(-4) // Get the last 4 unique songs
+    .slice(-4)
     .map(id => songHistory.find(s => s.id === id))
-    .sort((a, b) => new Date(b.lastPlayed) - new Date(a.lastPlayed)); // Sort by most recent playback
+    .sort((a, b) => new Date(b.lastPlayed) - new Date(a.lastPlayed));
 
   if (recentSongs.length) {
     const container = document.createElement('div');
@@ -86,155 +125,232 @@ async function loadListenAgain() {
   }
 }
 
-async function loadTrending() {
-  const sectionList = document.querySelector('#trending .section-list');
-  sectionList.innerHTML = '<span>Loading trending songs...</span>';
+/* =================== */
+/* Search & Fetch */
+async function searchSongs() {
+  const query = searchInput.value.trim();
+  if (!query) return;
+
+  previousView = { type: 'home' }; // Save home as previous view
+  currentQuery = query;
+  visibleSongCount = 4;
+  searchSongsPage = 0;
+  resultsList.innerHTML = '';
+  libraryView.style.display = 'none';
+  document.getElementById('home-content').style.display = 'none';
+  resultsList.style.display = 'block';
+  hideBackButton();
+
+  await fetchResults();
+}
+
+async function fetchResults() {
   try {
-    const queries = ['trending songs', 'top hits', 'popular songs', 'top 50', 'english top songs'];
-    let data = null;
-    for (const query of queries) {
-      const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(query)}&limit=8`);
-      if (!response.ok) continue;
-      const result = await response.json();
-      if (result.success !== false && (result.songs?.results?.length > 0 || result.albums?.results?.length > 0)) {
-        data = result;
-        break;
-      }
-    }
-    if (!data || (!data.songs?.results?.length && !data.albums?.results?.length)) {
-      sectionList.innerHTML = '<span>No trending songs found. Try searching!</span>';
+    const response = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`);
+    if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
+
+    const data = await response.json();
+
+    if (!data.songs?.results?.length && !data.artists?.results?.length && !data.albums?.results?.length) {
+      moreBtn.style.display = 'none';
+      resultsList.innerHTML = '<span>No results found.</span>';
       return;
     }
 
-    const items = data.songs?.results || data.albums?.results || [];
-    sectionList.innerHTML = '';
-
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    items.forEach(item => {
-      const normalizedItem = normalizeSong(item);
-      if (!songHistory.some(s => s.id === normalizedItem.id)) {
-        songHistory.push(normalizedItem);
-      }
-      const card = createSongCard(normalizedItem);
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    sectionList.appendChild(container);
+    displayResults(data);
+    moreBtn.style.display = data.songs.next || data.artists.next || data.albums.next ? 'block' : 'none';
+    currentPage++;
   } catch (err) {
-    sectionList.innerHTML = '<span>Error loading trending songs. Try searching!</span>';
-    console.error('Error fetching trending:', err);
+    moreBtn.style.display = 'none';
+    resultsList.innerHTML = '<span>Error loading results.</span>';
+    console.error('Error fetching results:', err);
   }
 }
 
-async function loadTopCharts() {
-  const sectionList = document.querySelector('#top-charts .section-list');
-  sectionList.innerHTML = '<span>Loading top charts...</span>';
+async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
+  if (!artistId || artistId === 'undefined') {
+    resultsList.innerHTML = '<span>Invalid artist ID.</span>';
+    console.error('Invalid artistId:', artistId);
+    return;
+  }
+
+  if (!append) {
+    previousView = {
+      type: 'search',
+      query: currentQuery,
+      page: currentPage,
+      visibleSongCount: visibleSongCount,
+      lastSongResults: lastSongResults
+    };
+  }
+
   try {
-    const queries = ['top charts', 'trending playlists', 'top english playlists', 'top 50', 'weekly top songs'];
-    let data = null;
-    for (const query of queries) {
-      const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(query)}&limit=6`);
-      if (!response.ok) continue;
-      const result = await response.json();
-      if (result.success !== false && (result.playlists?.results?.length > 0 || result.songs?.results?.length > 0 || result.albums?.results?.length > 0)) {
-        data = result;
-        break;
+    const url = `https://apivibron.vercel.app/api/artists/${artistId}/songs`;
+    console.log('Fetching artist songs:', url);
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Artist fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const songs = data.data?.songs || [];
+    console.log('Artist songs received:', songs.length, songs.map(s => s.id));
+    lastArtistSongs = songs;
+    visibleArtistSongCount = 10;
+
+    if (!append) {
+      resultsList.innerHTML = '';
+      libraryView.style.display = 'none';
+      document.getElementById('home-content').style.display = 'none';
+      searchInput.value = `Songs by ${artistName}`;
+      resultsList.style.display = 'block';
+      currentArtistId = artistId;
+      artistPage = page;
+      showBackButton();
+    }
+
+    let cards;
+    if (!append) {
+      const titleHeader = document.createElement('h3');
+      titleHeader.textContent = `Songs by ${artistName}`;
+      resultsList.appendChild(titleHeader);
+
+      const container = document.createElement('div');
+      container.className = 'song-container';
+      cards = document.createElement('div');
+      cards.className = 'cards';
+      container.appendChild(cards);
+      resultsList.appendChild(container);
+    } else {
+      cards = resultsList.querySelector('.cards');
+    }
+
+    if (!append && songs.length) {
+      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
+      console.log('Artist queue updated:', queue.map(q => q.id));
+      renderQueue();
+    }
+
+    songs.slice(0, visibleArtistSongCount).forEach(song => {
+      const normalizedSong = normalizeSong(song);
+      if (!songHistory.some(s => s.id === normalizedSong.id)) {
+        songHistory.push(normalizedSong);
       }
+      const card = createSongCard(normalizedSong, true, false);
+      cards.appendChild(card);
+    });
+
+    let loadMoreBtn = document.getElementById('artist-songs-load-more');
+    if (!loadMoreBtn) {
+      loadMoreBtn = document.createElement('button');
+      loadMoreBtn.id = 'artist-songs-load-more';
+      loadMoreBtn.className = 'load-more-btn';
+      loadMoreBtn.textContent = 'Load More';
+      resultsList.appendChild(loadMoreBtn);
     }
-    if (!data || (!data.playlists?.results?.length && !data.songs?.results?.length && !data.albums?.results?.length)) {
-      sectionList.innerHTML = '<span>No top charts found. Try searching!</span>';
-      return;
+    if (songs.length > visibleArtistSongCount) {
+      loadMoreBtn.style.display = 'block';
+      loadMoreBtn.onclick = () => {
+        visibleArtistSongCount += 5;
+        fetchArtistSongs(artistId, artistName, artistPage, true);
+      };
+    } else {
+      loadMoreBtn.style.display = 'none';
     }
 
-    let items = data.playlists?.results || data.songs?.results || data.albums?.results || [];
-    sectionList.innerHTML = '';
+    saveState();
+  } catch (err) {
+    resultsList.innerHTML = '<span>Error loading artist songs. Please try again.</span>';
+    console.error(`Error fetching artist songs for ID ${artistId}:`, err.message);
+  }
+}
 
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    items.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      const normalizedItem = normalizeSong(item);
-      card.innerHTML = `
-        <img src="${item.image?.[2]?.url || item.image || 'default.png'}" alt="${item.title}" />
-        <div class="card-body">
-          <div class="song-name">${item.title}</div>
-          <div class="artist-name">${item.primaryArtists || item.language || 'Various'}</div>
-        </div>
-        <div class="play-down">
-          <div class="play-btn" onclick="event.stopPropagation(); searchInput.value = '${item.title}'; searchSongs();"><i class="fa-solid fa-play"></i></div>
-        </div>
-      `;
-      card.addEventListener('click', () => {
-        searchInput.value = item.title;
-        searchSongs();
+async function fetchAlbumSongs(albumId, albumTitle) {
+  if (!albumId || albumId === 'undefined') {
+    resultsList.innerHTML = '<span>Invalid album ID.</span>';
+    console.error('Invalid albumId:', albumId);
+    return;
+  }
+
+  previousView = {
+    type: 'search',
+    query: currentQuery,
+    page: currentPage,
+    visibleSongCount: visibleSongCount,
+    lastSongResults: lastSongResults
+  };
+
+  try {
+    const url = `https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`;
+    console.log('Fetching album songs:', url);
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Album fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
+    }
+
+    const data = await response.json();
+    if (!data.success) throw new Error('API returned success: false');
+
+    const songs = data.data?.songs || [];
+    console.log('Album songs received:', songs.length, songs.map(s => s.id));
+
+    resultsList.innerHTML = '';
+    libraryView.style.display = 'none';
+    document.getElementById('home-content').style.display = 'none';
+    searchInput.value = `Songs from ${albumTitle}`;
+    resultsList.style.display = 'block';
+    showBackButton();
+
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '1rem';
+
+    const titleHeader = document.createElement('h3');
+    titleHeader.textContent = `Songs from ${albumTitle}`;
+    header.appendChild(titleHeader);
+
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'playlist-download-btn';
+    downloadBtn.textContent = 'Download Album';
+    downloadBtn.disabled = songs.length === 0;
+    downloadBtn.onclick = () => downloadPlaylist(songs.map(normalizeSong), albumTitle);
+    header.appendChild(downloadBtn);
+
+    resultsList.appendChild(header);
+
+    if (songs.length) {
+      const container = document.createElement('div');
+      container.className = 'song-container';
+      const cards = document.createElement('div');
+      cards.className = 'cards';
+      songs.forEach(song => {
+        const normalizedSong = normalizeSong(song);
+        if (!songHistory.some(s => s.id === normalizedSong.id)) {
+          songHistory.push(normalizedSong);
+        }
+        const card = createSongCard(normalizedSong, false, true);
+        cards.appendChild(card);
       });
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    sectionList.appendChild(container);
+      container.appendChild(cards);
+      resultsList.appendChild(container);
+
+      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
+      console.log('Album queue updated:', queue.map(q => q.id));
+      renderQueue();
+    } else {
+      resultsList.innerHTML = '<span>No songs found in this album.</span>';
+    }
+
+    saveState();
   } catch (err) {
-    sectionList.innerHTML = '<span>Error loading top charts. Try searching!</span>';
-    console.error('Error fetching top charts:', err);
+    resultsList.innerHTML = '<span>Error loading album songs. Please try again.</span>';
+    console.error(`Error fetching album songs for ID ${albumId}:`, err.message);
   }
 }
-
-/*async function loadNewReleases() {
-  const sectionList = document.querySelector('#new-releases .section-list');
-  sectionList.innerHTML = '<span>Loading new releases...</span>';
-  try {
-    const queries = ['new releases', 'latest albums', 'new english songs', 'latest songs', 'new hindi songs'];
-    let data = null;
-    for (const query of queries) {
-      const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(query)}&limit=6`);
-      if (!response.ok) continue;
-      const result = await response.json();
-      if (result.success !== false && (result.albums?.results?.length > 0 || result.songs?.results?.length > 0)) {
-        data = result;
-        break;
-      }
-    }
-    if (!data || (!data.albums?.results?.length && !data.songs?.results?.length)) {
-      sectionList.innerHTML = '<span>No new releases found. Try searching!</span>';
-      return;
-    }
-
-    let items = data.albums?.results || data.songs?.results || [];
-    sectionList.innerHTML = '';
-
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    items.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      const normalizedItem = normalizeSong(item);
-      card.innerHTML = `
-        <img src="${item.image?.[2]?.url || item.image || 'default.png'}" alt="${item.title}" />
-        <div class="card-body">
-          <div class="song-name">${item.title}</div>
-          <div class="artist-name">${item.primaryArtists || 'Various'}</div>
-        </div>
-        <div class="play-down">
-          <div class="play-btn" onclick="event.stopPropagation(); fetchAlbumSongs('${item.id}', '${item.title}')"><i class="fa-solid fa-play"></i></div>
-        </div>
-      `;
-      card.addEventListener('click', () => fetchAlbumSongs(item.id, item.title));
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    sectionList.appendChild(container);
-  } catch (err) {
-    sectionList.innerHTML = '<span>Error loading new releases. Try searching!</span>';
-    console.error('Error fetching new releases:', err);
-  }
-}*/
 
 async function fetchPlaylistSongs(playlistId, playlistTitle) {
   try {
@@ -247,6 +363,7 @@ async function fetchPlaylistSongs(playlistId, playlistTitle) {
     libraryView.style.display = 'none';
     searchInput.value = `Songs from ${playlistTitle}`;
     moreBtn.style.display = 'none';
+    hideBackButton();
 
     if (songs.length) {
       const container = document.createElement('div');
@@ -290,7 +407,7 @@ function normalizeSong(song) {
   };
 }
 
-function createSongCard(song) {
+function createSongCard(song, fromArtist = false, fromAlbum = false) {
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
@@ -300,13 +417,13 @@ function createSongCard(song) {
       <div class="artist-name">${song.artist}</div>
     </div>
     <div class="play-down">
-      <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, true)"><i class="fa-solid fa-play"></i></div>
+      <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>
       <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
       <div class="add-fav${favorites.some(f => f.id === song.id) ? ' favorited' : ''}" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></div>
       <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
     </div>
   `;
-  card.addEventListener('click', () => playSong(song, true));
+  card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
   return card;
 }
 
@@ -385,7 +502,6 @@ window.addEventListener('load', () => {
 
   setInterval(saveState, 5000);
 
-  // Progress and volume handling
   audioPlayer.addEventListener('timeupdate', () => {
     if (!audioPlayer.duration) return;
     const percentage = (audioPlayer.currentTime / audioPlayer.duration) * 100;
@@ -429,357 +545,6 @@ function saveState() {
   localStorage.setItem('playlists', JSON.stringify(playlists));
 }
 
-/* =================== */
-/* Search & Fetch */
-async function searchSongs() {
-  const query = searchInput.value.trim();
-  if (!query) return;
-
-  currentQuery = query;
-  visibleSongCount = 4; 
-  searchSongsPage = 0;
-  searchArtistsPage = 0;
-  searchAlbumsPage = 0;
-  resultsList.innerHTML = '';
-  libraryView.style.display = 'none';
-  document.getElementById('home-content').style.display = 'none';
-  resultsList.style.display = 'block';
-
-  await fetchResults();
-}
-
-async function fetchResults() {
-  try {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`);
-    if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
-
-    const data = await response.json();
-
-    if (!data.songs?.results?.length && !data.artists?.results?.length && !data.albums?.results?.length) {
-      moreBtn.style.display = 'none';
-      resultsList.innerHTML = '<span>No results found.</span>';
-      return;
-    }
-
-    displayResults(data);
-    moreBtn.style.display = data.songs.next || data.artists.next || data.albums.next ? 'block' : 'none';
-    currentPage++;
-  } catch (err) {
-    moreBtn.style.display = 'none';
-    resultsList.innerHTML = '<span>Error loading results.</span>';
-    console.error('Error fetching results:', err);
-  }
-}
-
-async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
-  if (!artistId || artistId === 'undefined') {
-    resultsList.innerHTML = '<span>Invalid artist ID.</span>';
-    console.error('Invalid artistId:', artistId);
-    return;
-  }
-
-  try {
-    const url = `https://apivibron.vercel.app/api/artists/${artistId}/songs`;
-    console.log('Fetching artist songs:', url);
-    const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Artist fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const songs = data.data?.songs || [];
-    console.log('Artist songs received:', songs.length, songs.map(s => s.id));
-    lastArtistSongs = songs;
-visibleArtistSongCount = 10; // or whatever starting point you want
-
-function renderArtistSongs() {
-  // Clear song list, then render from lastArtistSongs.slice(0, visibleArtistSongCount)
-  // Add a "Load More" button if needed
-  // Similar logic as above
-  resultsList.innerHTML = '';
-  // ...add header, etc...
-  const container = document.createElement('div');
-  container.className = 'song-container';
-  const cards = document.createElement('div');
-  cards.className = 'cards';
-  lastArtistSongs.slice(0, visibleArtistSongCount).forEach(song => {
-    const normalizedSong = normalizeSong(song);
-    const card = createSongCard(normalizedSong, true, false);
-    cards.appendChild(card);
-  });
-  container.appendChild(cards);
-  resultsList.appendChild(container);
-
-  let loadMoreBtn = document.getElementById('artist-songs-load-more');
-  if (!loadMoreBtn) {
-    loadMoreBtn = document.createElement('button');
-    loadMoreBtn.id = 'artist-songs-load-more';
-    loadMoreBtn.className = 'load-more-btn';
-    loadMoreBtn.textContent = 'Load More';
-    resultsList.appendChild(loadMoreBtn);
-  }
-  if (lastArtistSongs.length > visibleArtistSongCount) {
-    loadMoreBtn.style.display = 'block';
-    loadMoreBtn.onclick = () => {
-      visibleArtistSongCount += 5;
-      renderArtistSongs();
-    };
-  } else {
-    loadMoreBtn.style.display = 'none';
-  }
-}
-
-    if (!append) {
-      resultsList.innerHTML = '';
-      libraryView.style.display = 'none';
-      document.getElementById('home-content').style.display = 'none';
-      searchInput.value = `Songs by ${artistName}`;
-      resultsList.style.display = 'block';
-      currentArtistId = artistId;
-      artistPage = page;
-    }
-
-    let cards;
-    if (!append) {
-      const titleHeader = document.createElement('h3');
-      titleHeader.textContent = `Songs by ${artistName}`;
-      resultsList.appendChild(titleHeader);
-
-      const container = document.createElement('div');
-      container.className = 'song-container';
-      cards = document.createElement('div');
-      cards.className = 'cards';
-      container.appendChild(cards);
-      resultsList.appendChild(container);
-    } else {
-      cards = resultsList.querySelector('.cards');
-    }
-
-    // Queue all songs for continuous playback
-    if (!append && songs.length) {
-      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
-      console.log('Artist queue updated:', queue.map(q => q.id));
-      renderQueue();
-    }
-
-    // Add songs to songHistory and create cards
-    songs.forEach(song => {
-      const normalizedSong = normalizeSong(song);
-      if (!songHistory.some(s => s.id === normalizedSong.id)) {
-        songHistory.push(normalizedSong);
-      }
-      const card = createSongCard(normalizedSong, true, false);
-      cards.appendChild(card);
-    });
-
-    saveState();
-  } catch (err) {
-    resultsList.innerHTML = '<span>Error loading artist songs. Please try again.</span>';
-    console.error(`Error fetching artist songs for ID ${artistId}:`, err.message);
-  }
-}
-
-async function fetchAlbumSongs(albumId, albumTitle) {
-  if (!albumId || albumId === 'undefined') {
-    resultsList.innerHTML = '<span>Invalid album ID.</span>';
-    console.error('Invalid albumId:', albumId);
-    return;
-  }
-
-  try {
-    const url = `https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`;
-    console.log('Fetching album songs:', url);
-    const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Album fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
-    }
-
-    const data = await response.json();
-    if (!data.success) throw new Error('API returned success: false');
-
-    const songs = data.data?.songs || [];
-    console.log('Album songs received:', songs.length, songs.map(s => s.id));
-
-    resultsList.innerHTML = '';
-    libraryView.style.display = 'none';
-    document.getElementById('home-content').style.display = 'none';
-    searchInput.value = `Songs from ${albumTitle}`;
-    resultsList.style.display = 'block';
-
-    // Add header and download button
-    const header = document.createElement('div');
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
-    header.style.marginBottom = '1rem';
-
-    const titleHeader = document.createElement('h3');
-    titleHeader.textContent = `Songs from ${albumTitle}`;
-    header.appendChild(titleHeader);
-
-    const downloadBtn = document.createElement('button');
-    downloadBtn.className = 'playlist-download-btn';
-    downloadBtn.textContent = 'Download Album';
-    downloadBtn.disabled = songs.length === 0;
-    downloadBtn.onclick = () => downloadPlaylist(songs.map(normalizeSong), albumTitle);
-    header.appendChild(downloadBtn);
-
-    resultsList.appendChild(header);
-
-    if (songs.length) {
-      const container = document.createElement('div');
-      container.className = 'song-container';
-      const cards = document.createElement('div');
-      cards.className = 'cards';
-      songs.forEach(song => {
-        const normalizedSong = normalizeSong(song);
-        if (!songHistory.some(s => s.id === normalizedSong.id)) {
-          songHistory.push(normalizedSong);
-        }
-        const card = createSongCard(normalizedSong, false, true);
-        cards.appendChild(card);
-      });
-      container.appendChild(cards);
-      resultsList.appendChild(container);
-
-      // Queue all songs for continuous playback
-      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
-      console.log('Album queue updated:', queue.map(q => q.id));
-      renderQueue();
-    } else {
-      resultsList.innerHTML = '<span>No songs found in this album.</span>';
-    }
-
-    saveState();
-  } catch (err) {
-    resultsList.innerHTML = '<span>Error loading album songs. Please try again.</span>';
-    console.error(`Error fetching album songs for ID ${albumId}:`, err.message);
-  }
-}
-async function loadMoreArtistSongs() {
-  if (!currentArtistId) return;
-  artistPage++;
-  await fetchArtistSongs(currentArtistId, searchInput.value.replace('Songs by ', ''), artistPage, true);
-}
-
-/*function loadMoreResults() {
-  fetchResults();
-}*/
-
-function displayResults(data) {
-  resultsList.innerHTML = '';
-
-  // ----- SONGS -----
-  lastSongResults = data.songs.results || [];
-  if (lastSongResults.length > 0) {
-    const songsHeader = document.createElement('h3');
-    songsHeader.textContent = 'Songs';
-    resultsList.appendChild(songsHeader);
-
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    // Show only up to visibleSongCount
-    lastSongResults.slice(0, visibleSongCount).forEach(song => {
-      const normalizedSong = normalizeSong(song);
-      if (!songHistory.some(s => s.id === normalizedSong.id)) {
-        songHistory.push(normalizedSong);
-      }
-      const card = createSongCard(normalizedSong);
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    resultsList.appendChild(container);
-
-    // Load More button logic
-    let loadMoreBtn = document.getElementById('songs-load-more');
-    if (!loadMoreBtn) {
-      loadMoreBtn = document.createElement('button');
-      loadMoreBtn.id = 'songs-load-more';
-      loadMoreBtn.className = 'load-more-btn';
-      loadMoreBtn.textContent = 'Load More';
-      resultsList.appendChild(loadMoreBtn);
-    }
-    if (lastSongResults.length > visibleSongCount) {
-      loadMoreBtn.style.display = 'block';
-      loadMoreBtn.onclick = () => {
-        visibleSongCount += 5;
-        displayResults({songs: {results: lastSongResults}, artists: data.artists, albums: data.albums});
-      };
-    } else {
-      loadMoreBtn.style.display = 'none';
-    }
-  }
-
-  // ----- ARTISTS -----
-  if (data.artists.results.length > 0) {
-    const artistsHeader = document.createElement('h3');
-    artistsHeader.textContent = 'Artists';
-    resultsList.appendChild(artistsHeader);
-
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    data.artists.results.slice(0, 3).forEach(artist => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${artist.image || 'default.png'}" alt="${artist.name}" />
-        <div class="card-body">
-          <div class="song-name">${artist.name}</div>
-          <div class="artist-name">${artist.role || 'Artist'}</div>
-        </div>
-        <div class="play-down">
-          <div class="play-btn" onclick="event.stopPropagation(); fetchArtistSongs('${artist.id}', '${artist.name}')"><i class="fa-solid fa-play"></i></div>
-        </div>
-      `;
-      card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    resultsList.appendChild(container);
-  }
-
-  // ----- ALBUMS -----
-  if (data.albums.results.length > 0) {
-    const albumsHeader = document.createElement('h3');
-    albumsHeader.textContent = 'Albums';
-    resultsList.appendChild(albumsHeader);
-
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    data.albums.results.slice(0, 2).forEach(album => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${album.image || 'default.png'}" alt="${album.title}" />
-        <div class="card-body">
-          <div class="song-name">${album.title}</div>
-          <div class="artist-name">${album.primaryArtists} (${album.year})</div>
-        </div>
-        <div class="play-down">
-          <div class="play-btn" onclick="event.stopPropagation(); fetchAlbumSongs('${album.id}', '${album.title}')"><i class="fa-solid fa-play"></i></div>
-        </div>
-      `;
-      card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    resultsList.appendChild(container);
-  }
-
-  if (!data.songs.results.length && !data.artists.results.length && !data.albums.results.length) {
-    resultsList.innerHTML = '<span>No results found.</span>';
-  }
-
-  saveState();
-}
 /* =================== */
 /* Playback */
 function loadSongWithoutPlaying(song) {
@@ -830,7 +595,7 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   } else if (fromArtist || fromAlbum) {
     console.log('Preserving queue for artist/album:', queue.map(q => q.id));
     if (!queue.some(q => q.id === song.id)) {
-      queue.unshift(song); // Ensure current song is at queue start
+      queue.unshift(song);
       console.log('Added current song to queue:', song.id);
       renderQueue();
     }
@@ -930,6 +695,7 @@ async function autoAddSimilar(currentSong) {
     console.error('Error in autoAddSimilar:', err.message);
   }
 }
+
 function renderQueue() {
   if (queue.length === 0) {
     queueList.innerHTML = '<span>No songs in queue</span>';
@@ -966,27 +732,6 @@ function emptyQueue() {
 
 /* =================== */
 /* Favorites & Playlists */
-function createSongCard(song, fromArtist = false, fromAlbum = false) {
-  console.log('Creating card for song:', song.id, fromArtist, fromAlbum);
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `
-    <img src="${song.image || 'default.png'}" alt="${song.title}" />
-    <div class="card-body">
-      <div class="song-name">${song.title}</div>
-      <div class="artist-name">${song.artist}</div>
-    </div>
-    <div class="play-down">
-      <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>
-      <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
-      <div class="add-fav${favorites.some(f => f.id === song.id) ? ' favorited' : ''}" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></div>
-      <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
-    </div>
-  `;
-  card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
-  return card;
-}
-
 function filterSongPicker(query) {
   const songPickerList = document.getElementById('song-picker-list');
   const lowerQuery = query.toLowerCase();
@@ -1131,6 +876,7 @@ function loadFavorites() {
     ` : '<span>No favorites yet</span>'}
   `;
   moreBtn.style.display = 'none';
+  hideBackButton();
 }
 
 function createPlaylist(name) {
@@ -1219,6 +965,7 @@ function loadPlaylists() {
     `).join('')}
   `;
   moreBtn.style.display = 'none';
+  hideBackButton();
 }
 
 /* =================== */
@@ -1239,11 +986,147 @@ function focusSearch() {
   libraryView.style.display = 'none';
   document.getElementById('home-content').style.display = 'none';
   resultsList.style.display = 'block';
+  hideBackButton();
+}
+
+function displayResults(data) {
+  resultsList.innerHTML = '';
+
+  // ----- SONGS -----
+  lastSongResults = data.songs.results || [];
+  if (lastSongResults.length > 0) {
+    const songsHeader = document.createElement('h3');
+    songsHeader.textContent = 'Songs';
+    resultsList.appendChild(songsHeader);
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    // Show only up to visibleSongCount
+    lastSongResults.slice(0, visibleSongCount).forEach(song => {
+      const normalizedSong = normalizeSong(song);
+      if (!songHistory.some(s => s.id === normalizedSong.id)) {
+        songHistory.push(normalizedSong);
+      }
+      const card = createSongCard(normalizedSong);
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    resultsList.appendChild(container);
+
+    // Load More button logic
+    let loadMoreBtn = document.getElementById('songs-load-more');
+    if (!loadMoreBtn) {
+      loadMoreBtn = document.createElement('button');
+      loadMoreBtn.id = 'songs-load-more';
+      loadMoreBtn.className = 'load-more-btn';
+      loadMoreBtn.textContent = 'Load More';
+      resultsList.appendChild(loadMoreBtn);
+    }
+    if (lastSongResults.length > visibleSongCount) {
+      loadMoreBtn.style.display = 'block';
+      loadMoreBtn.onclick = () => {
+        visibleSongCount += 5;
+        displayResults({songs: {results: lastSongResults}, artists: data.artists, albums: data.albums});
+      };
+    } else {
+      loadMoreBtn.style.display = 'none';
+    }
+  }
+
+  // ----- ARTISTS -----
+  if (data.artists.results.length > 0) {
+    const artistsHeader = document.createElement('h3');
+    artistsHeader.textContent = 'Artists';
+    resultsList.appendChild(artistsHeader);
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    data.artists.results.slice(0, 3).forEach(artist => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <img src="${artist.image || 'default.png'}" alt="${artist.name}" />
+        <div class="card-body">
+          <div class="song-name">${artist.name}</div>
+          <div class="artist-name">${artist.role || 'Artist'}</div>
+        </div>
+        <div class="play-down">
+          <div class="play-btn" onclick="event.stopPropagation(); fetchArtistSongs('${artist.id}', '${artist.name}')"><i class="fa-solid fa-play"></i></div>
+        </div>
+      `;
+      card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    resultsList.appendChild(container);
+  }
+
+  // ----- ALBUMS -----
+  if (data.albums.results.length > 0) {
+    const albumsHeader = document.createElement('h3');
+    albumsHeader.textContent = 'Albums';
+    resultsList.appendChild(albumsHeader);
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    data.albums.results.slice(0, 2).forEach(album => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <img src="${album.image || 'default.png'}" alt="${album.title}" />
+        <div class="card-body">
+          <div class="song-name">${album.title}</div>
+          <div class="artist-name">${album.primaryArtists} (${album.year})</div>
+        </div>
+        <div class="play-down">
+          <div class="play-btn" onclick="event.stopPropagation(); fetchAlbumSongs('${album.id}', '${album.title}')"><i class="fa-solid fa-play"></i></div>
+        </div>
+      `;
+      card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    resultsList.appendChild(container);
+  }
+
+  if (!data.songs.results.length && !data.artists.results.length && !data.albums.results.length) {
+    resultsList.innerHTML = '<span>No results found.</span>';
+  }
+
+  saveState();
+}
+
+function createSongPickerModal(playlistIdx) {
+  const modal = document.createElement('div');
+  modal.className = 'song-picker-modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h4>Add Songs to Playlist</h4>
+      <input type="text" id="song-picker-search" placeholder="Search songs..." oninput="filterSongPicker(this.value)" />
+      <div class="song-picker-list" id="song-picker-list" data-playlist-idx="${playlistIdx}"></div>
+      <div class="modal-buttons">
+        <button onclick="closeSongPickerModal()">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  filterSongPicker('');
+}
+
+async function loadMoreArtistSongs() {
+  if (!currentArtistId) return;
+  artistPage++;
+  await fetchArtistSongs(currentArtistId, searchInput.value.replace('Songs by ', ''), artistPage, true);
 }
 
 /* =================== */
-/* Event Listeners 
-moreBtn.addEventListener('click', loadMoreResults);*/
+/* Event Listeners */
 audioPlayer.addEventListener('play', () => {
   isPlaying = true;
   playerBar.classList.add('playing');
@@ -1256,3 +1139,66 @@ audioPlayer.addEventListener('ended', playNext);
 searchInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') searchSongs();
 });
+
+// Add event listener for the search button
+document.querySelector('.search-container button').addEventListener('click', searchSongs);
+
+// Add event listeners for player controls
+document.getElementById('next-btn').addEventListener('click', playNext);
+document.getElementById('prev-btn').addEventListener('click', playPrevious);
+document.getElementById('play-pause-btn').addEventListener('click', playPause);
+document.getElementById('fav-btn').addEventListener('click', addToFavoritesFromPlayer);
+document.getElementById('loop-btn').addEventListener('click', toggleLoop);
+document.getElementById('queue-open-btn').addEventListener('click', dropQueue);
+document.getElementById('empty-queue-btn').addEventListener('click', emptyQueue);
+
+// Add event listeners for library navigation
+document.querySelector('#library-nav a[href="#favorites"]').addEventListener('click', loadFavorites);
+document.querySelector('#library-nav a[href="#playlists"]').addEventListener('click', loadPlaylists);
+
+// Add event listener for load more button (if it exists)
+if (moreBtn) {
+  moreBtn.addEventListener('click', () => {
+    if (currentArtistId) {
+      loadMoreArtistSongs();
+    } else {
+      fetchResults();
+    }
+  });
+}
+
+// Add event listener for queue open button
+document.getElementById('q-open-btn').addEventListener('click', () => {
+  queueContainer.classList.toggle('open');
+});
+
+// Add event listeners for sidebar navigation
+document.querySelector('#home-nav').addEventListener('click', loadHomeContent);
+document.querySelector('#search-nav').addEventListener('click', focusSearch);
+
+// Make global functions available for onclick handlers
+window.playSong = playSong;
+window.addToQueue = addToQueue;
+window.addToFavorites = addToFavorites;
+window.downloadSong = downloadSong;
+window.removeFromQueue = removeFromQueue;
+window.playPause = playPause;
+window.playNext = playNext;
+window.playPrevious = playPrevious;
+window.toggleLoop = toggleLoop;
+window.addToFavoritesFromPlayer = addToFavoritesFromPlayer;
+window.dropQueue = dropQueue;
+window.emptyQueue = emptyQueue;
+window.loadFavorites = loadFavorites;
+window.loadPlaylists = loadPlaylists;
+window.createPlaylistModal = createPlaylistModal;
+window.closePlaylistModal = closePlaylistModal;
+window.createSongPickerModal = createSongPickerModal;
+window.closeSongPickerModal = closeSongPickerModal;
+window.addToPlaylist = addToPlaylist;
+window.removeFromPlaylist = removeFromPlaylist;
+window.deletePlaylist = deletePlaylist;
+window.fetchArtistSongs = fetchArtistSongs;
+window.fetchAlbumSongs = fetchAlbumSongs;
+window.searchSongs = searchSongs;
+window.goBack = goBack;
