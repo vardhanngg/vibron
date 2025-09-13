@@ -7,14 +7,14 @@ let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 let playlists = JSON.parse(localStorage.getItem('playlists') || '[]');
 let currentArtistId = '';
 let artistPage = 0;
-let visibleSongCount = 4;
+let visibleSongCount = 6;
 let lastSongResults = [];
 let searchSongsPage = 0;
 let visibleArtistSongCount = 10;
 let lastArtistSongs = [];
 let visibleAlbumSongCount = 10;
 let lastAlbumSongs = [];
-let previousView = null; // Track previous view for back button
+let previousView = null;
 
 const searchInput = document.getElementById('searchInput');
 const resultsList = document.getElementById('song-list');
@@ -133,7 +133,7 @@ async function searchSongs() {
 
   previousView = { type: 'home' }; // Save home as previous view
   currentQuery = query;
-  visibleSongCount = 4;
+  visibleSongCount = 6;
   searchSongsPage = 0;
   resultsList.innerHTML = '';
   libraryView.style.display = 'none';
@@ -527,6 +527,9 @@ window.addEventListener('load', () => {
   document.getElementById('sidebar-toggle').addEventListener('click', () => {
     sidebar.classList.toggle('open');
   });
+
+  // Add click-outside listener
+  document.addEventListener('click', handleOutsideClick);
 });
 
 function formatTime(seconds) {
@@ -1142,6 +1145,17 @@ searchInput.addEventListener('keypress', (e) => {
 
 // Add event listener for the search button
 document.querySelector('.search-container button').addEventListener('click', searchSongs);
+function handleOutsideClick(event) {
+  // Handle queue container
+  if (queueContainer.classList.contains('open') && !queueContainer.contains(event.target) && !event.target.closest('#queue-open-btn') && !event.target.closest('#q-open-btn')) {
+    queueContainer.classList.remove('open');
+  }
+
+  // Handle sidebar
+  if (sidebar.classList.contains('open') && !sidebar.contains(event.target) && !event.target.closest('#sidebar-toggle')) {
+    sidebar.classList.remove('open');
+  }
+}
 
 // Add event listeners for player controls
 document.getElementById('next-btn').addEventListener('click', playNext);
@@ -1168,9 +1182,9 @@ if (moreBtn) {
 }
 
 // Add event listener for queue open button
-document.getElementById('q-open-btn').addEventListener('click', () => {
-  queueContainer.classList.toggle('open');
-});
+//document.getElementById('q-open-btn').addEventListener('click', () => {
+ //queueContainer.classList.toggle('open');
+//});
 
 // Add event listeners for sidebar navigation
 document.querySelector('#home-nav').addEventListener('click', loadHomeContent);

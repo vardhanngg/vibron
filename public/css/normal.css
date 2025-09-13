@@ -332,7 +332,7 @@ body {
   flex-wrap: nowrap;
 }
 
-.play-btn, .queue-btn, .add-fav, .download-btn {
+.play-btn, .queue-open-btn, .add-fav, .download-btn {
   border-radius: 6px;
   width: 20px; /* Slightly larger for visibility */
   height: 20px;
@@ -345,7 +345,7 @@ body {
   transition: all 0.2s ease;
 }
 
-.play-btn:hover, .queue-btn:hover, .add-fav:hover, .download-btn:hover {
+.play-btn:hover, .queue-open-btn:hover, .add-fav:hover, .download-btn:hover {
   background: #ff2a4a;
   transform: scale(1.1);
 }
@@ -695,7 +695,7 @@ body {
   z-index: 999;
 }
 
-.q-open-btn {
+.queue-open-btn {
   background: var(--accent);
   border-radius: 50%;
   width: 50px;
@@ -712,7 +712,7 @@ body {
   align-items: center;
 }
 
-.q-open-btn:hover {
+.queue-open-btn:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(255, 64, 129, 0.4);
 }
@@ -871,6 +871,24 @@ body {
   margin: 0.5rem 0;
   font-size: 0.9rem;
   color: var(--muted);
+}
+#queue-container {
+  display: none;
+  /* Other styles */
+}
+
+#queue-container.open {
+  display: block;
+}
+
+#sidebar {
+  transform: translateX(-100%); /* Assuming sidebar slides in from the left */
+  transition: transform 0.3s ease;
+  /* Other styles */
+}
+
+#sidebar.open {
+  transform: translateX(0);
 }
 
 #library-view .playlist-item {
@@ -1105,12 +1123,71 @@ body {
     max-width: 400px;
   }
 
-  .queue-holder {
-    width: 100%;
-    right: 0;
-    bottom: 90px;
-    padding: 0 1rem;
+/* Previous CSS content remains unchanged until .queue-open-btn section */
+
+/* Queue Open Button */
+.queue-open-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--accent); /* #ff4081 */
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 15px rgba(255, 64, 129, 0.3);
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001; /* Ensure above player-bar (z-index: 1000) */
+}
+
+.queue-open-btn:hover {
+  background: #ff2a4a;
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(255, 42, 74, 0.4);
+}
+
+.queue-open-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3);
+}
+
+@media screen and (max-width: 768px) {
+  .queue-open-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
   }
+}
+
+@media screen and (max-width: 500px) {
+  .queue-open-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Remove the conflicting #queue-open-btn styles */
+@media screen and (max-width: 500px) {
+  /* Remove the previous #queue-open-btn block */
+  /* Remaining media query styles for other elements */
+}
+
+/* Rest of your existing CSS remains unchanged */
+
+
+
+
+
+
+
 
   .q-open-btn {
     position: absolute;
@@ -1172,7 +1249,7 @@ body {
     gap: 8px;
   }
 
-  .play-btn, .queue-btn, .add-fav, .download-btn {
+  .play-btn, .queue-open-btn, .add-fav, .download-btn {
     width: 18px;
     height: 18px;
     padding: 5px;
@@ -1231,7 +1308,7 @@ body {
     text-align: center;
   }
 
-  .play-btn, .queue-btn, .add-fav, .download-btn {
+  .play-btn, .queue-open-btn, .add-fav, .download-btn {
     width: 16px;
     height: 16px;
     padding: 4px;
@@ -1252,4 +1329,7 @@ body {
     padding: 0.3rem 0.7rem;
     font-size: 0.7rem;
   }
+
+
+
 }

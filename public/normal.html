@@ -68,20 +68,19 @@
 <!-- <button id="more" class="load-more" style="display: none;" onclick="loadMoreResults()"></button>-->
 </main>
 
-  <div class="queue-holder">
-    <div class="q-open-btn" onclick="dropQueue()">Q</div>
-    <div class="queue-container" id="queue-container">
-      <div class="queue-header-holder">
-        <h3 class="queue-title">Queue</h3>
-        <button class="player-play-btn" onclick="playNext()"><i class="fa-solid fa-forward"></i> Next</button>
-      </div>
-      <div id="queue-list" class="queue-list">
-        <span>No songs in queue</span>
-      </div>
-      <button class="empty-queue" onclick="emptyQueue()">Empty Queue</button>
-      <div class="auto-queue-hint">Auto-adding similar songs...</div>
+<div class="queue-holder">
+<button id="queue-open-btn" class="queue-open-btn q-open-btn" onclick="dropQueue()">Q</button>  <div class="queue-container" id="queue-container">
+    <div class="queue-header-holder">
+      <h3 class="queue-title">Queue</h3>
+      <button class="player-play-btn" onclick="playNext()"><i class="fa-solid fa-forward"></i> Next</button>
     </div>
+    <div id="queue-list" class="queue-list">
+      <span>No songs in queue</span>
+    </div>
+    <button class="empty-queue" onclick="emptyQueue()">Empty Queue</button>
+    <div class="auto-queue-hint">Auto-adding similar songs...</div>
   </div>
+</div>
 
   <footer id="player-bar">
     <div class="player-info">
