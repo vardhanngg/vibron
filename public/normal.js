@@ -532,6 +532,11 @@ window.addEventListener('load', () => {
 
   // Add click-outside listener
   document.addEventListener('click', handleOutsideClick);
+
+  // Auto-select search input text on click
+  searchInput.addEventListener('click', () => {
+    searchInput.select();
+  });
 });
 
 function formatTime(seconds) {
@@ -593,8 +598,8 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   updateFavoriteButton();
 
   if (fromSearch) {
-    console.log('Clearing queue for search');
-    queue = [];
+    console.log('Clearing queue for new search and adding song:', song.id);
+    queue = []; // Clear queue for new search
     addToQueue(song.id);
     autoAddSimilar(song);
   } else if (fromArtist || fromAlbum) {
@@ -764,12 +769,16 @@ function createPlaylistModal(songId = '') {
       <h4>Create Playlist</h4>
       <input type="text" id="playlist-name-input" placeholder="Enter playlist name..." />
       <div class="modal-buttons">
-        <button onclick="createPlaylist(document.getElementById('playlist-name-input').value, '${songId}')">Create</button>
+        <button onclick="createPlaylist(document.getElementById('playlist-name-input').value, '${songId}'); closePlaylistModal()">Create</button>
         <button onclick="closePlaylistModal()">Cancel</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+  setTimeout(() => {
+    const input = document.getElementById('playlist-name-input');
+    if (input) input.focus();
+  }, 0);
 }
 
 function closePlaylistModal() {
@@ -907,7 +916,7 @@ function createPlaylist(name, songId = '') {
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
       loadPlaylists();
     }
-    closePlaylistModal();
+    closePlaylistModal(); // Ensure modal closes after creating playlist
   } else {
     showNotification('Please enter a valid playlist name.');
   }
@@ -1229,15 +1238,6 @@ if (moreBtn) {
     }
   });
 }
-
-// Add event listener for queue open button
-//document.getElementById('q-open-btn').addEventListener('click', () => {
-// queueContainer.classList.toggle('open');
-//});
-
-// Add event listeners for sidebar navigation
-document.querySelector('#home-nav').addEventListener('click', loadHomeContent);
-document.querySelector('#search-nav').addEventListener('click', focusSearch);
 
 // Make global functions available for onclick handlers
 window.playSong = playSong;
