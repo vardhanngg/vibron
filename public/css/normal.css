@@ -332,7 +332,7 @@ body {
   flex-wrap: nowrap;
 }
 
-.play-btn, .queue-open-btn, .add-fav, .download-btn {
+.play-btn, .playlist-btn, .queue-btn, .queue-open-btn, .add-fav, .download-btn {
   border-radius: 6px;
   width: 20px; /* Slightly larger for visibility */
   height: 20px;
@@ -345,7 +345,7 @@ body {
   transition: all 0.2s ease;
 }
 
-.play-btn:hover, .queue-open-btn:hover, .add-fav:hover, .download-btn:hover {
+.play-btn:hover, .playlist-btn:hover, .queue-btn:hover, .queue-open-btn:hover, .add-fav:hover, .download-btn:hover {
   background: #ff2a4a;
   transform: scale(1.1);
 }
@@ -1055,14 +1055,14 @@ body {
   overflow-y: auto;
 }
 
-.song-picker-item {
+.song-picker-item, .playlist-picker-item {
   padding: 0.75rem;
   border-bottom: 1px solid var(--glass-border);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.song-picker-item:hover {
+.song-picker-item:hover, .playlist-picker-item:hover {
   background: rgba(255, 64, 129, 0.1);
   border-radius: 8px;
 }
@@ -1249,7 +1249,7 @@ body {
     gap: 8px;
   }
 
-  .play-btn, .queue-open-btn, .add-fav, .download-btn {
+  .play-btn, .playlist-btn, .queue-btn, .queue-open-btn, .add-fav, .download-btn {
     width: 18px;
     height: 18px;
     padding: 5px;
@@ -1308,7 +1308,7 @@ body {
     text-align: center;
   }
 
-  .play-btn, .queue-open-btn, .add-fav, .download-btn {
+  .play-btn, .playlist-btn, .queue-btn, .queue-open-btn, .add-fav, .download-btn {
     width: 16px;
     height: 16px;
     padding: 4px;

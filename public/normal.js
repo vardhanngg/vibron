@@ -408,6 +408,7 @@ function normalizeSong(song) {
 }
 
 function createSongCard(song, fromArtist = false, fromAlbum = false) {
+  const isFavorited = favorites.some(f => f.id === song.id);
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
@@ -417,10 +418,11 @@ function createSongCard(song, fromArtist = false, fromAlbum = false) {
       <div class="artist-name">${song.artist}</div>
     </div>
     <div class="play-down">
-      <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>
-      <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
-      <div class="add-fav${favorites.some(f => f.id === song.id) ? ' favorited' : ''}" onclick="event.stopPropagation(); addToFavorites('${song.id}')"><i class="fa-solid fa-heart"></i></div>
-      <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
+      <div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>
+      <div class="playlist-btn" title="Add to Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${song.id}')"><i class="fa-solid fa-plus"></i></div>
+      <div class="add-fav${isFavorited ? ' favorited' : ''}" title="${isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}" onclick="event.stopPropagation(); toggleFavorites('${song.id}')"><i class="fa${isFavorited ? '-solid' : '-regular'} fa-heart"></i></div>
+      <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-list"></i></div>
+      <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
     </div>
   `;
   card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
@@ -653,6 +655,7 @@ function addToQueue(songId) {
     queue.push(song);
     renderQueue();
     saveState();
+    showNotification('Added to queue!');
   }
 }
 
@@ -753,7 +756,7 @@ function closeSongPickerModal() {
   if (modal) modal.remove();
 }
 
-function createPlaylistModal() {
+function createPlaylistModal(songId = '') {
   const modal = document.createElement('div');
   modal.className = 'song-picker-modal';
   modal.innerHTML = `
@@ -761,7 +764,7 @@ function createPlaylistModal() {
       <h4>Create Playlist</h4>
       <input type="text" id="playlist-name-input" placeholder="Enter playlist name..." />
       <div class="modal-buttons">
-        <button onclick="createPlaylist(document.getElementById('playlist-name-input').value)">Create</button>
+        <button onclick="createPlaylist(document.getElementById('playlist-name-input').value, '${songId}')">Create</button>
         <button onclick="closePlaylistModal()">Cancel</button>
       </div>
     </div>
@@ -808,9 +811,17 @@ function removeFromFavorites(songId) {
   }
 }
 
+function toggleFavorites(songId) {
+  if (favorites.some(f => f.id === songId)) {
+    removeFromFavorites(songId);
+  } else {
+    addToFavorites(songId);
+  }
+}
+
 function addToFavoritesFromPlayer() {
   if (currentSongIndex >= 0 && songHistory[currentSongIndex]) {
-    addToFavorites(songHistory[currentSongIndex].id);
+    toggleFavorites(songHistory[currentSongIndex].id);
   } else {
     showNotification('No song is currently playing.');
   }
@@ -867,10 +878,11 @@ function loadFavorites() {
                 <div class="artist-name">${song.artist}</div>
               </div>
               <div class="play-down">
-                <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
-                <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
-                <div class="add-fav" onclick="event.stopPropagation(); removeFromFavorites('${song.id}')"><i class="fa-solid fa-trash"></i></div>
-                <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
+                <div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
+                <div class="playlist-btn" title="Add to Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${song.id}')"><i class="fa-solid fa-plus"></i></div>
+                <div class="add-fav" title="Remove from Favorites" onclick="event.stopPropagation(); removeFromFavorites('${song.id}')"><i class="fa-solid fa-trash"></i></div>
+                <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-list"></i></div>
+                <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
               </div>
             </div>
           `).join('')}
@@ -882,14 +894,19 @@ function loadFavorites() {
   hideBackButton();
 }
 
-function createPlaylist(name) {
+function createPlaylist(name, songId = '') {
   if (name.trim()) {
     playlists.push({ name, songs: [] });
+    if (songId) {
+      addToPlaylist(playlists.length - 1, songId);
+      showNotification('Playlist created and song added!');
+    } else {
+      showNotification('Playlist created!');
+    }
     saveState();
     if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
       loadPlaylists();
     }
-    showNotification('Playlist created!');
     closePlaylistModal();
   } else {
     showNotification('Please enter a valid playlist name.');
@@ -899,13 +916,17 @@ function createPlaylist(name) {
 function addToPlaylist(playlistIdx, songId) {
   const song = songHistory.find(s => s.id === songId);
   if (song) {
-    playlists[playlistIdx].songs.push(song);
-    saveState();
-    if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
-      loadPlaylists();
+    if (!playlists[playlistIdx].songs.some(s => s.id === songId)) {
+      playlists[playlistIdx].songs.push(song);
+      saveState();
+      if (libraryView.style.display === 'block' && libraryView.innerHTML.includes('<h4>Playlists</h4>')) {
+        loadPlaylists();
+      }
+      showNotification('Added to playlist!');
+    } else {
+      showNotification('Song already in playlist.');
     }
-    showNotification('Added to playlist!');
-    closeSongPickerModal();
+    closeAddToPlaylistModal();
   }
 }
 
@@ -954,10 +975,11 @@ function loadPlaylists() {
                   <div class="artist-name">${song.artist}</div>
                 </div>
                 <div class="play-down">
-                  <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
-                  <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-plus"></i></div>
-                  <div class="add-fav" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${song.id}')"><i class="fa-solid fa-trash"></i></div>
-                  <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
+                  <div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${song.id}', title: '${song.title}', artist: '${song.artist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
+                  <div class="playlist-btn" title="Add to Another Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${song.id}')"><i class="fa-solid fa-plus"></i></div>
+                  <div class="add-fav" title="Remove from Playlist" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${song.id}')"><i class="fa-solid fa-trash"></i></div>
+                  <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${song.id}')"><i class="fa-solid fa-list"></i></div>
+                  <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${song.id}')"><i class="fa-solid fa-download"></i></div>
                 </div>
               </div>
             `).join('')}
@@ -969,6 +991,33 @@ function loadPlaylists() {
   `;
   moreBtn.style.display = 'none';
   hideBackButton();
+}
+
+function showAddToPlaylistModal(songId) {
+  const modal = document.createElement('div');
+  modal.className = 'song-picker-modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h4>Add to Playlist</h4>
+      <div id="playlist-picker-list">
+        ${playlists.length ? playlists.map((pl, idx) => `
+          <div class="playlist-picker-item" onclick="addToPlaylist(${idx}, '${songId}'); closeAddToPlaylistModal();">
+            ${pl.name}
+          </div>
+        `).join('') : '<span>No playlists yet. Create one below.</span>'}
+      </div>
+      <div class="modal-buttons">
+        <button onclick="closeAddToPlaylistModal(); createPlaylistModal('${songId}');">Create New</button>
+        <button onclick="closeAddToPlaylistModal()">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeAddToPlaylistModal() {
+  const modal = document.querySelector('.song-picker-modal');
+  if (modal) modal.remove();
 }
 
 /* =================== */
@@ -1058,7 +1107,7 @@ function displayResults(data) {
           <div class="artist-name">${artist.role || 'Artist'}</div>
         </div>
         <div class="play-down">
-          <div class="play-btn" onclick="event.stopPropagation(); fetchArtistSongs('${artist.id}', '${artist.name}')"><i class="fa-solid fa-play"></i></div>
+          <div class="play-btn" title="View Songs" onclick="event.stopPropagation(); fetchArtistSongs('${artist.id}', '${artist.name}')"><i class="fa-solid fa-play"></i></div>
         </div>
       `;
       card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
@@ -1088,7 +1137,7 @@ function displayResults(data) {
           <div class="artist-name">${album.primaryArtists} (${album.year})</div>
         </div>
         <div class="play-down">
-          <div class="play-btn" onclick="event.stopPropagation(); fetchAlbumSongs('${album.id}', '${album.title}')"><i class="fa-solid fa-play"></i></div>
+          <div class="play-btn" title="View Songs" onclick="event.stopPropagation(); fetchAlbumSongs('${album.id}', '${album.title}')"><i class="fa-solid fa-play"></i></div>
         </div>
       `;
       card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
@@ -1183,7 +1232,7 @@ if (moreBtn) {
 
 // Add event listener for queue open button
 //document.getElementById('q-open-btn').addEventListener('click', () => {
- //queueContainer.classList.toggle('open');
+// queueContainer.classList.toggle('open');
 //});
 
 // Add event listeners for sidebar navigation
@@ -1193,7 +1242,9 @@ document.querySelector('#search-nav').addEventListener('click', focusSearch);
 // Make global functions available for onclick handlers
 window.playSong = playSong;
 window.addToQueue = addToQueue;
+window.toggleFavorites = toggleFavorites;
 window.addToFavorites = addToFavorites;
+window.removeFromFavorites = removeFromFavorites;
 window.downloadSong = downloadSong;
 window.removeFromQueue = removeFromQueue;
 window.playPause = playPause;
@@ -1216,3 +1267,6 @@ window.fetchArtistSongs = fetchArtistSongs;
 window.fetchAlbumSongs = fetchAlbumSongs;
 window.searchSongs = searchSongs;
 window.goBack = goBack;
+window.showAddToPlaylistModal = showAddToPlaylistModal;
+window.closeAddToPlaylistModal = closeAddToPlaylistModal;
+window.createPlaylist = createPlaylist;
