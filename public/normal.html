@@ -13,10 +13,9 @@
 <body>
   <header class="top-bar">
     <a href="normal.html" class="branding">
-  <img src="/v.ico" alt="Vibron Logo" class="logo" />
-  <span class="brand-name">Vibron</span>
-</a>
-
+      <img src="/v.ico" alt="Vibron Logo" class="logo" />
+      <span class="brand-name">Vibron</span>
+    </a>
     <button id="sidebar-toggle" class="sidebar-toggle">
       <i class="fa-solid fa-bars"></i>
       <span class="fallback-text">Menu</span>
@@ -33,54 +32,52 @@
     </ul>
   </nav>
 
-<main>
-  <header class="glass-header">
-    <h1 id="greeting">Good afternoon</h1>
-    <p class="subtitle">Search, stream, and enjoy your music</p>
-  </header>
+  <main>
+    <header class="glass-header">
+      <h1 id="greeting">Good afternoon</h1>
+      <p class="subtitle">Search, stream, and enjoy your music</p>
+    </header>
 
-  <div class="search-container">
-    <input type="text" id="searchInput" placeholder="Search for songs, artists, or albums..." />
-    <button onclick="searchSongs()" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
-  </div>
-
-  <div id="home-content" class="home-content">
-    <section id="listen-again" class="home-section">
-      <h3>Listen Again</h3>
-      <div class="section-list"></div>
-    </section>
-    <section id="trending" class="home-section">
-     <!-- <h3>Trending</h3>-->
-      <div class="section-list"></div>
-    </section>
-    <section id="top-charts" class="home-section">
-      <!--<h3>Top Charts</h3>-->
-      <div class="section-list"></div>
-    </section>
-    <section id="new-releases" class="home-section">
-      <!--<h3>New Releases</h3>-->
-      <div class="section-list"></div>
-    </section>
-  </div>
-
-  <div id="library-view" style="display: none; width: 90%; max-width: 1000px; margin: 1rem auto;"></div>
-  <div id="song-list" class="song-list" style="display: none;"></div>
-<!-- <button id="more" class="load-more" style="display: none;" onclick="loadMoreResults()"></button>-->
-</main>
-
-<div class="queue-holder">
-<button id="queue-open-btn" class="queue-open-btn q-open-btn" onclick="dropQueue()">Q</button>  <div class="queue-container" id="queue-container">
-    <div class="queue-header-holder">
-      <h3 class="queue-title">Queue</h3>
-      <button class="player-play-btn" onclick="playNext()"><i class="fa-solid fa-forward"></i> Next</button>
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Search for songs, artists, or albums..." />
+      <button onclick="searchSongs()" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
     </div>
-    <div id="queue-list" class="queue-list">
-      <span>No songs in queue</span>
+    <button id="listen-together-btn" class="listen-btn">👥 Listen Together</button> <!-- Changed class to avoid conflict -->
+
+    <div id="home-content" class="home-content">
+      <section id="listen-again" class="home-section">
+        <h3>Listen Again</h3>
+        <div class="section-list"></div>
+      </section>
+      <section id="trending" class="home-section">
+        <div class="section-list"></div>
+      </section>
+      <section id="top-charts" class="home-section">
+        <div class="section-list"></div>
+      </section>
+      <section id="new-releases" class="home-section">
+        <div class="section-list"></div>
+      </section>
     </div>
-    <button class="empty-queue" onclick="emptyQueue()">Empty Queue</button>
-    <div class="auto-queue-hint">Auto-adding similar songs...</div>
+
+    <div id="library-view" style="display: none; width: 90%; max-width: 1000px; margin: 1rem auto;"></div>
+    <div id="song-list" class="song-list" style="display: none;"></div>
+  </main>
+
+  <div class="queue-holder">
+    <button id="queue-open-btn" class="queue-open-btn q-open-btn" onclick="dropQueue()">Q</button>
+    <div class="queue-container" id="queue-container">
+      <div class="queue-header-holder">
+        <h3 class="queue-title">Queue</h3>
+        <button class="player-play-btn" onclick="playNext()"><i class="fa-solid fa-forward"></i> Next</button>
+      </div>
+      <div id="queue-list" class="queue-list">
+        <span>No songs in queue</span>
+      </div>
+      <button class="empty-queue" onclick="emptyQueue()">Empty Queue</button>
+      <div class="auto-queue-hint">Auto-adding similar songs...</div>
+    </div>
   </div>
-</div>
 
   <footer id="player-bar">
     <div class="player-info">
@@ -91,11 +88,11 @@
       </div>
     </div>
     <div class="player-controls">
-      <button onclick="playPrevious()" title="Previous"><i class="fa-solid fa-backward"></i></button>
-      <button onclick="playPause()" id="play-pause-btn" title="Play/Pause"><i class="fa-solid fa-play"></i></button>
-      <button onclick="playNext()" title="Next"><i class="fa-solid fa-forward"></i></button>
-      <button onclick="addToFavoritesFromPlayer()" id="fav-btn" title="Add to Favorites"><i class="fa-regular fa-heart"></i></button>
-      <button onclick="toggleLoop()" id="loop-btn" title="Toggle Loop"><i class="fa-solid fa-repeat"></i></button>
+      <button id="prev-btn" onclick="playPrevious()" title="Previous"><i class="fa-solid fa-backward"></i></button>
+      <button id="play-pause-btn" onclick="playPause()" title="Play/Pause"><i class="fa-solid fa-play"></i></button>
+      <button id="next-btn" onclick="playNext()" title="Next"><i class="fa-solid fa-forward"></i></button>
+      <button id="fav-btn" onclick="addToFavoritesFromPlayer()" title="Add to Favorites"><i class="fa-regular fa-heart"></i></button>
+      <button id="loop-btn" onclick="toggleLoop()" title="Toggle Loop"><i class="fa-solid fa-repeat"></i></button>
     </div>
     <div class="player-progress" onclick="seek(event)">
       <div id="progress" class="progress-bar"></div>
@@ -108,6 +105,46 @@
   </footer>
 
   <audio id="audio-player" preload="metadata"></audio>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <!-- Listen Together Modal -->
+  <div id="listen-together-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span id="close-modal" class="close" onclick="closeListenModal()">×</span> <!-- Added missing close button -->
+      <h2>Listen Together</h2>
+      <button id="host-session-btn">Host a Session</button>
+      <button id="join-session-btn">Join a Session</button>
+      <button onclick="closeListenModal()">Cancel</button>
+      <div id="join-input" style="display: none; margin-top: 1rem;">
+        <input type="text" id="session-code-input" placeholder="Enter 6-char code" maxlength="6" />
+        <button onclick="joinSession()">Join</button>
+      </div>
+      <div id="session-code-display" style="display: none; margin-top: 1rem;">
+        <p>Share this code: <span id="session-code"></span></p>
+        <button onclick="leaveSession()">Leave Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Container (Added toggle button) -->
+  <div id="chat-container" style="display: none; position: fixed; bottom: 100px; right: 20px; width: 300px; height: 400px; background: #fff; border: 1px solid #ccc; padding: 1rem; z-index: 1000;">
+    <div class="toggle-header">
+      <h3>Chat</h3>
+      <button class="toggle-btn" onclick="toggleChat()">-</button>
+    </div>
+    <div id="chat-messages" style="height: 300px; overflow-y: auto;"></div>
+    <input type="text" id="chat-input" placeholder="Type a message..." />
+    <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
+    <button onclick="leaveSession()">Leave Session</button>
+  </div>
+
+  <!-- Participants List (Added toggle button) -->
+  <div id="participants-list" style="display: none; position: fixed; bottom: 100px; left: 20px; width: 200px; background: #fff; border: 1px solid #ccc; padding: 1rem; z-index: 1000;">
+    <div class="toggle-header">
+      <h3>Participants</h3>
+      <button class="toggle-btn" onclick="toggleParticipants()">-</button>
+    </div>
+    <ul id="participants-ul"></ul>
+  </div>
   <script src="normal.js"></script>
 </body>
 </html>

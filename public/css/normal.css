@@ -1,4 +1,3 @@
-/* Base & Body */
 :root {
   --bg: #111218;
   --panel: #191b24;
@@ -6,15 +5,19 @@
   --muted: #a6adbb;
   --accent: #ff4081;
   --accent-2: #6a5acd;
-  --glass-bg: rgba(30, 30, 30, 0.8); /* Fallback for older browsers */
+  --glass-bg: rgba(30, 30, 30, 0.8);
   --glass-border: rgba(255, 255, 255, 0.1);
   --shadow-light: 0 4px 16px rgba(0, 0, 0, 0.3);
   --shadow-glow: 0 0 20px rgba(255, 64, 129, 0.2);
 }
 
-body {
+* {
   margin: 0;
-  padding: 60px 0 90px 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
   background-image: url('/public/default.png');
   background-size: cover;
@@ -25,9 +28,9 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
+  padding: 60px 0 90px 0;
 }
 
-/* Top Bar */
 .top-bar {
   position: fixed;
   top: 0;
@@ -73,7 +76,6 @@ body {
      1px -1px 0 black,
     -1px  1px 0 black,
      1px  1px 0 black;
-  text-decoration: none;
 }
 
 .switch-btn {
@@ -85,7 +87,6 @@ body {
   font-size: 0.9rem;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(255, 64, 129, 0.3);
-  text-decoration: none;
   transition: all 0.2s ease;
   margin-left: auto;
 }
@@ -116,25 +117,6 @@ body {
   transform: scale(1.05);
 }
 
-.sidebar-toggle .fallback-text {
-  display: none;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.sidebar-toggle .fa-bars {
-  display: inline-block;
-}
-
-.sidebar-toggle.no-icon .fallback-text {
-  display: inline-block;
-}
-
-.sidebar-toggle.no-icon .fa-bars {
-  display: none;
-}
-
-/* Sidebar */
 .sidebar {
   position: fixed;
   left: 0;
@@ -191,7 +173,6 @@ body {
   color: var(--muted);
 }
 
-/* Header */
 .glass-header {
   text-align: center;
   padding: 2rem 1rem 1.5rem 1rem;
@@ -220,7 +201,6 @@ body {
   margin-top: 0.5rem;
 }
 
-/* Search Container */
 .search-container {
   width: 90%;
   max-width: 600px;
@@ -273,7 +253,6 @@ body {
   box-shadow: 0 4px 12px rgba(255, 42, 74, 0.3);
 }
 
-/* Song, Artist, and Album Lists */
 .song-container {
   max-width: 600px;
   align-items: center;
@@ -287,7 +266,7 @@ body {
 .cards {
   display: flex;
   flex-direction: column;
-  gap: 12px; /* Increased for better spacing */
+  gap: 12px;
   width: 100%;
 }
 
@@ -327,14 +306,14 @@ body {
 
 .play-down {
   display: flex;
-  gap: 10px; /* Increased for better spacing */
+  gap: 10px;
   align-items: center;
   flex-wrap: nowrap;
 }
 
-.play-btn, .playlist-btn, .queue-btn, .queue-open-btn, .add-fav, .download-btn {
+.play-btn, .playlist-btn, .queue-btn, .add-fav, .download-btn {
   border-radius: 6px;
-  width: 20px; /* Slightly larger for visibility */
+  width: 20px;
   height: 20px;
   background: var(--accent);
   padding: 6px;
@@ -345,7 +324,7 @@ body {
   transition: all 0.2s ease;
 }
 
-.play-btn:hover, .playlist-btn:hover, .queue-btn:hover, .queue-open-btn:hover, .add-fav:hover, .download-btn:hover {
+.play-btn:hover, .playlist-btn:hover, .queue-btn:hover, .add-fav:hover, .download-btn:hover {
   background: #ff2a4a;
   transform: scale(1.1);
 }
@@ -399,12 +378,6 @@ body {
   padding-bottom: 0.25rem;
 }
 
-#song-list p {
-  color: var(--text);
-}
-
-/* Back Button */
-/* Back Button */
 .back-btn {
   position: fixed;
   top: 50%;
@@ -430,16 +403,6 @@ body {
   box-shadow: 0 4px 12px rgba(255, 42, 74, 0.3);
 }
 
-.back-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3);
-}
-
-.back-btn i {
-  margin-right: 0.5rem;
-}
-
-/* Home Content */
 .home-content {
   width: 90%;
   max-width: 1000px;
@@ -478,18 +441,6 @@ body {
   background-clip: text;
 }
 
-.home-section .song-container {
-  width: 90%;
-  max-width: 600px;
-  align-items: stretch;
-  justify-content: initial;
-}
-
-.home-section .section-list {
-  width: 100%;
-}
-
-/* Load More Button */
 .load-more-btn {
   display: block;
   padding: 0.75rem 2rem;
@@ -501,7 +452,6 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  text-align: center;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(255, 64, 129, 0.2);
 }
@@ -512,18 +462,6 @@ body {
   box-shadow: 0 4px 12px rgba(255, 42, 74, 0.3);
 }
 
-.load-more-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3);
-}
-
-.load-more-btn:disabled {
-  background: var(--muted);
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* Player Footer */
 #player-bar {
   position: fixed;
   bottom: 0;
@@ -605,18 +543,21 @@ body {
   justify-content: center;
 }
 
-.player-controls button:hover {
+.player-controls button:hover:not(.disabled) {
   background: #ff2a4a;
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(255, 42, 74, 0.3);
 }
 
-#fav-btn.favorited {
-  background: #ff2a4a;
-  color: white;
+.player-controls button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* Progress Bar */
+#fav-btn.favorited {
+  background: #ff2a4a;
+}
+
 .player-progress {
   position: relative;
   flex: 1;
@@ -650,7 +591,6 @@ body {
   box-shadow: 0 0 8px var(--accent);
 }
 
-/* Time Display */
 .time-display {
   font-size: 0.8rem;
   color: var(--muted);
@@ -658,7 +598,6 @@ body {
   text-align: center;
 }
 
-/* Volume Slider */
 #volume-slider {
   width: 80px;
   -webkit-appearance: none;
@@ -685,7 +624,6 @@ body {
   box-shadow: 0 0 8px var(--accent);
 }
 
-/* Queue Section */
 .queue-holder {
   position: fixed;
   right: 1rem;
@@ -710,11 +648,13 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1001;
 }
 
 .queue-open-btn:hover {
+  background: #ff2a4a;
   transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(255, 64, 129, 0.4);
+  box-shadow: 0 6px 20px rgba(255, 42, 74, 0.4);
 }
 
 .queue-container {
@@ -754,20 +694,6 @@ body {
   font-size: 1.1rem;
 }
 
-.queue-header-holder button {
-  background: var(--accent);
-  border: none;
-  color: white;
-  padding: 0.5rem;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.queue-header-holder button:hover {
-  background: #ff2a4a;
-}
-
 .queue-list {
   max-height: 300px;
   overflow-y: auto;
@@ -783,11 +709,6 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
 }
 
 .queue-item:hover {
@@ -843,11 +764,6 @@ body {
   transform: scale(1.05);
 }
 
-.empty-queue:focus {
-  outline: none;
-}
-
-/* Library View */
 #library-view {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -871,24 +787,6 @@ body {
   margin: 0.5rem 0;
   font-size: 0.9rem;
   color: var(--muted);
-}
-#queue-container {
-  display: none;
-  /* Other styles */
-}
-
-#queue-container.open {
-  display: block;
-}
-
-#sidebar {
-  transform: translateX(-100%); /* Assuming sidebar slides in from the left */
-  transition: transform 0.3s ease;
-  /* Other styles */
-}
-
-#sidebar.open {
-  transform: translateX(0);
 }
 
 #library-view .playlist-item {
@@ -973,13 +871,6 @@ body {
   transform: scale(1.1);
 }
 
-.remove-fav::before, .remove-from-playlist::before {
-  content: "\f1f8";
-  font-family: "Font Awesome 6 Free";
-  font-weight: 900;
-  font-size: 20px;
-}
-
 .delete-playlist, .playlist-download-btn, .favorites-download-btn {
   padding: 10px 15px;
   background: var(--accent);
@@ -997,11 +888,6 @@ body {
   transform: scale(1.05);
 }
 
-.delete-playlist:focus, .playlist-download-btn:focus, .favorites-download-btn:focus {
-  outline: none;
-}
-
-/* Song Picker Modal */
 .song-picker-modal {
   position: fixed;
   top: 0;
@@ -1050,7 +936,7 @@ body {
   color: var(--muted);
 }
 
-.song-picker-list {
+.song-picker-list, .playlist-picker-item {
   max-height: 300px;
   overflow-y: auto;
 }
@@ -1091,7 +977,6 @@ body {
   margin-top: 0.5rem;
 }
 
-/* Notification */
 .notification {
   position: fixed;
   top: 80px;
@@ -1108,11 +993,107 @@ body {
   animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-out 2.7s;
 }
 
+#chat-container {
+  display: none;
+  position: fixed;
+  bottom: 90px;
+  right: 1rem;
+  width: 300px;
+  max-height: 300px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 15px;
+  padding: 1rem;
+  box-shadow: var(--shadow-light);
+  z-index: 900;
+}
+
+#chat-messages {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  display: none;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 0.5rem;
+}
+
+#chat-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text);
+  border-radius: 10px;
+  outline: none;
+}
+
+#send-chat-btn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+#send-chat-btn:hover {
+  background: #ff2a4a;
+}
+
+#participants-list {
+  display: none;
+  position: fixed;
+  bottom: 400px;
+  right: 1rem;
+  width: 200px;
+  max-height: 200px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 15px;
+  padding: 1rem;
+  box-shadow: var(--shadow-light);
+  z-index: 900;
+}
+
+#participants-ul {
+  list-style: none;
+  max-height: 150px;
+  overflow-y: auto;
+  display: none;
+}
+
+.toggle-btn {
+  background: var(--accent);
+  border: none;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  position: absolute;
+  top: -10px;
+  right: 10px;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 @keyframes fadeOut {
   to { opacity: 0; transform: translateY(-10px); }
 }
 
-/* Responsive */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media screen and (max-width: 768px) {
   body {
     padding-bottom: 120px;
@@ -1123,80 +1104,15 @@ body {
     max-width: 400px;
   }
 
-/* Previous CSS content remains unchanged until .queue-open-btn section */
+  .queue-container {
+    width: 100%;
+    max-width: none;
+  }
 
-/* Queue Open Button */
-.queue-open-btn {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: var(--accent); /* #ff4081 */
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  border: none;
-  cursor: pointer;
-  color: white;
-  font-weight: bold;
-  font-size: 1.2rem;
-  box-shadow: 0 4px 15px rgba(255, 64, 129, 0.3);
-  transition: all 0.2s ease;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1001; /* Ensure above player-bar (z-index: 1000) */
-}
-
-.queue-open-btn:hover {
-  background: #ff2a4a;
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(255, 42, 74, 0.4);
-}
-
-.queue-open-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 64, 129, 0.3);
-}
-
-@media screen and (max-width: 768px) {
   .queue-open-btn {
     width: 40px;
     height: 40px;
     font-size: 1rem;
-  }
-}
-
-@media screen and (max-width: 500px) {
-  .queue-open-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 0.9rem;
-  }
-}
-
-/* Remove the conflicting #queue-open-btn styles */
-@media screen and (max-width: 500px) {
-  /* Remove the previous #queue-open-btn block */
-  /* Remaining media query styles for other elements */
-}
-
-/* Rest of your existing CSS remains unchanged */
-
-
-
-
-
-
-
-
-  .q-open-btn {
-    position: absolute;
-    right: 1rem;
-  }
-
-  .queue-container {
-    width: 100%;
-    max-width: none;
   }
 
   #player-bar {
@@ -1249,7 +1165,7 @@ body {
     gap: 8px;
   }
 
-  .play-btn, .playlist-btn, .queue-btn, .queue-open-btn, .add-fav, .download-btn {
+  .play-btn, .playlist-btn, .queue-btn, .add-fav, .download-btn {
     width: 18px;
     height: 18px;
     padding: 5px;
@@ -1273,6 +1189,18 @@ body {
   #library-view .playlist-item {
     flex-wrap: wrap;
     gap: 0.5rem;
+  }
+
+  #chat-container {
+    width: 100%;
+    right: 0;
+    margin: 0 auto;
+  }
+
+  #participants-list {
+    width: 100%;
+    right: 0;
+    margin: 0 auto;
   }
 }
 
@@ -1308,7 +1236,7 @@ body {
     text-align: center;
   }
 
-  .play-btn, .playlist-btn, .queue-btn, .queue-open-btn, .add-fav, .download-btn {
+  .play-btn, .playlist-btn, .queue-btn, .add-fav, .download-btn {
     width: 16px;
     height: 16px;
     padding: 4px;
@@ -1330,6 +1258,9 @@ body {
     font-size: 0.7rem;
   }
 
-
-
+  .queue-open-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
 }
