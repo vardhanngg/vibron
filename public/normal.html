@@ -42,7 +42,46 @@
       <input type="text" id="searchInput" placeholder="Search for songs, artists, or albums..." />
       <button onclick="searchSongs()" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
     </div>
-    <button id="listen-together-btn" class="listen-btn">👥 Listen Together</button> <!-- Changed class to avoid conflict -->
+
+    <div class="listen-wrapper">
+      <button id="listen-together-btn" class="listen-btn">
+        <i class="fas fa-users"></i> Listen Together
+      </button>
+      <div id="session-code-display" class="session-code hidden">
+        <p>Share this code: <span id="session-code"></span></p>
+        <button class="modal-btn leave-btn" onclick="leaveSession()">Leave Session</button>
+      </div>
+      <div id="participants-list" class="participants-container hidden">
+        <div class="toggle-header">
+          <h3>Participants</h3>
+          <button class="toggle-btn" onclick="toggleParticipants()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <ul id="participants-ul"></ul>
+      </div>
+      <div id="listen-together-modal" class="modal-content listen-modal hidden">
+        <span class="close" onclick="closeListenModal()">×</span>
+        <h2>Listen Together</h2>
+        <div id="listen-options" class="modal-options">
+          <button id="host-session-btn" class="modal-btn host-btn" onclick="hostSession()">Host a Session</button>
+          <button id="join-session-btn" class="modal-btn join-btn" onclick="showJoinInput()">Join a Session</button>
+          <button class="modal-btn cancel-btn" onclick="closeListenModal()">Cancel</button>
+        </div>
+        <div id="join-input" class="modal-input hidden">
+          <input type="text" id="session-code-input" placeholder="Enter 6-char code" maxlength="6" />
+          <div class="modal-buttons">
+            <button class="modal-btn join-btn" onclick="joinSession()">Join</button>
+            <button class="modal-btn cancel-btn" onclick="closeListenModal()">Cancel</button>
+          </div>
+        </div>
+        <div id="participants-modal" class="modal-participants hidden">
+          <h3>Participants</h3>
+          <ul id="participants-modal-ul"></ul>
+          <button class="modal-btn leave-btn" onclick="leaveSession()">Leave Session</button>
+        </div>
+      </div>
+    </div>
 
     <div id="home-content" class="home-content">
       <section id="listen-again" class="home-section">
@@ -60,8 +99,8 @@
       </section>
     </div>
 
-    <div id="library-view" style="display: none; width: 90%; max-width: 1000px; margin: 1rem auto;"></div>
-    <div id="song-list" class="song-list" style="display: none;"></div>
+    <div id="library-view" class="hidden"></div>
+    <div id="song-list" class="song-list hidden"></div>
   </main>
 
   <div class="queue-holder">
@@ -104,47 +143,22 @@
     <input type="range" id="volume-slider" min="0" max="100" step="1" value="100" title="Volume" />
   </footer>
 
-  <audio id="audio-player" preload="metadata"></audio>
-  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-  <!-- Listen Together Modal -->
-  <div id="listen-together-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <span id="close-modal" class="close" onclick="closeListenModal()">×</span> <!-- Added missing close button -->
-      <h2>Listen Together</h2>
-      <button id="host-session-btn">Host a Session</button>
-      <button id="join-session-btn">Join a Session</button>
-      <button onclick="closeListenModal()">Cancel</button>
-      <div id="join-input" style="display: none; margin-top: 1rem;">
-        <input type="text" id="session-code-input" placeholder="Enter 6-char code" maxlength="6" />
-        <button onclick="joinSession()">Join</button>
-      </div>
-      <div id="session-code-display" style="display: none; margin-top: 1rem;">
-        <p>Share this code: <span id="session-code"></span></p>
-        <button onclick="leaveSession()">Leave Session</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Chat Container (Added toggle button) -->
-  <div id="chat-container" style="display: none; position: fixed; bottom: 100px; right: 20px; width: 300px; height: 400px; background: #fff; border: 1px solid #ccc; padding: 1rem; z-index: 1000;">
+  <div id="chat-container" class="hidden">
     <div class="toggle-header">
       <h3>Chat</h3>
-      <button class="toggle-btn" onclick="toggleChat()">-</button>
+      <button class="toggle-btn" onclick="toggleChat()">
+        <i class="fas fa-chevron-right"></i>
+      </button>
     </div>
-    <div id="chat-messages" style="height: 300px; overflow-y: auto;"></div>
+    <div id="chat-messages"></div>
     <input type="text" id="chat-input" placeholder="Type a message..." />
     <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
     <button onclick="leaveSession()">Leave Session</button>
+    <span id="chat-badge" class="hidden">0</span>
   </div>
 
-  <!-- Participants List (Added toggle button) -->
-  <div id="participants-list" style="display: none; position: fixed; bottom: 100px; left: 20px; width: 200px; background: #fff; border: 1px solid #ccc; padding: 1rem; z-index: 1000;">
-    <div class="toggle-header">
-      <h3>Participants</h3>
-      <button class="toggle-btn" onclick="toggleParticipants()">-</button>
-    </div>
-    <ul id="participants-ul"></ul>
-  </div>
+  <audio id="audio-player" preload="metadata"></audio>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <script src="normal.js"></script>
 </body>
 </html>
