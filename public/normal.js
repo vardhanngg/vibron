@@ -7,6 +7,7 @@ let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 let playlists = JSON.parse(localStorage.getItem('playlists') || '[]');
 let currentArtistId = '';
 let artistPage = 0;
+//let isHost = false;
 let visibleSongCount = 6;
 let lastSongResults = [];
 let searchSongsPage = 0;
@@ -17,11 +18,17 @@ let lastAlbumSongs = [];
 let previousView = null;
 const socket = io('https://vibron-sockets.onrender.com'); // Connect to Render backend
 let currentSessionCode = null;
-let isHost = false;
+let isHost = true;
 let participants = {};
 let stateChanged = false; // For optimized state saving
 
 const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') {
+    searchSongs();
+  }
+});
+
 const resultsList = document.getElementById('song-list');
 const libraryView = document.getElementById('library-view');
 const audioPlayer = document.getElementById('audio-player');
@@ -158,9 +165,10 @@ async function searchSongs() {
   searchSongsPage = 0;
   resultsList.innerHTML = '';
   libraryView.style.display = 'none';
-  document.getElementById('home-content').style.display = 'none';
-  //resultsList.style.display = 'block';
-  resultsList.classList.remove('hidden');
+document.getElementById('home-content').style.display = 'none';
+resultsList.classList.remove('hidden');
+resultsList.style.display = 'block'; // ✅ ensure results are visible
+
 
   hideBackButton();
 
@@ -191,6 +199,8 @@ async function fetchResults() {
     // show or hide the button depending on whether another page exists
     if (data.songs.next || data.artists.next || data.albums.next) {
       moreBtn.classList.remove('hidden');
+      moreBtn.style.display = 'block';
+
     } else {
       moreBtn.classList.add('hidden');
     }
@@ -284,7 +294,7 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
     let loadMoreBtn = document.getElementById('artist-songs-load-more');
     if (!loadMoreBtn) {
       loadMoreBtn = document.createElement('button');
-      loadMoreBtn.id = 'artist-songs-load-more';
+      //loadMoreBtn.id = 'artist-songs-load-more';
       loadMoreBtn.className = 'load-more-btn';
       loadMoreBtn.textContent = 'Load More';
       resultsList.appendChild(loadMoreBtn);
@@ -565,6 +575,7 @@ function loadSongWithoutPlaying(song) {
 }
 
 function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = false) {
+  if (!isHost && currentSessionCode) return;
   console.log('playSong called:', song.id, song.title, { fromSearch, fromArtist, fromAlbum });
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
@@ -616,6 +627,7 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
 }
 
 function playPause() {
+  if (!isHost && currentSessionCode) return;
   if (isPlaying) {
     audioPlayer.pause();
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -633,6 +645,7 @@ function playPause() {
 }
 
 function playNext() {
+  if (!isHost && currentSessionCode) return; 
   if (queue.length > 0) {
     const nextSong = queue.shift();
     playSong(nextSong, false);
@@ -652,6 +665,7 @@ function playNext() {
 }
 
 function playPrevious() {
+  if (!isHost && currentSessionCode) return; 
   if (currentSongIndex > 0) {
     currentSongIndex--;
     playSong(songHistory[currentSongIndex], false);
@@ -761,9 +775,17 @@ function removeFromQueue(idx) {
   saveState();
 }
 
-function dropQueue() {
+function toggleQueue() {
+  // close chat if open
+  document.getElementById('chat-container').classList.remove('open');
   queueContainer.classList.toggle('open');
 }
+function toggleChat() {
+  // close queue if open
+  queueContainer.classList.remove('open');
+  document.getElementById('chat-container').classList.toggle('open');
+}
+
 
 function emptyQueue() {
   queue = [];
@@ -1102,28 +1124,44 @@ function closeListenModal() {
   const modal = document.getElementById('listen-together-modal');
   if (modal) modal.style.display = 'none';
 }
+/*function hostSession() {
+  let displayName = prompt("Enter your name:");
+  if (!displayName || !displayName.trim()) displayName = "Host";
 
+  socket.emit("host-session", { name: displayName }, (sessionCode) => {
+    if (!sessionCode) {
+      showNotification("Failed to create session");
+      return;
+    }
+    currentSessionCode = sessionCode;
+    document.getElementById("session-code").textContent = sessionCode;
+    document.getElementById("session-code-display").classList.remove("hidden");
+    document.getElementById("chat-open-btn").style.display = "flex"; // ✅ host sees chat button
+    closeListenModal();
+  });
+}
+*/
 function joinSession() {
-  const code = document.getElementById('session-code-input').value.toUpperCase().trim();
+  const code = document.getElementById("session-code-input").value.toUpperCase().trim();
   if (code.length !== 6) {
-    showNotification('Invalid code');
+    showNotification("Invalid code");
     return;
   }
-  socket.emit('join-session', { code });
+
+  let displayName = prompt("Enter your name:");
+  if (!displayName || !displayName.trim()) displayName = "Guest";
+
+  socket.emit("join-session", { code, name: displayName }, (success) => {
+    if (success) {
+      document.getElementById("chat-open-btn").style.display = "flex"; // ✅ joiner sees chat button
+      closeListenModal();
+       isHost = false;
+    } else {
+      showNotification("Invalid session code");
+    }
+  });
 }
 
-function showSessionUI() {
-  const chatMessages = document.getElementById('chat-messages');
-  const participantsUl = document.getElementById('participants-ul');
-  document.getElementById('chat-container').classList.remove('hidden');
-  document.getElementById('participants-list').classList.remove('hidden');
-  chatMessages.style.display = 'none'; // Collapsed by default
-  participantsUl.style.display = 'none'; // Collapsed by default
-  const chatToggle = document.querySelector('#chat-container .toggle-btn');
-  const participantsToggle = document.querySelector('#participants-list .toggle-btn');
-  if (chatToggle) chatToggle.textContent = '+';
-  if (participantsToggle) participantsToggle.textContent = '+';
-}
 
 function leaveSession() {
     leaveSessionUIReset();
@@ -1138,6 +1176,9 @@ function leaveSession() {
   document.getElementById('participants-list').style.display = 'none';
   enableControls();
   showNotification('Left session');
+  document.getElementById('chat-open-btn').style.display = 'none';
+document.getElementById('chat-container').classList.remove('open'); // also close chat
+
 }
 
 function renderParticipants() {
@@ -1177,17 +1218,7 @@ function sendChatMessage() {
   input.value = '';
 }
 
-function toggleChat() {
-  const chat = document.getElementById('chat-messages');
-  const btn = event.target;
-  if (chat.style.display === 'none') {
-    chat.style.display = 'block';
-    btn.textContent = '-';
-  } else {
-    chat.style.display = 'none';
-    btn.textContent = '+';
-  }
-}
+
 
 function toggleParticipants() {
   const list = document.getElementById('participants-ul');
@@ -1210,6 +1241,7 @@ function formatTime(seconds) {
 /* =================== */
 /* Other Controls */
 function toggleLoop() {
+  if (!isHost && currentSessionCode) return; 
   audioPlayer.loop = !audioPlayer.loop;
   loopBtn.innerHTML = audioPlayer.loop ? '<i class="fa-solid fa-repeat"></i>' : '<i class="fa-regular fa-repeat"></i>';
 }
@@ -1366,16 +1398,29 @@ async function loadMoreArtistSongs() {
 socket.on('session-created', ({ code }) => {
   currentSessionCode = code;
   isHost = true;
+
   document.getElementById('session-code').textContent = code;
   document.getElementById('session-code-display').classList.remove('hidden');
   showSessionUI();
+
+  // 🔥 Hide listen options
+  const listenOptions = document.getElementById('listen-options');
+  if (listenOptions) listenOptions.classList.add('hidden');
+
+  // 🔥 Close the listen together modal completely
+  closeListenModal();
+
+  document.getElementById("chat-open-btn").style.display = "flex"; // show chat button
+
   const shareBtn = document.createElement('button');
   shareBtn.textContent = 'Share Code';
   shareBtn.onclick = () =>
     navigator.clipboard.writeText(code).then(() => showNotification('Code copied!'));
   document.getElementById('session-code-display').appendChild(shareBtn);
+
   showNotification('Session hosted! Share the code: ' + code);
 });
+
 
 socket.on('session-joined', ({ code, isHost: host }) => {
   currentSessionCode = code;
@@ -1384,6 +1429,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   showSessionUI();
   if (!isHost) disableControls();
   showNotification(`Joined session ${code}`);
+document.getElementById("chat-open-btn").style.display = "flex";
 });
 
 socket.on('error', ({ message }) => {
@@ -1630,6 +1676,8 @@ function leaveSessionUIReset() {
   document.getElementById('participants-list').classList.add('hidden');
   document.getElementById('chat-container').classList.add('hidden');
   document.getElementById('listen-together-modal').classList.add('hidden');
+  document.getElementById('listen-options').classList.remove('hidden');
+
 }
 
 
@@ -1669,3 +1717,5 @@ window.toggleParticipants = toggleParticipants;
 window.joinSession = joinSession;
 window.closeListenModal = closeListenModal;
 window.sendChatMessage = sendChatMessage;
+//window.hostSession = hostSession;
+

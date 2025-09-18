@@ -129,10 +129,11 @@ body {
   padding: 1rem;
   overflow-y: auto;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4);
-  z-index: 900;
+  z-index: 1200; /* ensure sidebar overlays listen together */
   transform: translateX(-100%);
   transition: transform 0.3s ease;
 }
+
 
 .sidebar.open {
   transform: translateX(0);
@@ -636,6 +637,12 @@ body {
   align-items: center;
   z-index: 1001;
 }
+.chat-open-btn {
+  margin-left: 10px;
+  background: var(--accent-2);
+   display: none;
+}
+
 
 .queue-open-btn:hover {
   background: #ff2a4a;
@@ -1142,27 +1149,24 @@ leave-btn {
 
 #chat-container {
   position: fixed;
+  right: 1rem;
   bottom: 100px;
-  right: 20px;
   width: 300px;
-  max-height: 400px;
+  max-width: 90vw;
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: 15px;
   padding: 1rem;
   box-shadow: var(--shadow-light);
-  z-index: 1002; /* Higher than player-bar */
-  display: flex;
+  display: none;
   flex-direction: column;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  z-index: 1100; /* above queue, below sidebar */
 }
 
 #chat-container.open {
-  transform: translateX(0);
-  opacity: 1;
+  display: flex;
 }
+
 
 #chat-container.hidden {
   display: none !important;

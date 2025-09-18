@@ -109,9 +109,11 @@
 
   </main>
 
-  <div class="queue-holder">
-    <button id="queue-open-btn" class="queue-open-btn q-open-btn" onclick="dropQueue()">Q</button>
-    <div class="queue-container" id="queue-container">
+<div class="queue-holder">
+  <button id="queue-open-btn" class="queue-open-btn q-open-btn" onclick="toggleQueue()">Q</button>
+  <button id="chat-open-btn" class="queue-open-btn chat-open-btn" onclick="toggleChat()">💬</button>
+  <div class="queue-container" id="queue-container">
+
       <div class="queue-header-holder">
         <h3 class="queue-title">Queue</h3>
         <button class="player-play-btn" onclick="playNext()"><i class="fa-solid fa-forward"></i> Next</button>
@@ -153,8 +155,9 @@
     <div class="toggle-header">
       <h3>Chat</h3>
       <button class="toggle-btn" onclick="toggleChat()">
-        <i class="fas fa-chevron-right"></i>
-      </button>
+  <i class="fas fa-chevron-right"></i>
+</button>
+
     </div>
     <div id="chat-messages"></div>
     <input type="text" id="chat-input" placeholder="Type a message..." />
