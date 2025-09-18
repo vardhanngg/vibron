@@ -48,9 +48,10 @@
         <i class="fas fa-users"></i> Listen Together
       </button>
       <div id="session-code-display" class="session-code hidden">
-        <p>Share this code: <span id="session-code"></span></p>
-        <button class="modal-btn leave-btn" onclick="leaveSession()">Leave Session</button>
-      </div>
+  <p>Share this code: <span id="session-code"></span></p>
+  <button class="modal-btn leave-btn hidden" onclick="leaveSession()">Leave Session</button>
+</div>
+
       <div id="participants-list" class="participants-container hidden">
         <div class="toggle-header">
           <h3>Participants</h3>
@@ -78,7 +79,10 @@
         <div id="participants-modal" class="modal-participants hidden">
           <h3>Participants</h3>
           <ul id="participants-modal-ul"></ul>
-          <button class="modal-btn leave-btn" onclick="leaveSession()">Leave Session</button>
+         <!--  <button class="modal-btn leave-btn" onclick="leaveSession()">Leave Session</button>-->
+          <button class="modal-btn leave-btn hidden" onclick="leaveSession()">Leave Session</button>
+<!-- repeat for the second leave button -->
+
         </div>
       </div>
     </div>
@@ -101,6 +105,8 @@
 
     <div id="library-view" class="hidden"></div>
     <div id="song-list" class="song-list hidden"></div>
+  <button id="more" class="load-more-btn hidden">Load More</button>
+
   </main>
 
   <div class="queue-holder">

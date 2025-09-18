@@ -153,12 +153,15 @@ async function searchSongs() {
 
   previousView = { type: 'home' };
   currentQuery = query;
+  currentPage = 1;   
   visibleSongCount = 6;
   searchSongsPage = 0;
   resultsList.innerHTML = '';
   libraryView.style.display = 'none';
   document.getElementById('home-content').style.display = 'none';
-  resultsList.style.display = 'block';
+  //resultsList.style.display = 'block';
+  resultsList.classList.remove('hidden');
+
   hideBackButton();
 
   await fetchResults();
@@ -166,27 +169,41 @@ async function searchSongs() {
 
 async function fetchResults() {
   try {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`);
+    const response = await fetch(
+      `/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`
+    );
     if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
 
     const data = await response.json();
 
-    if (!data.songs?.results?.length && !data.artists?.results?.length && !data.albums?.results?.length) {
-      moreBtn.style.display = 'none';
+    if (
+      !data.songs?.results?.length &&
+      !data.artists?.results?.length &&
+      !data.albums?.results?.length
+    ) {
+      moreBtn.classList.add('hidden');
       resultsList.innerHTML = '<span>No results found.</span>';
       return;
     }
 
     displayResults(data);
-    moreBtn.style.display = data.songs.next || data.artists.next || data.albums.next ? 'block' : 'none';
-    currentPage++;
+
+    // show or hide the button depending on whether another page exists
+    if (data.songs.next || data.artists.next || data.albums.next) {
+      moreBtn.classList.remove('hidden');
+    } else {
+      moreBtn.classList.add('hidden');
+    }
+
+    // 🔴  REMOVE the automatic currentPage++ here
   } catch (err) {
-    moreBtn.style.display = 'none';
+    moreBtn.classList.add('hidden');
     resultsList.innerHTML = '<span>Error loading results.</span>';
     console.error('Error fetching results:', err);
     showNotification('Failed to load search results.');
   }
 }
+
 
 async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
   if (!artistId || artistId === 'undefined') {
@@ -225,7 +242,9 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       libraryView.style.display = 'none';
       document.getElementById('home-content').style.display = 'none';
       searchInput.value = `Songs by ${artistName}`;
-      resultsList.style.display = 'block';
+     // resultsList.style.display = 'block';
+      resultsList.classList.remove('hidden');
+
       currentArtistId = artistId;
       artistPage = page;
       showBackButton();
@@ -323,7 +342,9 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     libraryView.style.display = 'none';
     document.getElementById('home-content').style.display = 'none';
     searchInput.value = `Songs from ${albumTitle}`;
-    resultsList.style.display = 'block';
+    //resultsList.style.display = 'block';
+    resultsList.classList.remove('hidden');
+
     showBackButton();
 
     const header = document.createElement('div');
@@ -1094,8 +1115,8 @@ function joinSession() {
 function showSessionUI() {
   const chatMessages = document.getElementById('chat-messages');
   const participantsUl = document.getElementById('participants-ul');
-  document.getElementById('chat-container').style.display = 'block';
-  document.getElementById('participants-list').style.display = 'block';
+  document.getElementById('chat-container').classList.remove('hidden');
+  document.getElementById('participants-list').classList.remove('hidden');
   chatMessages.style.display = 'none'; // Collapsed by default
   participantsUl.style.display = 'none'; // Collapsed by default
   const chatToggle = document.querySelector('#chat-container .toggle-btn');
@@ -1105,6 +1126,8 @@ function showSessionUI() {
 }
 
 function leaveSession() {
+    leaveSessionUIReset();
+
   if (currentSessionCode) {
     socket.emit('leave-session', { code: currentSessionCode });
   }
@@ -1344,7 +1367,7 @@ socket.on('session-created', ({ code }) => {
   currentSessionCode = code;
   isHost = true;
   document.getElementById('session-code').textContent = code;
-  document.getElementById('session-code-display').style.display = 'block';
+  document.getElementById('session-code-display').classList.remove('hidden');
   showSessionUI();
   const shareBtn = document.createElement('button');
   shareBtn.textContent = 'Share Code';
@@ -1494,11 +1517,10 @@ window.addEventListener('load', () => {
     searchInput.select();
   });
 
-  document.getElementById('listen-together-btn').addEventListener('click', () => {
-    document.getElementById('listen-together-modal').style.display = 'block';
-    document.getElementById('join-input').style.display = 'none';
-    document.getElementById('session-code-display').style.display = 'none';
-  });
+document.getElementById('listen-together-btn').addEventListener('click', () => {
+  openListenModal();
+});
+
 
   document.getElementById('host-session-btn').addEventListener('click', () => {
     socket.emit('create-session');
@@ -1537,15 +1559,20 @@ window.addEventListener('load', () => {
   document.getElementById('queue-open-btn').addEventListener('click', dropQueue);
   document.getElementById('empty-queue').addEventListener('click', emptyQueue);
 
-  if (moreBtn) {
-    moreBtn.addEventListener('click', () => {
-      if (currentArtistId) {
-        loadMoreArtistSongs();
-      } else {
-        fetchResults();
-      }
-    });
-  }
+if (moreBtn) {
+  moreBtn.addEventListener('click', () => {
+    if (currentArtistId) {
+      // For artist-specific lists
+      currentPage++;
+      loadMoreArtistSongs();
+    } else {
+      // For general search results
+      //currentPage++;
+      fetchResults();
+    }
+  });
+}
+
 
   setInterval(() => {
     if (isHost && currentSessionCode && songHistory[currentSongIndex]) {
@@ -1584,6 +1611,27 @@ function handleOutsideClick(event) {
     sidebar.classList.remove('open');
   }
 }
+/* === Listen-Together UI helpers === */
+function openListenModal() {
+  // show the main listen-together modal, keep join-input hidden first
+  document.getElementById('listen-together-modal').classList.remove('hidden');
+  document.getElementById('join-input').classList.add('hidden');
+}
+
+function showJoinInput() {
+  // hide host/join/cancel buttons and show the join-code input
+  document.getElementById('listen-options').classList.add('hidden');
+  document.getElementById('join-input').classList.remove('hidden');
+}
+
+function leaveSessionUIReset() {
+  // hide every listen-together element that should disappear when leaving
+  document.getElementById('session-code-display').classList.add('hidden');
+  document.getElementById('participants-list').classList.add('hidden');
+  document.getElementById('chat-container').classList.add('hidden');
+  document.getElementById('listen-together-modal').classList.add('hidden');
+}
+
 
 // Global functions for onclick handlers
 window.playSong = playSong;
