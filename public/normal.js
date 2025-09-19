@@ -712,6 +712,35 @@ function showChatButton() {
  // showNotification('showchatbuttonfun');
 }
 
+function setSessionControlsDisabled(disabled) {
+  const listenBtn = document.getElementById('listen-together-btn');
+  const moodBtn   = document.querySelector('.switch-btn');
+  const homeLink  = document.querySelector('header.top-bar a.branding');
+
+  if (disabled) {
+    // Visually dim and block clicks
+    [listenBtn, moodBtn, homeLink].forEach(el => {
+      if (!el) return;
+      el.classList.add('disabled-session');
+      el.setAttribute('tabindex', '-1');
+      el.addEventListener('click', blockClick, true);
+    });
+  } else {
+    [listenBtn, moodBtn, homeLink].forEach(el => {
+      if (!el) return;
+      el.classList.remove('disabled-session');
+      el.removeAttribute('tabindex');
+      el.removeEventListener('click', blockClick, true);
+    });
+  }
+}
+
+function blockClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+
 function hideChatButton() {
   const chatBtn = document.getElementById('chat-open-btn');
   if (chatBtn) {
@@ -1228,6 +1257,7 @@ function joinSession() {
       document.getElementById("chat-open-btn").style.display = "flex"; // ✅ joiner sees chat button
       closeListenModal();
       showChatButton();
+      setSessionControlsDisabled(true);
        isHost = false;
     } else {
       showNotification("Invalid session code");
@@ -1249,6 +1279,7 @@ function leaveSession() {
   document.getElementById('participants-list').style.display = 'none';
   enableControls();
   showNotification('Left session');
+  setSessionControlsDisabled(false);
   document.getElementById('chat-container').classList.remove('open');
   updateChatButtonVisibility();
   hideChatButton();
@@ -1545,6 +1576,7 @@ async function loadMoreArtistSongs() {
 /* WebSocket Handlers */
 socket.on('session-created', ({ code }) => {
   console.log('Session created, code:', code);
+   setSessionControlsDisabled(true);
   currentSessionCode = code;
   isHost = true;
   document.getElementById('session-code').textContent = code;
@@ -1600,6 +1632,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   }
   showNotification(`Joined session ${code}`);
   updateChatButtonVisibility();
+  setSessionControlsDisabled(true);
 });
 
 socket.on('error', ({ message }) => {

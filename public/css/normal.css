@@ -1161,6 +1161,12 @@ leave-btn {
   flex-direction: column;
   z-index: 2001;        /* higher than the queue’s 1000 */
 }
+.disabled-session {
+  pointer-events: none;       /* actually blocks clicks */
+  opacity: 0.5;               /* dim to show it's disabled */
+  cursor: default;
+}
+
 
 
 #chat-container.open {
