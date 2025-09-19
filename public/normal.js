@@ -1341,7 +1341,7 @@ function hostSession() {
     }
 
     isHost = true;
-    rememberSession(sessionCode, true);
+   // rememberSession(sessionCode, true);
     showSessionControls(sessionCode);
     document.getElementById('chat-open-btn').style.display = 'flex';
   });
@@ -1359,21 +1359,22 @@ function joinSession() {
   return;
 }
 
-  socket.emit("join-session", { code, name: userName }, (success) => {
-    if (success) {
-      document.getElementById("chat-open-btn").style.display = "flex"; // joiner sees chat button
-      closeListenModal();
-      showChatButton();
-      rememberSession(code, false);     // ✅ fixed
-      setSessionControlsDisabled(true);
-      isHost = false;
-    } else {
-      showNotification("Invalid session code");
-    }
-  });
+ socket.emit("join-session", { code, name: userName }, (success) => {
+  if (success) {
+    document.getElementById("chat-open-btn").style.display = "flex";
+    closeListenModal();
+    showChatButton();
+    //rememberSession(code, false);
+    setSessionControlsDisabled(true);
+    isHost = false;
+  } else {
+    showNotification("Invalid session code");
+  }
+});
+
 }
 
-
+/*
 function leaveSession() {
   console.log('Leaving session, currentSessionCode:', currentSessionCode);
   leaveSessionUIReset();
@@ -1394,6 +1395,47 @@ function leaveSession() {
   clearSessionMemory();
   document.getElementById('transfer-host-btn').classList.add('hidden');
 }
+*/
+
+function leaveSession() {
+  console.log('Leaving session, currentSessionCode:', currentSessionCode);
+
+  // Reset UI
+  leaveSessionUIReset();
+
+  // Tell server
+  if (currentSessionCode) {
+    socket.emit('leave-session', { code: currentSessionCode });
+  }
+
+  // Reset local state
+  currentSessionCode = null;
+  isHost = false;
+  participants = {};
+
+  // Hide UI
+  document.getElementById('chat-container').style.display = 'none';
+  document.getElementById('participants-list').style.display = 'none';
+  document.getElementById('chat-container').classList.remove('open');
+  document.getElementById('transfer-host-btn').classList.add('hidden');
+
+  // Reset controls
+  enableControls();
+  setSessionControlsDisabled(false);
+
+  // Hide chat button
+  updateChatButtonVisibility();
+  hideChatButton();
+
+  // Re-enable Listen Together button
+  const listenBtn = document.getElementById('listen-together-btn');
+  if (listenBtn) listenBtn.disabled = false;
+
+  // Clear stored session so refresh doesn’t rejoin
+  clearSessionMemory();
+
+  showNotification('Left session');
+}
 
 function showTransferModal() {
   const modal = document.getElementById('transfer-modal');
@@ -1409,9 +1451,9 @@ function showTransferModal() {
     entries.forEach(([socketId, p]) => {
       if (socketId !== mySocketId) {
         const li = document.createElement('li');
-        // show the socketId and whether that user is host/participant
         const role = p.isHost ? ' (Host)' : '';
-        li.textContent = socketId + role;
+        const displayName = p.name || socketId;  // ✅ prefer name, fallback to id
+        li.textContent = `${displayName}${role}`;
         li.onclick = () => transferHostTo(socketId);
         list.appendChild(li);
       }
@@ -1420,6 +1462,7 @@ function showTransferModal() {
 
   modal.classList.remove('hidden');
 }
+
 
 
 
@@ -1438,10 +1481,83 @@ function transferHostTo(targetId) {
     showNotification("You are not the host or no session is active.");
     return;
   }
-  socket.emit('transferHost', { room: currentSessionCode, newHost: targetId });
+
+  // Send to backend using the new event + payload
+  socket.emit("transfer-host", { code: currentSessionCode, newHostId: targetId });
+
   closeTransferModal();
-  showNotification("Host transferred successfully!");
+  showNotification("Transferring host...");
 }
+
+
+socket.on("host-transferred", ({ newHostId }) => {
+  // Reset everyone to participant
+  Object.keys(participants).forEach(pid => {
+    participants[pid].isHost = false;
+  });
+
+  if (participants[newHostId]) {
+    participants[newHostId].isHost = true;
+  }
+
+  if (socket.id === newHostId) {
+    // I became host
+    isHost = true;
+    participants[socket.id] = participants[socket.id] || {};
+    participants[socket.id].isHost = true;
+
+    showNotification("🎉 You are now the host");
+
+    showSessionControls(currentSessionCode);
+
+    // ✅ Enable controls and show transfer button
+    setSessionControlsDisabled(false);
+    const transferBtn = document.getElementById("transfer-host-btn");
+    if (transferBtn) transferBtn.classList.remove("hidden");
+  } else {
+    // Someone else is host
+    isHost = false;
+    participants[socket.id] = participants[socket.id] || {};
+    participants[socket.id].isHost = false;
+
+    showNotification("Host transferred to another user");
+
+    hideSessionControls();
+
+    // ✅ Disable controls and hide transfer button
+    setSessionControlsDisabled(true);
+    const transferBtn = document.getElementById("transfer-host-btn");
+    if (transferBtn) transferBtn.classList.add("hidden");
+  }
+
+  renderParticipants();
+});
+
+
+async function autoRejoin() {
+  const sessionData = getRememberedSession(); // however you store it
+  if (!sessionData) return;
+
+  const { code, wasHost } = sessionData;
+
+  // try to rejoin
+  socket.emit("join-session", { code, name: userName }, (success) => {
+    if (success) {
+      console.log("Auto-rejoined session:", code);
+      setSessionControlsDisabled(!wasHost);
+      isHost = wasHost;
+      showChatButton();
+      showSessionControls(code);
+    } else {
+      console.log("Auto-rejoin failed, clearing session");
+      clearSessionMemory();
+      enableListenTogetherButton();
+    }
+  });
+}
+
+
+
 
 
 function renderParticipants() {
@@ -1874,7 +1990,7 @@ socket.on('session-created', ({ code }) => {
   updateChatButtonVisibility();
   showChatButton();
   document.getElementById('transfer-host-btn').classList.remove('hidden');
-  rememberSession(sessionCode, true);
+ // rememberSession(sessionCode, true);
 });
 
 socket.on('connect', () => {
@@ -1916,18 +2032,18 @@ socket.on('chat-message', ({ user, message, time }) => {
 });
 */
 
-socket.on('hostTransferred', newHostId => {
-  if (newHostId === mySocketId) {
-    // I am now host
+socket.on('host-transferred', ({ newHostId }) => {
+  if (socket.id === newHostId) {
     isHost = true;
-    showNotification("You are now the host!");
-    document.getElementById('transfer-host-btn').classList.remove('hidden');
+    showNotification("You are now the host");
+    showSessionControls(currentSessionCode);
   } else {
     isHost = false;
-    showNotification("Host role transferred.");
-    document.getElementById('transfer-host-btn').classList.add('hidden');
+    showNotification("Host has been transferred to another user");
+    hideSessionControls();
   }
 });
+
 
 
 socket.on('participantsUpdate', list => {
@@ -1964,7 +2080,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   showNotification(`Joined session ${code}`);
   updateChatButtonVisibility();
   setSessionControlsDisabled(true);
-  rememberSession(sessionCode, false);
+  //rememberSession(sessionCode, false);
 });
 
 socket.on('error', ({ message }) => {
@@ -1981,11 +2097,12 @@ socket.on('disconnect', () => {
   leaveSession();
 });
 
-socket.on('user-joined', ({ userId, isHost }) => {
-  participants[userId] = { isHost };
+socket.on('user-joined', ({ userId, name, isHost }) => {
+  participants[userId] = { name, isHost };
   renderParticipants();
-  showNotification(`User ${userId.slice(0, 4)} joined`);
+  showNotification(`${name} joined`);
 });
+
 
 socket.on('user-left', ({ userId }) => {
   delete participants[userId];
@@ -2228,6 +2345,18 @@ if (moreBtn) {
   }, 2000); // Sync every 2 seconds
 });
 
+window.addEventListener("beforeunload", () => {
+  if (currentSessionCode) {
+    // Inform server you're leaving
+    socket.emit("leave-session", { code: currentSessionCode });
+  }
+
+  // Reset local state
+  currentSessionCode = null;
+  isHost = false;
+});
+
+
 function handleOutsideClick(event) {
   if (
     queueContainer.classList.contains('open') &&
@@ -2268,7 +2397,7 @@ function leaveSessionUIReset() {
   document.getElementById('listen-options').classList.remove('hidden');
   document.getElementById('join-input').classList.add('hidden');
   updateChatButtonVisibility();
-}
+}/*
 document.addEventListener('DOMContentLoaded', () => {
   const code = localStorage.getItem('sessionCode');
   const role = localStorage.getItem('sessionRole');
@@ -2276,8 +2405,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // reconnect as participant; if you want to restore host,
     // you can check role === 'host' and call a special API
     joinSessionWithCode(code, role === 'host');
+    
   }
+});*/
+/*
+document.addEventListener("DOMContentLoaded", () => {
+  autoRejoin();
 });
+*/
 
 async function joinSessionWithCode(code, wasHost) {
   try {
