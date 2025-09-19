@@ -7,6 +7,15 @@ let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
 let playlists = JSON.parse(localStorage.getItem('playlists') || '[]');
 let currentArtistId = '';
 let artistPage = 0;
+let pendingAction = null;
+let pendingMessage = null;
+
+let mySocketId = null;
+//let userName = localStorage.getItem('userName') || '';
+let userName = "";
+//let userName = localStorage.getItem("userName") || "";
+
+
 //let isHost = false;
 let visibleSongCount = 6;
 let lastSongResults = [];
@@ -18,7 +27,7 @@ let lastAlbumSongs = [];
 let previousView = null;
 const socket = io('https://vibron-sockets.onrender.com'); // Connect to Render backend
 let currentSessionCode = null;
-let isHost = true;
+let isHost = false;
 let participants = {};
 let stateChanged = false; // For optimized state saving
 
@@ -126,6 +135,77 @@ async function loadHomeContent() {
 
   await Promise.all([loadListenAgain()]);
 }
+
+function askForName(action = null) {
+  pendingAction = action; 
+  document.getElementById('name-input-modal').classList.remove('hidden');
+}
+/*
+function saveUserName() {
+  const input = document.getElementById('user-name-input').value.trim();
+  if (!input) {
+    showNotification("Please enter a name.");
+    return;
+  }
+
+  userName = input;  // only store in memory
+  document.getElementById('name-input-modal').classList.add('hidden');
+
+  if (pendingAction === "host") {
+    hostSession();   // 🔄 use new function
+  } else if (pendingAction === "join") {
+    joinSession();   // 🔄 already exists
+  } if (pendingAction === "chat") {
+  if (pendingMessage) {
+    if (!userName || !userName.trim()) {
+      userName = "Guest";   // fallback
+    }
+    sendChatMessageWithName(pendingMessage);
+    pendingMessage = null;
+  }
+}
+
+
+  pendingAction = null;
+}
+*/
+function saveUserName() {
+  const inputEl = document.getElementById('user-name-input');
+  if (!inputEl) {
+    console.error('[CHAT DEBUG] saveUserName: input element #user-name-input NOT FOUND');
+    showNotification('Internal error: name input missing.');
+    return;
+  }
+  const input = inputEl.value.trim();
+  console.log('[CHAT DEBUG] saveUserName called. input:', input, 'pendingAction:', pendingAction);
+  if (!input) {
+    showNotification("Please enter a name.");
+    return;
+  }
+
+  userName = input;
+  document.getElementById('name-input-modal').classList.add('hidden');
+  console.log('[CHAT DEBUG] userName set to ->', userName);
+
+  if (pendingAction === "host") {
+    hostSession();
+  } else if (pendingAction === "join") {
+    joinSession();
+  } else if (pendingAction === "chat") {
+    if (pendingMessage) {
+      // ensure name exists when sending pending message
+      if (!userName || !userName.trim()) userName = 'Guest';
+      sendChatMessageWithName(pendingMessage);
+      pendingMessage = null;
+    }
+  }
+
+  pendingAction = null;
+}
+
+
+
+
 
 async function loadListenAgain() {
   const sectionList = document.querySelector('#listen-again .section-list');
@@ -1221,27 +1301,9 @@ function closeListenModal() {
     document.getElementById('listen-options').classList.remove('hidden');
   }
 }
-/*function hostSession() {
-  let displayName = prompt("Enter your name:");
-  if (!displayName || !displayName.trim()) displayName = "Host";
 
-  socket.emit("host-session", { name: displayName }, (sessionCode) => {
-    if (!sessionCode) {
-      showNotification("Failed to create session");
-      return;
-    }
-    currentSessionCode = sessionCode;
-    document.getElementById("session-code").textContent = sessionCode;
-    document.getElementById("session-code-display").classList.remove("hidden");
-    document.getElementById("chat-open-btn").style.display = "flex"; // ✅ host sees chat button
-    closeListenModal();
-  });
-}
-*/
-function hostSession() {
-  socket.emit('host-session');
-}
 
+/*
 function joinSession() {
   const code = document.getElementById("session-code-input").value.toUpperCase().trim();
   if (code.length !== 6) {
@@ -1254,11 +1316,57 @@ function joinSession() {
 
   socket.emit("join-session", { code, name: displayName }, (success) => {
     if (success) {
-      document.getElementById("chat-open-btn").style.display = "flex"; // ✅ joiner sees chat button
+      document.getElementById("chat-open-btn").style.display = "flex"; // joiner sees chat button
       closeListenModal();
       showChatButton();
+      rememberSession(code, false);     // ✅ fixed
       setSessionControlsDisabled(true);
-       isHost = false;
+      isHost = false;
+    } else {
+      showNotification("Invalid session code");
+    }
+  });
+}
+/*/
+function hostSession() {
+  if (!userName || !userName.trim()) {
+    askForName("host");
+    return;
+  }
+
+  socket.emit('create-session', { name: userName }, (sessionCode) => {
+    if (!sessionCode) {
+      showNotification("Failed to create session. Try again.");
+      return;
+    }
+
+    isHost = true;
+    rememberSession(sessionCode, true);
+    showSessionControls(sessionCode);
+    document.getElementById('chat-open-btn').style.display = 'flex';
+  });
+}
+
+function joinSession() {
+  const code = document.getElementById("session-code-input").value.toUpperCase().trim();
+  if (code.length !== 6) {
+    showNotification("Invalid code");
+    return;
+  }
+
+ if (!userName || !userName.trim()) {
+  askForName("join");
+  return;
+}
+
+  socket.emit("join-session", { code, name: userName }, (success) => {
+    if (success) {
+      document.getElementById("chat-open-btn").style.display = "flex"; // joiner sees chat button
+      closeListenModal();
+      showChatButton();
+      rememberSession(code, false);     // ✅ fixed
+      setSessionControlsDisabled(true);
+      isHost = false;
     } else {
       showNotification("Invalid session code");
     }
@@ -1283,7 +1391,58 @@ function leaveSession() {
   document.getElementById('chat-container').classList.remove('open');
   updateChatButtonVisibility();
   hideChatButton();
+  clearSessionMemory();
+  document.getElementById('transfer-host-btn').classList.add('hidden');
 }
+
+function showTransferModal() {
+  const modal = document.getElementById('transfer-modal');
+  const list  = document.getElementById('transfer-list');
+  list.innerHTML = '';
+
+  const entries = Object.entries(participants || {});
+  if (entries.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No participants to transfer to';
+    list.appendChild(li);
+  } else {
+    entries.forEach(([socketId, p]) => {
+      if (socketId !== mySocketId) {
+        const li = document.createElement('li');
+        // show the socketId and whether that user is host/participant
+        const role = p.isHost ? ' (Host)' : '';
+        li.textContent = socketId + role;
+        li.onclick = () => transferHostTo(socketId);
+        list.appendChild(li);
+      }
+    });
+  }
+
+  modal.classList.remove('hidden');
+}
+
+
+
+function closeTransferModal() {
+  const modal = document.getElementById('transfer-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+
+function closeTransferModal() {
+  document.getElementById('transfer-modal').classList.add('hidden');
+}
+
+function transferHostTo(targetId) {
+  if (!isHost || !currentSessionCode) {
+    showNotification("You are not the host or no session is active.");
+    return;
+  }
+  socket.emit('transferHost', { room: currentSessionCode, newHost: targetId });
+  closeTransferModal();
+  showNotification("Host transferred successfully!");
+}
+
 
 function renderParticipants() {
   const ul = document.getElementById('participants-ul');
@@ -1314,13 +1473,124 @@ function enableControls() {
   const controls = document.querySelectorAll('.player-controls button');
   controls.forEach(btn => btn.classList.remove('disabled'));
 }
+/*
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  if (!userName || !userName.trim()) {
+    pendingMessage = message;
+    pendingAction = "chat";
+    askForName("chat");
+    return;
+  }
+
+  sendChatMessageWithName(message);
+}
+*/
+
+/*
+function sendChatMessageWithName(message) {
+  // only fallback if no name
+  if (!userName || !userName.trim()) {
+    userName = "Guest";
+  }
+
+  socket.emit("chat-message", {
+    user: userName.trim(),
+    message: message,
+    time: new Date().toISOString()
+  });
+
+  document.getElementById("chat-input").value = "";
+}
+
+
+
+function sendChatMessageWithName(message) {
+  if (!userName || !userName.trim()) {
+    userName = "Guest";
+  }
+  userName = "Guest";
+
+  socket.emit("chat-message", {
+    user: userName.trim(),
+    message: message,
+    time: new Date().toISOString()
+  });
+
+  document.getElementById("chat-input").value = "";
+}
+
+*/
+
+
 
 function sendChatMessage() {
   const input = document.getElementById('chat-input');
-  if (!input.value.trim()) return;
-  socket.emit('chat-message', { message: input.value });
-  input.value = '';
+  if (!input) {
+    console.error('[CHAT DEBUG] sendChatMessage: chat input element not found');
+    return;
+  }
+  const message = input.value.trim();
+  if (!message) return;
+
+  // If no name yet, prompt and save pending message
+  if (!userName || !userName.trim()) {
+    pendingMessage = message;
+    pendingAction = "chat";
+    console.log('[CHAT DEBUG] No userName yet - asking for it and storing pendingMessage:', pendingMessage);
+    askForName('chat');
+    return;
+  }
+
+  // normal send
+  sendChatMessageWithName(message);
 }
+
+function sendChatMessageWithName(message) {
+  // Defensive fallback only if still empty
+  if (!userName || !userName.trim()) {
+    console.warn('[CHAT DEBUG] sendChatMessageWithName: userName empty, falling back to Guest');
+    userName = "Guest";
+  }
+
+  const data = {
+    user: userName.trim(),
+    message: message,
+    time: new Date().toISOString(),
+    _fromClientId: mySocketId  // helpful tracer field
+  };
+
+  console.log('[CHAT DEBUG] Emitting chat-message ->', data);
+  socket.emit('chat-message', data);
+
+  // clear input after emit
+  const input = document.getElementById('chat-input');
+  if (input) input.value = '';
+}
+
+// single receiver — keep only one listener
+socket.off('chat-message'); // remove any accidental duplicates if using hot reload
+/*
+socket.on('chat-message', (data) => {
+  console.log('[CHAT DEBUG] Received chat-message from server:', data);
+
+  // Server should ideally forward the same user. If not present, show helpful fallback.
+  const displayName = data && data.user && data.user.trim() ? data.user : (userName || "Guest");
+
+  const chatMessages = document.getElementById('chat-messages');
+  if (!chatMessages) {
+    console.error('[CHAT DEBUG] chat-messages element not found');
+    return;
+  }
+  const msgDiv = document.createElement('div');
+  msgDiv.innerHTML = `<strong>${displayName}:</strong> ${data.message}`;
+  chatMessages.appendChild(msgDiv);
+});
+
+*/
 
 
 
@@ -1603,7 +1873,68 @@ socket.on('session-created', ({ code }) => {
   showNotification('Session hosted! Share the code: ' + code);
   updateChatButtonVisibility();
   showChatButton();
+  document.getElementById('transfer-host-btn').classList.remove('hidden');
+  rememberSession(sessionCode, true);
 });
+
+socket.on('connect', () => {
+  mySocketId = socket.id;
+  console.log('My socket ID:', mySocketId);
+});
+
+socket.on('create-session', ({ name }, callback) => {
+  const code = generateSessionCode();
+  rooms[code] = {
+    host: socket.id,
+    participants: {
+      [socket.id]: { id: socket.id, name: name || "Host", isHost: true }
+    }
+  };
+  socket.join(code);
+  callback(code);
+  io.to(code).emit('participantsUpdate', rooms[code].participants);
+});
+
+
+socket.on('transferHost', ({ room, newHost }) => {
+  const roomObj = rooms[room];
+  if (!roomObj) return;
+  if (socket.id !== roomObj.host) return; // only current host can transfer
+  roomObj.host = newHost;
+  io.to(room).emit('hostTransferred', newHost);
+});
+/*
+socket.on('chat-message', ({ user, message, time }) => {
+  console.log("Server got chat:", user, message);
+
+  // Re-broadcast with the correct user
+  io.to(room).emit('chat-message', {
+    user: user && user.trim() ? user : "Guest",
+    message,
+    time
+  });
+});
+*/
+
+socket.on('hostTransferred', newHostId => {
+  if (newHostId === mySocketId) {
+    // I am now host
+    isHost = true;
+    showNotification("You are now the host!");
+    document.getElementById('transfer-host-btn').classList.remove('hidden');
+  } else {
+    isHost = false;
+    showNotification("Host role transferred.");
+    document.getElementById('transfer-host-btn').classList.add('hidden');
+  }
+});
+
+
+socket.on('participantsUpdate', list => {
+  participants = list;
+});
+
+
 
 /*
 socket.on('session-joined', ({ code, isHost: host }) => {
@@ -1633,6 +1964,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   showNotification(`Joined session ${code}`);
   updateChatButtonVisibility();
   setSessionControlsDisabled(true);
+  rememberSession(sessionCode, false);
 });
 
 socket.on('error', ({ message }) => {
@@ -1690,14 +2022,37 @@ socket.on('request-state', ({ forUser }) => {
   };
   socket.emit('provide-state', { forUser, state });
 });
-
-socket.on('chat-message', ({ userId, message }) => {
+/*
+socket.on('chat-message', ({ user, message }) => {
   const chatMessages = document.getElementById('chat-messages');
   const msgDiv = document.createElement('div');
-  msgDiv.textContent = `${userId.slice(0, 4)}: ${message}`;
+  msgDiv.innerHTML = `<strong>${user || "guest"}:</strong> ${message}`;
   chatMessages.appendChild(msgDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
 });
+*/
+
+socket.on('chat-message', ({ user, message }) => {
+  const chatMessages = document.getElementById('chat-messages');
+  const msgDiv = document.createElement('div');
+  
+  // If no user provided, fallback to my own local userName or "Guest"
+  const displayName = user && user.trim() ? user : (userName || "Guest");
+  
+  msgDiv.innerHTML = `<strong>${displayName}:</strong> ${message}`;
+  chatMessages.appendChild(msgDiv);
+});
+
+
+function rememberSession(code, isHost) {
+  localStorage.setItem('sessionCode', code);
+  localStorage.setItem('sessionRole', isHost ? 'host' : 'participant');
+}
+
+function clearSessionMemory() {
+  localStorage.removeItem('sessionCode');
+  localStorage.removeItem('sessionRole');
+}
+
 
 function handlePlaybackControl(data) {
   switch (data.action) {
@@ -1769,11 +2124,42 @@ window.addEventListener('load', () => {
 document.getElementById('listen-together-btn').addEventListener('click', () => {
   openListenModal();
 });
+/*
+document.getElementById('listen-together-btn').addEventListener('click', () => {
+  let displayName = prompt("Enter your name:");
+  if (!displayName || !displayName.trim()) displayName = "Host";
 
-
-  document.getElementById('host-session-btn').addEventListener('click', () => {
-    socket.emit('create-session');
+  socket.emit('create-session', { name: displayName }, (sessionCode) => {
+    isHost = true;
+    rememberSession(sessionCode, true);
+    showSessionControls(sessionCode);
+    document.getElementById('chat-open-btn').style.display = 'flex';
   });
+});
+*/
+//hosting functoin
+/*
+document.getElementById('host-session-btn').addEventListener('click', () => {
+if (!userName || !userName.trim()) {
+  askForName("host");
+  return;
+}
+
+  socket.emit('create-session', { name: userName }, (sessionCode) => {
+    if (!sessionCode) {
+      showNotification("Failed to create session. Try again.");
+      return;
+    }
+
+    isHost = true;
+    rememberSession(sessionCode, true);
+    showSessionControls(sessionCode);
+    document.getElementById('chat-open-btn').style.display = 'flex';
+  });
+});*/
+
+document.getElementById('host-session-btn').addEventListener('click', hostSession);
+
 
   document.getElementById('join-session-btn').addEventListener('click', () => {
     document.getElementById('join-input').style.display = 'block';
@@ -1883,6 +2269,29 @@ function leaveSessionUIReset() {
   document.getElementById('join-input').classList.add('hidden');
   updateChatButtonVisibility();
 }
+document.addEventListener('DOMContentLoaded', () => {
+  const code = localStorage.getItem('sessionCode');
+  const role = localStorage.getItem('sessionRole');
+  if (code) {
+    // reconnect as participant; if you want to restore host,
+    // you can check role === 'host' and call a special API
+    joinSessionWithCode(code, role === 'host');
+  }
+});
+
+async function joinSessionWithCode(code, wasHost) {
+  try {
+    await socket.emit('joinSession', { code });
+    setSessionControlsDisabled(true);
+    if (wasHost) {
+      // optionally re-establish as host if your backend supports it
+    }
+  } catch (e) {
+    console.error('Auto-rejoin failed', e);
+    clearSessionMemory();
+  }
+}
+
 
 
 // Global functions for onclick handlers
@@ -1921,5 +2330,5 @@ window.toggleParticipants = toggleParticipants;
 window.joinSession = joinSession;
 window.closeListenModal = closeListenModal;
 window.sendChatMessage = sendChatMessage;
-//window.hostSession = hostSession;
+
 

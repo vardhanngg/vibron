@@ -47,6 +47,10 @@
       <button id="listen-together-btn" class="listen-btn">
         <i class="fas fa-users"></i> Listen Together
       </button>
+      <button id="transfer-host-btn"
+        class="listen-btn hidden"
+        onclick="showTransferModal()">Transfer Host</button>
+
       <div id="session-code-display" class="session-code hidden">
   <p>Share this code: <span id="session-code"></span></p>
   <button class="modal-btn leave-btn hidden" onclick="leaveSession()">Leave Session</button>
@@ -65,10 +69,19 @@
         <span class="close" onclick="closeListenModal()">×</span>
         <h2>Listen Together</h2>
         <div id="listen-options" class="modal-options">
-          <button id="host-session-btn" class="modal-btn host-btn" onclick="hostSession()">Host a Session</button>
-          <button id="join-session-btn" class="modal-btn join-btn" onclick="showJoinInput()">Join a Session</button>
+         <!--<button id="host-session-btn" class="modal-btn host-btn" onclick="hostSession()">Host a Session</button>
+        -->
+        <button id="host-session-btn" class="modal-btn host-btn">Host a Session</button> 
+        <button id="join-session-btn" class="modal-btn join-btn" onclick="showJoinInput()">Join a Session</button>
           <button class="modal-btn cancel-btn" onclick="closeListenModal()">Cancel</button>
         </div>
+        <div id="name-input-modal" class="modal-content hidden">
+  <span class="close" onclick="closeNameModal()">×</span>
+  <h3>Enter your Name</h3>
+  <input type="text" id="user-name-input" placeholder="Your name..." />
+  <button class="modal-btn" onclick="saveUserName()">OK</button>
+</div>
+
         <div id="join-input" class="modal-input hidden">
           <input type="text" id="session-code-input" placeholder="Enter 6-char code" maxlength="6" />
           <div class="modal-buttons">
@@ -86,6 +99,11 @@
         </div>
       </div>
     </div>
+<div id="transfer-modal" class="modal-content hidden">
+  <span class="close" onclick="closeTransferModal()">×</span>
+  <h3>Transfer Host To:</h3>
+  <ul id="transfer-list"></ul>
+</div>
 
     <div id="home-content" class="home-content">
       <section id="listen-again" class="home-section">
