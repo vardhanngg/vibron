@@ -177,35 +177,45 @@ resultsList.style.display = 'block'; // ✅ ensure results are visible
 
 async function fetchResults() {
   try {
+    // main search (songs / artists / albums)
     const response = await fetch(
       `/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`
     );
     if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
-
     const data = await response.json();
 
+    // 🎵 extra call for playlists
+    const plResponse = await fetch(
+      `https://apivibron.vercel.app/api/search/playlists?query=${encodeURIComponent(currentQuery)}`
+    );
+    const plJson = await plResponse.json();
+    // add playlists into the same object so displayResults can see it
+    data.playlists = plJson?.data || { results: [] };
+
+    // no results check (include playlists now)
     if (
       !data.songs?.results?.length &&
       !data.artists?.results?.length &&
-      !data.albums?.results?.length
+      !data.albums?.results?.length &&
+      !data.playlists?.results?.length        // ✅ new line
     ) {
       moreBtn.classList.add('hidden');
       resultsList.innerHTML = '<span>No results found.</span>';
       return;
     }
 
+    // hand everything—including playlists—to your renderer
     displayResults(data);
 
-    // show or hide the button depending on whether another page exists
+    // show or hide the “Load More” button
     if (data.songs.next || data.artists.next || data.albums.next) {
       moreBtn.classList.remove('hidden');
       moreBtn.style.display = 'block';
-
     } else {
       moreBtn.classList.add('hidden');
     }
 
-    // 🔴  REMOVE the automatic currentPage++ here
+    //  keep currentPage handling exactly as you have it (don’t auto-increment)
   } catch (err) {
     moreBtn.classList.add('hidden');
     resultsList.innerHTML = '<span>Error loading results.</span>';
@@ -213,6 +223,7 @@ async function fetchResults() {
     showNotification('Failed to load search results.');
   }
 }
+
 
 
 async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
@@ -410,44 +421,50 @@ async function fetchAlbumSongs(albumId, albumTitle) {
 
 async function fetchPlaylistSongs(playlistId, playlistTitle) {
   try {
-    const response = await fetch(`https://apivibron.vercel.app/api/search?q=${encodeURIComponent(playlistTitle)}&limit=10`);
+    const url = `https://apivibron.vercel.app/api/playlists?id=${playlistId}&page=0&limit=10`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`Playlist fetch failed: ${response.statusText}`);
     const data = await response.json();
-    const songs = data.songs?.results || data.playlists?.results?.find(p => p.id === playlistId)?.songs || [];
+    const songs = data.data?.songs || [];
 
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
+    document.getElementById('home-content').style.display = 'none';
     searchInput.value = `Songs from ${playlistTitle}`;
-    moreBtn.style.display = 'none';
-    hideBackButton();
+    resultsList.classList.remove('hidden');
 
-    if (songs.length) {
-      const container = document.createElement('div');
-      container.className = 'song-container';
-      const cards = document.createElement('div');
-      cards.className = 'cards';
-      songs.forEach(song => {
-        const normalizedSong = normalizeSong(song);
-        if (!songHistory.some(s => s.id === normalizedSong.id)) {
-          songHistory.push(normalizedSong);
-        }
-        const card = createSongCard(normalizedSong);
-        cards.appendChild(card);
-      });
-      container.appendChild(cards);
-      resultsList.appendChild(container);
-    } else {
-      resultsList.innerHTML = '<span>No songs found in this playlist.</span>';
-    }
-    resultsList.style.display = 'block';
+    showBackButton();
+
+    const header = document.createElement('h3');
+    header.textContent = `Songs from ${playlistTitle}`;
+    resultsList.appendChild(header);
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    songs.forEach(song => {
+      const normalizedSong = normalizeSong(song);
+      if (!songHistory.some(s => s.id === normalizedSong.id)) {
+        songHistory.push(normalizedSong);
+      }
+      const card = createSongCard(normalizedSong);
+      cards.appendChild(card);
+    });
+    container.appendChild(cards);
+    resultsList.appendChild(container);
+
+    queue = songs.map(normalizeSong);
+    renderQueue();
     markStateChanged();
     saveState();
   } catch (err) {
-    resultsList.innerHTML = '<span>Error loading playlist songs.</span>';
+    resultsList.innerHTML = '<span>Error loading playlist songs. Please try again.</span>';
     console.error('Error fetching playlist songs:', err);
     showNotification('Failed to load playlist songs.');
   }
 }
+
 
 function normalizeSong(song) {
   return {
@@ -575,7 +592,10 @@ function loadSongWithoutPlaying(song) {
 }
 
 function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = false) {
-  if (!isHost && currentSessionCode) return;
+  if (!isHost && currentSessionCode) {
+     showNotification('Only the host can control playback.');
+    return; 
+  }
   console.log('playSong called:', song.id, song.title, { fromSearch, fromArtist, fromAlbum });
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
@@ -627,7 +647,10 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
 }
 
 function playPause() {
-  if (!isHost && currentSessionCode) return;
+  if (!isHost && currentSessionCode) {
+     showNotification('Only the host can control playback.');
+    return; 
+  }
   if (isPlaying) {
     audioPlayer.pause();
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -645,7 +668,10 @@ function playPause() {
 }
 
 function playNext() {
-  if (!isHost && currentSessionCode) return; 
+  if (!isHost && currentSessionCode) {
+     showNotification('Only the host can control playback.');
+    return; 
+  }
   if (queue.length > 0) {
     const nextSong = queue.shift();
     playSong(nextSong, false);
@@ -665,7 +691,10 @@ function playNext() {
 }
 
 function playPrevious() {
-  if (!isHost && currentSessionCode) return; 
+  if (!isHost && currentSessionCode) {
+     showNotification('Only the host can control playback.');
+    return; 
+  }
   if (currentSongIndex > 0) {
     currentSongIndex--;
     playSong(songHistory[currentSongIndex], false);
@@ -675,6 +704,23 @@ function playPrevious() {
     socket.emit('sync-state', { song: songHistory[currentSongIndex], currentTime: audioPlayer.currentTime, isPlaying: true });
   }
 }
+function showChatButton() {
+  const chatBtn = document.getElementById('chat-open-btn');
+  if (chatBtn) {
+    chatBtn.style.display = 'inline-flex'; // makes the 💬 button visible
+  }
+ // showNotification('showchatbuttonfun');
+}
+
+function hideChatButton() {
+  const chatBtn = document.getElementById('chat-open-btn');
+  if (chatBtn) {
+    chatBtn.style.display = 'none'; // hides it again
+  }
+  //showNotification('hidechatbuttonfun');
+}
+
+
 
 function seek(event) {
   const rect = event.currentTarget.getBoundingClientRect();
@@ -780,11 +826,28 @@ function toggleQueue() {
   document.getElementById('chat-container').classList.remove('open');
   queueContainer.classList.toggle('open');
 }
-function toggleChat() {
+/*function toggleChat() {
   // close queue if open
   queueContainer.classList.remove('open');
   document.getElementById('chat-container').classList.toggle('open');
+}*/
+function toggleChat() {
+  const chatContainer = document.getElementById('chat-container');
+  if (!chatContainer) {
+    console.error("Chat container not found");
+    return;
+  }
+
+  // Toggle visibility
+  if (chatContainer.classList.contains('hidden')) {
+    chatContainer.classList.remove('hidden');
+    console.log("Chat opened");
+  } else {
+    chatContainer.classList.add('hidden');
+    console.log("Chat closed");
+  }
 }
+
 
 
 function emptyQueue() {
@@ -1122,7 +1185,12 @@ function closeAddToPlaylistModal() {
 /* Listen Together */
 function closeListenModal() {
   const modal = document.getElementById('listen-together-modal');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.classList.add('hidden');
+    // Reset join input visibility
+    document.getElementById('join-input').classList.add('hidden');
+    document.getElementById('listen-options').classList.remove('hidden');
+  }
 }
 /*function hostSession() {
   let displayName = prompt("Enter your name:");
@@ -1141,6 +1209,10 @@ function closeListenModal() {
   });
 }
 */
+function hostSession() {
+  socket.emit('host-session');
+}
+
 function joinSession() {
   const code = document.getElementById("session-code-input").value.toUpperCase().trim();
   if (code.length !== 6) {
@@ -1155,6 +1227,7 @@ function joinSession() {
     if (success) {
       document.getElementById("chat-open-btn").style.display = "flex"; // ✅ joiner sees chat button
       closeListenModal();
+      showChatButton();
        isHost = false;
     } else {
       showNotification("Invalid session code");
@@ -1164,8 +1237,8 @@ function joinSession() {
 
 
 function leaveSession() {
-    leaveSessionUIReset();
-
+  console.log('Leaving session, currentSessionCode:', currentSessionCode);
+  leaveSessionUIReset();
   if (currentSessionCode) {
     socket.emit('leave-session', { code: currentSessionCode });
   }
@@ -1176,9 +1249,9 @@ function leaveSession() {
   document.getElementById('participants-list').style.display = 'none';
   enableControls();
   showNotification('Left session');
-  document.getElementById('chat-open-btn').style.display = 'none';
-document.getElementById('chat-container').classList.remove('open'); // also close chat
-
+  document.getElementById('chat-container').classList.remove('open');
+  updateChatButtonVisibility();
+  hideChatButton();
 }
 
 function renderParticipants() {
@@ -1241,7 +1314,10 @@ function formatTime(seconds) {
 /* =================== */
 /* Other Controls */
 function toggleLoop() {
-  if (!isHost && currentSessionCode) return; 
+  if (!isHost && currentSessionCode) {
+     showNotification('Only the host can control playback.');
+    return; 
+  }
   audioPlayer.loop = !audioPlayer.loop;
   loopBtn.innerHTML = audioPlayer.loop ? '<i class="fa-solid fa-repeat"></i>' : '<i class="fa-regular fa-repeat"></i>';
 }
@@ -1261,7 +1337,7 @@ function focusSearch() {
 function displayResults(data) {
   resultsList.innerHTML = '';
 
-  // Songs
+  // ----- Songs -----
   lastSongResults = data.songs.results || [];
   if (lastSongResults.length > 0) {
     const songsHeader = document.createElement('h3');
@@ -1295,14 +1371,19 @@ function displayResults(data) {
       loadMoreBtn.style.display = 'block';
       loadMoreBtn.onclick = () => {
         visibleSongCount += 5;
-        displayResults({ songs: { results: lastSongResults }, artists: data.artists, albums: data.albums });
+        displayResults({
+          songs: { results: lastSongResults },
+          artists: data.artists,
+          albums: data.albums,
+          playlists: data.playlists            // keep playlists when re-rendering
+        });
       };
     } else {
       loadMoreBtn.style.display = 'none';
     }
   }
 
-  // Artists
+  // ----- Artists -----
   if (data.artists.results.length > 0) {
     const artistsHeader = document.createElement('h3');
     artistsHeader.textContent = 'Artists';
@@ -1322,7 +1403,9 @@ function displayResults(data) {
           <div class="artist-name">${artist.role || 'Artist'}</div>
         </div>
         <div class="play-down">
-          <div class="play-btn" title="View Songs" onclick="event.stopPropagation(); fetchArtistSongs('${encodeURIComponent(artist.id)}', '${artist.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
+          <div class="play-btn" title="View Songs"
+               onclick="event.stopPropagation(); fetchArtistSongs('${encodeURIComponent(artist.id)}',
+               '${artist.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
         </div>
       `;
       card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
@@ -1332,7 +1415,7 @@ function displayResults(data) {
     resultsList.appendChild(container);
   }
 
-  // Albums
+  // ----- Albums -----
   if (data.albums.results.length > 0) {
     const albumsHeader = document.createElement('h3');
     albumsHeader.textContent = 'Albums';
@@ -1352,7 +1435,9 @@ function displayResults(data) {
           <div class="artist-name">${album.primaryArtists} (${album.year})</div>
         </div>
         <div class="play-down">
-          <div class="play-btn" title="View Songs" onclick="event.stopPropagation(); fetchAlbumSongs('${encodeURIComponent(album.id)}', '${album.title.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
+          <div class="play-btn" title="View Songs"
+               onclick="event.stopPropagation(); fetchAlbumSongs('${encodeURIComponent(album.id)}',
+               '${album.title.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
         </div>
       `;
       card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
@@ -1362,7 +1447,53 @@ function displayResults(data) {
     resultsList.appendChild(container);
   }
 
-  if (!data.songs.results.length && !data.artists.results.length && !data.albums.results.length) {
+  // ----- Playlists (NEW) -----
+  if (data.playlists?.results?.length > 0) {
+    const playlistsHeader = document.createElement('h3');
+    playlistsHeader.textContent = 'Playlists';
+    resultsList.appendChild(playlistsHeader);
+
+    const container = document.createElement('div');
+    container.className = 'song-container';
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+
+    data.playlists.results.slice(0, 3).forEach(pl => {
+      // pick the best available image (fall back to default.png)
+      const img =
+        pl.image?.find(i => i.quality === '150x150')?.url ||
+        pl.image?.[0]?.url ||
+        'default.png';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <img src="${img}" alt="${pl.name}" />
+        <div class="card-body">
+          <div class="song-name">${pl.name}</div>
+          <div class="artist-name">${pl.language || ''} • ${pl.songCount} songs</div>
+        </div>
+        <div class="play-down">
+          <div class="play-btn" title="View Songs"
+               onclick="event.stopPropagation(); fetchPlaylistSongs('${encodeURIComponent(pl.id)}',
+               '${pl.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
+        </div>
+      `;
+      card.addEventListener('click', () => fetchPlaylistSongs(pl.id, pl.name));
+      cards.appendChild(card);
+    });
+
+    container.appendChild(cards);
+    resultsList.appendChild(container);
+  }
+
+  // ----- No results -----
+  if (
+    !data.songs.results.length &&
+    !data.artists.results.length &&
+    !data.albums.results.length &&
+    !(data.playlists?.results?.length)
+  ) {
     resultsList.innerHTML = '<span>No results found.</span>';
   }
 
@@ -1386,6 +1517,23 @@ function createSongPickerModal(playlistIdx) {
   document.body.appendChild(modal);
   filterSongPicker('');
 }
+function updateChatButtonVisibility() {
+  const chatButton = document.getElementById('chat-open-btn');
+  if (!chatButton) {
+    console.error('Chat button not found in DOM');
+    return;
+  }
+  console.log('Updating chat button visibility, currentSessionCode:', currentSessionCode);
+  if (currentSessionCode) {
+    chatButton.style.display = 'flex';
+    chatButton.classList.remove('hidden');
+    console.log('Chat button set to display: flex');
+  } else {
+    chatButton.style.display = 'none';
+    chatButton.classList.add('hidden');
+    console.log('Chat button set to display: none');
+  }
+}
 
 async function loadMoreArtistSongs() {
   if (!currentArtistId) return;
@@ -1396,40 +1544,62 @@ async function loadMoreArtistSongs() {
 /* =================== */
 /* WebSocket Handlers */
 socket.on('session-created', ({ code }) => {
+  console.log('Session created, code:', code);
   currentSessionCode = code;
   isHost = true;
-
   document.getElementById('session-code').textContent = code;
   document.getElementById('session-code-display').classList.remove('hidden');
-  showSessionUI();
-
-  // 🔥 Hide listen options
+  //showSessionUI();
   const listenOptions = document.getElementById('listen-options');
-  if (listenOptions) listenOptions.classList.add('hidden');
-
-  // 🔥 Close the listen together modal completely
+  if (listenOptions) {
+    listenOptions.classList.add('hidden');
+    console.log('Listen options hidden in session-created');
+  }
   closeListenModal();
-
-  document.getElementById("chat-open-btn").style.display = "flex"; // show chat button
-
+  const chatButton = document.getElementById('chat-open-btn');
+  if (chatButton) {
+    chatButton.style.display = 'flex';
+    chatButton.classList.remove('hidden');
+    console.log('Chat button shown in session-created');
+  } else {
+    console.error('Chat button not found in session-created');
+  }
   const shareBtn = document.createElement('button');
   shareBtn.textContent = 'Share Code';
-  shareBtn.onclick = () =>
-    navigator.clipboard.writeText(code).then(() => showNotification('Code copied!'));
+  shareBtn.onclick = () => navigator.clipboard.writeText(code).then(() => showNotification('Code copied!'));
   document.getElementById('session-code-display').appendChild(shareBtn);
-
   showNotification('Session hosted! Share the code: ' + code);
+  updateChatButtonVisibility();
+  showChatButton();
 });
 
-
+/*
 socket.on('session-joined', ({ code, isHost: host }) => {
   currentSessionCode = code;
   isHost = host;
   closeListenModal();
-  showSessionUI();
+  //showSessionUI();
   if (!isHost) disableControls();
   showNotification(`Joined session ${code}`);
 document.getElementById("chat-open-btn").style.display = "flex";
+});*/
+socket.on('session-joined', ({ code, isHost: host }) => {
+  console.log('Session joined, code:', code, 'isHost:', host);
+  currentSessionCode = code;
+  isHost = host;
+  closeListenModal();
+  //showSessionUI();
+  if (!isHost) disableControls();
+  const chatButton = document.getElementById('chat-open-btn');
+  if (chatButton) {
+    chatButton.style.display = 'flex';
+    chatButton.classList.remove('hidden');
+    console.log('Chat button shown in session-joined');
+  } else {
+    console.error('Chat button not found in session-joined');
+  }
+  showNotification(`Joined session ${code}`);
+  updateChatButtonVisibility();
 });
 
 socket.on('error', ({ message }) => {
@@ -1671,13 +1841,14 @@ function showJoinInput() {
 }
 
 function leaveSessionUIReset() {
-  // hide every listen-together element that should disappear when leaving
+  console.log('Resetting session UI');
   document.getElementById('session-code-display').classList.add('hidden');
   document.getElementById('participants-list').classList.add('hidden');
   document.getElementById('chat-container').classList.add('hidden');
   document.getElementById('listen-together-modal').classList.add('hidden');
   document.getElementById('listen-options').classList.remove('hidden');
-
+  document.getElementById('join-input').classList.add('hidden');
+  updateChatButtonVisibility();
 }
 
 

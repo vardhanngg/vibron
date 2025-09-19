@@ -1150,18 +1150,18 @@ leave-btn {
 #chat-container {
   position: fixed;
   right: 1rem;
-  bottom: 100px;
+  bottom: 160px;        /* keep it above the player bar */
   width: 300px;
-  max-width: 90vw;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 15px;
+  max-height: 400px;
+  background: rgba(0,0,0,0.85);
+  border: 1px solid #555;
+  border-radius: 12px;
   padding: 1rem;
-  box-shadow: var(--shadow-light);
-  display: none;
+  display: flex;
   flex-direction: column;
-  z-index: 1100; /* above queue, below sidebar */
+  z-index: 2001;        /* higher than the queue’s 1000 */
 }
+
 
 #chat-container.open {
   display: flex;
@@ -1418,10 +1418,6 @@ leave-btn {
     left: 2.5%;
   }
 
- #chat-container {
-    width: 90%;
-    right: 5%;
-  }
 }
 
 @media screen and (max-width: 500px) {
@@ -1499,8 +1495,5 @@ leave-btn {
     left: 5%;
   }
 
-#chat-container {
-    width: 90%;
-    right: 5%;
-  }
+
 }
