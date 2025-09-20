@@ -877,6 +877,33 @@ function setSessionControlsDisabled(disabled) {
   }
 }
 
+let isMuted = false;
+
+function toggleMute() {
+  const audio = document.getElementById('audio-player');
+  const muteBtn = document.getElementById('mute-btn');
+
+  isMuted = !isMuted;
+  audio.muted = isMuted;
+
+  // update icon
+  if (isMuted) {
+    muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+  } else {
+    muteBtn.innerHTML = '<i class="fa-solid fa-volume-up"></i>';
+  }
+}
+
+socket.on("host-play", () => {
+  const playPauseBtn = document.getElementById("play-pause-btn");
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+});
+
+socket.on("host-pause", () => {
+  const playPauseBtn = document.getElementById("play-pause-btn");
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+});
+
 function updateSessionControls() {
   const listenBtn = document.getElementById('listen-together-btn');
   const moodBtn   = document.querySelector('.switch-btn');
