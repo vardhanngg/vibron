@@ -1082,16 +1082,22 @@ function createPlaylistModal(songId = '') {
       <h4>Create Playlist</h4>
       <input type="text" id="playlist-name-input" placeholder="Enter playlist name..." />
       <div class="modal-buttons">
-        <button onclick="createPlaylist(document.getElementById('playlist-name-input').value, '${encodeURIComponent(songId)}'); closePlaylistModal()">Create</button>
+        <button id="create-playlist-btn" onclick="createPlaylist(document.getElementById('playlist-name-input').value, '${encodeURIComponent(songId)}'); closePlaylistModal()">Create</button>
         <button onclick="closePlaylistModal()">Cancel</button>
       </div>
     </div>
   `;
-  document.body.appendChild(modal);
+  document.body.appendChild(modal);/*
   setTimeout(() => {
     const input = document.getElementById('playlist-name-input');
     if (input) input.focus();
-  }, 0);
+  }, 0);*/
+setTimeout(() => {
+  const input = document.getElementById('playlist-name-input');
+  if (input) input.focus();
+  enableEnterSubmit("playlist-name-input", "create-playlist-btn");
+}, 0);
+
 }
 
 function closePlaylistModal() {
@@ -1334,7 +1340,23 @@ function loadPlaylists() {
   moreBtn.style.display = 'none';
   hideBackButton();
 }
+// Allow pressing Enter inside an input to trigger its related button
+function enableEnterSubmit(inputId, buttonId) {
+  const input = document.getElementById(inputId);
+  const button = document.getElementById(buttonId);
+  if (!input || !button) return;
 
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      button.click();
+    }
+  });
+}
+
+enableEnterSubmit("user-name-input", "save-username-btn");
+enableEnterSubmit("session-code-input", "join-session-btn");
+enableEnterSubmit("chat-input", "send-chat-btn");
 
 // open a single playlist and show songs (same style as Favorites)
 function openPlaylist(idx) {
@@ -2764,7 +2786,13 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener("DOMContentLoaded", () => {
   autoRejoin();
 });
-*/
+*//*
+document.addEventListener("DOMContentLoaded", () => {
+  // Enable Enter-to-submit in all input fields
+  enableEnterSubmit("session-code-input", "join-session-btn");
+  enableEnterSubmit("user-name-input", "save-username-btn");
+  enableEnterSubmit("chat-input", "chat-send-btn");
+});*/
 
 async function joinSessionWithCode(code, wasHost) {
   try {

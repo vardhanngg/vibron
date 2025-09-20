@@ -12,14 +12,13 @@
 </head>
 <body>
   <header class="top-bar">
-    <!--<a href="normal.html" class="branding">-->
-      <a href="#" class="branding" onclick="event.preventDefault(); loadHomeContent();"></a>
+    <a href="#" class="branding" onclick="event.preventDefault(); loadHomeContent();" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
       <img src="/v.ico" alt="Vibron Logo" class="logo" />
       <span class="brand-name">Vibron</span>
     </a>
     <button id="sidebar-toggle" class="sidebar-toggle">
       <i class="fa-solid fa-bars"></i>
-      <!--0<span class="fallback-text">Menu</span>-->
+      <!-- <span class="fallback-text">Menu</span> -->
     </button>
     <a href="mood.html" class="switch-btn">🎵 Switch to Mood Player</a>
   </header>
@@ -80,13 +79,16 @@
   <span class="close" onclick="closeNameModal()">×</span>
   <h3>Enter your Name</h3>
   <input type="text" id="user-name-input" placeholder="Your name..." />
-  <button class="modal-btn" onclick="saveUserName()">OK</button>
+  <!--<button class="modal-btn" onclick="saveUserName()">OK</button>-->
+  <button class="modal-btn" id="save-username-btn" onclick="saveUserName()">OK</button>
+
 </div>
 
         <div id="join-input" class="modal-input hidden">
           <input type="text" id="session-code-input" placeholder="Enter 6-char code" maxlength="6" />
           <div class="modal-buttons">
-            <button class="modal-btn join-btn" onclick="joinSession()">Join</button>
+            <!--<button class="modal-btn join-btn" onclick="joinSession()">Join</button>-->
+            <button class="modal-btn join-btn" id="join-session-btn" onclick="joinSession()">Join</button>
             <button class="modal-btn cancel-btn" onclick="closeListenModal()">Cancel</button>
           </div>
         </div>
