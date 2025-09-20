@@ -138,9 +138,11 @@ async function loadHomeContent() {
 
 function askForName(action = null) {
   pendingAction = action;
-  document.getElementById('listen-options').classList.add('hidden'); // hide host/join/cancel
+  document.getElementById('listen-options').classList.add('hidden');
+  document.getElementById('join-input').classList.add('hidden'); // ✅ hide code input
   document.getElementById('name-input-modal').classList.remove('hidden');
 }
+
 
 /*
 function saveUserName() {
@@ -797,20 +799,30 @@ function showChatButton() {
   }
  // showNotification('showchatbuttonfun');
 }
-
+/*
 function setSessionControlsDisabled(disabled) {
   const listenBtn = document.getElementById('listen-together-btn');
   const moodBtn   = document.querySelector('.switch-btn');
   const homeLink  = document.querySelector('header.top-bar a.branding');
+  const chatBtn   = document.getElementById('chat-open-btn'); // 💬 explicitly handle chat
 
   if (disabled) {
-    // Visually dim and block clicks
+    // Visually dim and block clicks for session controls
     [listenBtn, moodBtn, homeLink].forEach(el => {
       if (!el) return;
       el.classList.add('disabled-session');
       el.setAttribute('tabindex', '-1');
       el.addEventListener('click', blockClick, true);
     });
+
+    // ✅ Ensure chat button stays enabled
+    if (chatBtn) {
+      chatBtn.classList.remove('disabled-session');
+      chatBtn.removeAttribute('tabindex');
+      chatBtn.removeEventListener('click', blockClick, true);
+      chatBtn.disabled = false;
+    }
+
   } else {
     [listenBtn, moodBtn, homeLink].forEach(el => {
       if (!el) return;
@@ -818,8 +830,73 @@ function setSessionControlsDisabled(disabled) {
       el.removeAttribute('tabindex');
       el.removeEventListener('click', blockClick, true);
     });
+
+    // ✅ Always re-enable chat button
+    if (chatBtn) {
+      chatBtn.classList.remove('disabled-session');
+      chatBtn.removeAttribute('tabindex');
+      chatBtn.removeEventListener('click', blockClick, true);
+      chatBtn.disabled = false;
+    }
+  }
+}*/
+function setSessionControlsDisabled(disabled) {
+  const listenBtn = document.getElementById('listen-together-btn');
+  const moodBtn   = document.querySelector('.switch-btn');
+  const homeLink  = document.querySelector('header.top-bar a.branding');
+  const chatBtn   = document.getElementById('chat-open-btn');
+
+  // 🎵 Playback controls
+  const playerControls = document.querySelectorAll(
+    '#play-pause-btn, #next-btn, #prev-btn, #loop-btn, #fav-btn'
+  );
+
+  if (disabled) {
+    [listenBtn, moodBtn, homeLink].forEach(el => {
+      if (!el) return;
+      el.classList.add('disabled-session');
+      el.setAttribute('tabindex', '-1');
+      el.addEventListener('click', blockClick, true);
+    });
+
+    playerControls.forEach(btn => { if (btn) btn.disabled = true; });
+
+    if (chatBtn) chatBtn.disabled = false;
+
+  } else {
+    [listenBtn, moodBtn, homeLink].forEach(el => {
+      if (!el) return;
+      el.classList.remove('disabled-session');
+      el.removeAttribute('tabindex');
+      el.removeEventListener('click', blockClick, true);
+    });
+
+    playerControls.forEach(btn => { if (btn) btn.disabled = false; });
+
+    if (chatBtn) chatBtn.disabled = false;
   }
 }
+
+function updateSessionControls() {
+  const listenBtn = document.getElementById('listen-together-btn');
+  const moodBtn   = document.querySelector('.switch-btn');
+
+  if (currentSessionCode) {
+    if (isHost) {
+      // Host is in a session → hide/disable Listen Together + Mood Player
+      if (listenBtn) listenBtn.disabled = true;
+      if (moodBtn) moodBtn.disabled = true;
+    } else {
+      // Non-host participant → disable all session-related controls
+      setSessionControlsDisabled(true);
+    }
+  } else {
+    // Not in any session → everything enabled
+    setSessionControlsDisabled(false);
+  }
+}
+
+
 
 function blockClick(e) {
   e.preventDefault();
@@ -1108,22 +1185,30 @@ function playAllFavorites(shuffle = false) {
 }
 
 function loadFavorites() {
+  libraryView.classList.remove('hidden'); 
   libraryView.style.display = 'block';
   resultsList.style.display = 'none';
   document.getElementById('home-content').style.display = 'none';
-  libraryView.innerHTML = `
-    <h4>Favorites</h4>
-    <button onclick="playAllFavorites()" ${favorites.length === 0 ? 'disabled' : ''}>Play All</button>
-    <button onclick="playAllFavorites(true)" ${favorites.length === 0 ? 'disabled' : ''}>Shuffle All</button>
-    <button class="favorites-download-btn" onclick="downloadPlaylist(favorites, 'Favorites')" ${favorites.length === 0 ? 'disabled' : ''}>Download All</button>
-    ${
-      favorites.length
-        ? `
+
+  let html = `
+    <div class="playlist-view-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <button class="back-inline" onclick="loadHomeContent()">← Home</button>
+        <h4 style="margin:0">Favorites</h4>
+      </div>
+      <div>
+        <button onclick="playAllFavorites()" ${favorites.length === 0 ? 'disabled' : ''}>Play All</button>
+        <button onclick="playAllFavorites(true)" ${favorites.length === 0 ? 'disabled' : ''}>Shuffle All</button>
+        <button class="favorites-download-btn" onclick="downloadPlaylist(favorites, 'Favorites')" ${favorites.length === 0 ? 'disabled' : ''}>Download All</button>
+      </div>
+    </div>
+  `;
+
+  html += favorites.length
+    ? `
       <div class="song-container">
         <div class="cards">
-          ${favorites
-            .map(
-              song => `
+          ${favorites.map(song => `
             <div class="card">
               <img src="${song.image || 'default.png'}" alt="${song.title}" />
               <div class="card-body">
@@ -1131,25 +1216,24 @@ function loadFavorites() {
                 <div class="artist-name">${song.artist}</div>
               </div>
               <div class="play-down">
-                <div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${encodeURIComponent(song.id)}', title: '${song.title.replace(/'/g, "\\'")}', artist: '${song.artist.replace(/'/g, "\\'")}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
-                <div class="playlist-btn" title="Add to Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-plus"></i></div>
-                <div class="add-fav" title="Remove from Favorites" onclick="event.stopPropagation(); removeFromFavorites('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-trash"></i></div>
-                <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-list"></i></div>
-                <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-download"></i></div>
+                <div class="play-btn" onclick="event.stopPropagation(); playSong({id: '${encodeURIComponent(song.id)}', title: '${song.title.replace(/'/g, "\\'")}', artist: '${song.artist.replace(/'/g, "\\'")}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
+                <div class="playlist-btn" onclick="event.stopPropagation(); showAddToPlaylistModal('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-plus"></i></div>
+                <div class="add-fav" onclick="event.stopPropagation(); removeFromFavorites('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-trash"></i></div>
+                <div class="queue-btn" onclick="event.stopPropagation(); addToQueue('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-list"></i></div>
+                <div class="download-btn" onclick="event.stopPropagation(); downloadSong('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-download"></i></div>
               </div>
             </div>
-          `
-            )
-            .join('')}
+          `).join('')}
         </div>
       </div>
     `
-        : '<span>No favorites yet</span>'
-    }
-  `;
+    : '<span>No favorites yet</span>';
+
+  libraryView.innerHTML = html;
   moreBtn.style.display = 'none';
   hideBackButton();
 }
+
 
 function createPlaylist(name, songId = '') {
   if (name.trim()) {
@@ -1214,53 +1298,132 @@ function deletePlaylist(playlistIdx) {
   showNotification(`Playlist "${playlistName}" deleted!`);
 }
 
+// ---------- Playlists UI (replace existing loadPlaylists) ----------
 function loadPlaylists() {
+  libraryView.classList.remove('hidden');
   libraryView.style.display = 'block';
   resultsList.style.display = 'none';
   document.getElementById('home-content').style.display = 'none';
-  libraryView.innerHTML = `
-    <h4>Playlists</h4>
-    <button onclick="createPlaylistModal()">+ New</button>
-    ${playlists
-      .map(
-        (pl, idx) => `
-      <div class="playlist-item">
-        <h5>${pl.name} (${pl.songs.length})</h5>
-        <button class="delete-playlist" onclick="event.stopPropagation(); deletePlaylist(${idx})"><i class="fa-solid fa-trash"></i></button>
-        <button class="playlist-download-btn" onclick="downloadPlaylist(playlists[${idx}].songs, '${pl.name}')" ${pl.songs.length === 0 ? 'disabled' : ''}>Download Playlist</button>
-        <div class="song-container">
-          <div class="cards">
-            ${pl.songs
-              .map(
-                song => `
-              <div class="card">
-                <img src="${song.image || 'default.png'}" alt="${song.title}" />
-                <div class="card-body">
-                  <div class="song-name">${song.title}</div>
-                  <div class="artist-name">${song.artist}</div>
-                </div>
-                <div class="play-down">
-                  <div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${encodeURIComponent(song.id)}', title: '${song.title.replace(/'/g, "\\'")}', artist: '${song.artist.replace(/'/g, "\\'")}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
-                  <div class="playlist-btn" title="Add to Another Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-plus"></i></div>
-                  <div class="add-fav" title="Remove from Playlist" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${encodeURIComponent(song.id)}')"><i class="fa-solid fa-trash"></i></div>
-                  <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-list"></i></div>
-                  <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-download"></i></div>
-                </div>
-              </div>
-            `
-              )
-              .join('')}
+
+  const header = `
+    <div class="playlist-view-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <button class="back-inline" onclick="loadHomeContent()">← Home</button>
+        <h4 style="margin:0">Playlists</h4>
+      </div>
+      <button onclick="createPlaylistModal()">+ New</button>
+    </div>
+  `;
+
+  const listHtml = playlists.length
+    ? playlists.map((pl, idx) => `
+        <div class="playlist-item" onclick="openPlaylist(${idx})">
+          <div>
+            <strong>${pl.name}</strong>
+            <div style="font-size:0.85rem;color:var(--muted)">${pl.songs.length} songs</div>
+          </div>
+          <div>
+            <button class="delete-playlist" onclick="event.stopPropagation(); deletePlaylist(${idx})"><i class="fa-solid fa-trash"></i></button>
+            <button class="playlist-download-btn" onclick="event.stopPropagation(); downloadPlaylist(playlists[${idx}].songs, '${pl.name.replace(/'/g, "\\'")}')" ${pl.songs.length === 0 ? 'disabled' : ''}>Download</button>
           </div>
         </div>
-        <button onclick="createSongPickerModal(${idx})">+ Add Song</button>
-      </div>
-    `
-      )
-      .join('')}
-  `;
+      `).join('')
+    : '<span>No playlists yet. Create one with + New</span>';
+
+  libraryView.innerHTML = header + `<div class="playlist-list">${listHtml}</div>`;
   moreBtn.style.display = 'none';
   hideBackButton();
 }
+
+
+// open a single playlist and show songs (same style as Favorites)
+function openPlaylist(idx) {
+  const pl = playlists[idx];
+  if (!pl) return;
+
+  libraryView.classList.remove('hidden');
+  libraryView.style.display = 'block';
+  resultsList.style.display = 'none';
+  document.getElementById('home-content').style.display = 'none';
+
+  // header with back button + controls
+  let html = `
+    <div class="playlist-view-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <button class="back-inline" onclick="loadPlaylists()">← Playlists</button>
+        <h4 style="margin:0">${pl.name}</h4>
+      </div>
+      <div>
+        <button onclick="playPlaylist(${idx})" ${pl.songs.length === 0 ? 'disabled' : ''}>Play All</button>
+        <button onclick="playPlaylist(${idx}, true)" ${pl.songs.length === 0 ? 'disabled' : ''}>Shuffle</button>
+        <button class="playlist-download-btn" onclick="downloadPlaylist(playlists[${idx}].songs, '${pl.name.replace(/'/g, "\\'")}')" ${pl.songs.length === 0 ? 'disabled' : ''}>Download</button>
+      </div>
+    </div>
+  `;
+
+  if (!pl.songs || pl.songs.length === 0) {
+    html += `<div><span>No songs in this playlist.</span><div style="margin-top:8px;"><button onclick="createSongPickerModal(${idx})">+ Add Song</button></div></div>`;
+    libraryView.innerHTML = html;
+    moreBtn.style.display = 'none';
+    hideBackButton();
+    return;
+  }
+
+  // build song-cards for the playlist (same markup pattern as your favorites)
+  const songsHtml = pl.songs
+    .map(song => {
+      // escape single quotes in titles/artists for inline onclick strings
+      const safeTitle = (song.title || '').replace(/'/g, "\\'");
+      const safeArtist = (song.artist || '').replace(/'/g, "\\'");
+      return `
+        <div class="card">
+          <img src="${song.image || 'default.png'}" alt="${song.title}" />
+          <div class="card-body">
+            <div class="song-name">${song.title}</div>
+            <div class="artist-name">${song.artist}</div>
+          </div>
+          <div class="play-down">
+            <div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${encodeURIComponent(song.id)}', title: '${safeTitle}', artist: '${safeArtist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)"><i class="fa-solid fa-play"></i></div>
+            <div class="playlist-btn" title="Add to Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-plus"></i></div>
+            <div class="add-fav" title="Remove from Playlist" onclick="event.stopPropagation(); removeFromPlaylist(${idx}, '${encodeURIComponent(song.id)}')"><i class="fa-solid fa-trash"></i></div>
+            <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-list"></i></div>
+            <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-download"></i></div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  html += `<div class="song-container"><div class="cards">${songsHtml}</div></div>`;
+  html += `<div style="margin-top:10px;"><button onclick="createSongPickerModal(${idx})">+ Add Song</button></div>`;
+
+  libraryView.innerHTML = html;
+  moreBtn.style.display = 'none';
+  hideBackButton();
+}
+
+// play an entire playlist (helper used by the Play All / Shuffle buttons)
+function playPlaylist(idx, shuffle = false) {
+  const pl = playlists[idx];
+  if (!pl || !pl.songs || pl.songs.length === 0) {
+    showNotification('No songs in playlist.');
+    return;
+  }
+  queue = [];
+  const songsToQueue = shuffle ? [...pl.songs].sort(() => Math.random() - 0.5) : pl.songs;
+  songsToQueue.forEach(song => {
+    if (!queue.some(q => q.id === song.id)) queue.push(song);
+  });
+  playSong(queue[0], false);
+  renderQueue();
+  markStateChanged();
+  saveState();
+}
+
+// expose (if you rely on window.* inline handlers elsewhere)
+window.openPlaylist = openPlaylist;
+window.playPlaylist = playPlaylist;
+
 
 function showAddToPlaylistModal(songId) {
   const modal = document.createElement('div');
@@ -1352,6 +1515,8 @@ function hostSession() {
     showSessionControls(sessionCode);
     document.getElementById('chat-open-btn').style.display = 'flex';
   });
+  updateSessionControls();
+
 }
 
 function joinSession() {
@@ -1368,7 +1533,7 @@ function joinSession() {
 
  socket.emit("join-session", { code, name: userName }, (success) => {
   if (success) {
-    document.getElementById("chat-open-btn").style.display = "flex";
+   //document.getElementById("chat-open-btn").style.display = "flex";
     closeListenModal();
     showChatButton();
     //rememberSession(code, false);
@@ -1378,32 +1543,12 @@ function joinSession() {
     showNotification("Invalid session code");
   }
 });
+updateSessionControls();
 
 }
+
 
 /*
-function leaveSession() {
-  console.log('Leaving session, currentSessionCode:', currentSessionCode);
-  leaveSessionUIReset();
-  if (currentSessionCode) {
-    socket.emit('leave-session', { code: currentSessionCode });
-  }
-  currentSessionCode = null;
-  isHost = false;
-  participants = {};
-  document.getElementById('chat-container').style.display = 'none';
-  document.getElementById('participants-list').style.display = 'none';
-  enableControls();
-  showNotification('Left session');
-  setSessionControlsDisabled(false);
-  document.getElementById('chat-container').classList.remove('open');
-  updateChatButtonVisibility();
-  hideChatButton();
-  clearSessionMemory();
-  document.getElementById('transfer-host-btn').classList.add('hidden');
-}
-*/
-
 function leaveSession() {
   console.log('Leaving session, currentSessionCode:', currentSessionCode);
 
@@ -1441,8 +1586,54 @@ function leaveSession() {
   // Clear stored session so refresh doesn’t rejoin
   clearSessionMemory();
 
+
   showNotification('Left session');
+}*/
+
+function leaveSession() {
+  console.log('Leaving session, currentSessionCode:', currentSessionCode);
+
+  leaveSessionUIReset();
+
+  if (currentSessionCode) {
+    socket.emit('leave-session', { code: currentSessionCode });
+  }
+
+  currentSessionCode = null;
+  isHost = false;
+  participants = {};
+
+  userName = "";
+  pendingAction = null;
+  pendingMessage = null;
+
+  // 🔴 Old (breaks toggleChat)
+  // document.getElementById('chat-container').style.display = 'none';
+
+  // ✅ New (use hidden class instead)
+  const chatContainer = document.getElementById('chat-container');
+  if (chatContainer) {
+    chatContainer.classList.add('hidden');
+    chatContainer.classList.remove('open');
+  }
+
+  document.getElementById('participants-list').style.display = 'none';
+  //document.getElementById('transfer-host-btn').classList.add('hidden');
+
+  enableControls();
+  setSessionControlsDisabled(false);
+
+  hideChatButton();
+
+  const listenBtn = document.getElementById('listen-together-btn');
+  if (listenBtn) listenBtn.disabled = false;
+
+  clearSessionMemory();
+  showNotification('Left session');
+  updateSessionControls();
+
 }
+
 
 function showTransferModal() {
   const modal = document.getElementById('transfer-modal');
@@ -1472,16 +1663,86 @@ function showTransferModal() {
 
 
 
-
+/*
 function closeTransferModal() {
   const modal = document.getElementById('transfer-modal');
   if (modal) modal.classList.add('hidden');
-}
+}*/
 
 
 function closeTransferModal() {
   document.getElementById('transfer-modal').classList.add('hidden');
+
 }
+
+// Show session controls for the host
+// Show session controls for the host
+function showSessionControls(sessionCode) {
+  const controlsBar = document.getElementById('player-controls');
+  if (controlsBar) controlsBar.classList.remove('hidden');
+
+  const codeDisplay = document.getElementById('session-code-display');
+  if (codeDisplay) codeDisplay.classList.remove('hidden');
+
+  //const transferBtn = document.getElementById('transfer-host-btn');
+  //if (transferBtn) {
+  //  transferBtn.classList.remove('hidden');
+   // transferBtn.disabled = false;
+  //  transferBtn.onclick = openTransferModal; // or your modal handler
+ // }
+
+  // ✅ Bind playback buttons for host
+  const playBtn = document.getElementById("play-pause-btn");
+  const nextBtn = document.getElementById("next-btn");
+  const prevBtn = document.getElementById("prev-btn");
+  const loopBtn = document.getElementById("loop-btn");
+  const favBtn  = document.getElementById("fav-btn");
+
+  if (playBtn) {
+    playBtn.disabled = false;
+    playBtn.onclick = () => socket.emit("play-pause", { code: sessionCode });
+  }
+  if (nextBtn) {
+    nextBtn.disabled = false;
+    nextBtn.onclick = () => socket.emit("next-track", { code: sessionCode });
+  }
+  if (prevBtn) {
+    prevBtn.disabled = false;
+    prevBtn.onclick = () => socket.emit("prev-track", { code: sessionCode });
+  }
+  if (loopBtn) {
+    loopBtn.disabled = false;
+    loopBtn.onclick = () => socket.emit("toggle-loop", { code: sessionCode });
+  }
+  if (favBtn) {
+    favBtn.disabled = false;
+    favBtn.onclick = () => socket.emit("toggle-fav", { code: sessionCode });
+  }
+}
+
+// Hide session controls for non-hosts
+function hideSessionControls() {
+  const controlsBar = document.getElementById('player-controls');
+  if (controlsBar) controlsBar.classList.add('hidden');
+
+  //const transferBtn = document.getElementById('transfer-host-btn');
+  if (transferBtn) {
+    transferBtn.classList.add('hidden');
+    transferBtn.disabled = true;
+    transferBtn.onclick = null; // remove binding
+  }
+
+  // Disable playback buttons
+  document.querySelectorAll('#play-pause-btn, #next-btn, #prev-btn, #loop-btn, #fav-btn')
+    .forEach(btn => {
+      if (btn) {
+        btn.disabled = true;
+        btn.onclick = null; // clear host-only handlers
+      }
+    });
+}
+
+
 
 function transferHostTo(targetId) {
   if (!isHost || !currentSessionCode) {
@@ -1492,54 +1753,39 @@ function transferHostTo(targetId) {
   // Send to backend using the new event + payload
   socket.emit("transfer-host", { code: currentSessionCode, newHostId: targetId });
 
-  closeTransferModal();
+  //closeTransferModal();
   showNotification("Transferring host...");
 }
 
-
 socket.on("host-transferred", ({ newHostId }) => {
-  // Reset everyone to participant
   Object.keys(participants).forEach(pid => {
     participants[pid].isHost = false;
   });
-
   if (participants[newHostId]) {
     participants[newHostId].isHost = true;
   }
 
   if (socket.id === newHostId) {
-    // I became host
     isHost = true;
     participants[socket.id] = participants[socket.id] || {};
     participants[socket.id].isHost = true;
 
     showNotification("🎉 You are now the host");
-
     showSessionControls(currentSessionCode);
-
-    // ✅ Enable controls and show transfer button
     setSessionControlsDisabled(false);
-    const transferBtn = document.getElementById("transfer-host-btn");
-    if (transferBtn) transferBtn.classList.remove("hidden");
+
   } else {
-    // Someone else is host
     isHost = false;
     participants[socket.id] = participants[socket.id] || {};
     participants[socket.id].isHost = false;
 
     showNotification("Host transferred to another user");
-
     hideSessionControls();
-
-    // ✅ Disable controls and hide transfer button
     setSessionControlsDisabled(true);
-    const transferBtn = document.getElementById("transfer-host-btn");
-    if (transferBtn) transferBtn.classList.add("hidden");
   }
 
   renderParticipants();
 });
-
 
 async function autoRejoin() {
   const sessionData = getRememberedSession(); // however you store it
@@ -1695,7 +1941,7 @@ function sendChatMessageWithName(message) {
 }
 
 // single receiver — keep only one listener
-socket.off('chat-message'); // remove any accidental duplicates if using hot reload
+//socket.off('chat-message'); // remove any accidental duplicates if using hot reload
 /*
 socket.on('chat-message', (data) => {
   console.log('[CHAT DEBUG] Received chat-message from server:', data);
@@ -1714,6 +1960,25 @@ socket.on('chat-message', (data) => {
 });
 
 */
+socket.off('chat-message');   // remove old listeners
+
+socket.on('chat-message', (data) => {
+  console.log('[CHAT DEBUG] Received chat-message from server:', data);
+
+  const displayName = data && data.user && data.user.trim()
+    ? data.user
+    : (userName || "Guest");
+
+  const chatMessages = document.getElementById('chat-messages');
+  if (!chatMessages) {
+    console.error('[CHAT DEBUG] chat-messages element not found');
+    return;
+  }
+
+  const msgDiv = document.createElement('div');
+  msgDiv.innerHTML = `<strong>${displayName}:</strong> ${data.message}`;
+  //chatMessages.appendChild(msgDiv);
+});
 
 
 
@@ -1966,7 +2231,7 @@ async function loadMoreArtistSongs() {
 }
 
 /* =================== */
-/* WebSocket Handlers */
+/* WebSocket Handlers *//*
 socket.on('session-created', ({ code }) => {
   console.log('Session created, code:', code);
    setSessionControlsDisabled(true);
@@ -1999,7 +2264,60 @@ socket.on('session-created', ({ code }) => {
   document.getElementById('transfer-host-btn').classList.remove('hidden');
  // rememberSession(sessionCode, true);
 });
+*/
+socket.on('session-created', ({ code }) => {
+  console.log('Session created, code:', code);
+  setSessionControlsDisabled(false);
+  currentSessionCode = code;
+  isHost = true;
 
+  // ✅ Update code text
+  document.getElementById('session-code').textContent = code;
+  document.getElementById('session-code-display').classList.remove('hidden');
+
+  // Hide listen options
+  const listenOptions = document.getElementById('listen-options');
+  if (listenOptions) {
+    listenOptions.classList.add('hidden');
+    console.log('Listen options hidden in session-created');
+  }
+
+  closeListenModal();
+
+  // Ensure chat button is visible
+  const chatButton = document.getElementById('chat-open-btn');
+  if (chatButton) {
+    chatButton.classList.remove('hidden');
+    chatButton.disabled = false;
+    console.log('Chat button shown in session-created');
+  } else {
+    console.error('Chat button not found in session-created');
+  }
+
+  // ✅ Only add Share button once
+  let shareBtn = document.getElementById('share-code-btn');
+  if (!shareBtn) {
+    shareBtn = document.createElement('button');
+    shareBtn.id = 'share-code-btn';        // mark it
+    shareBtn.textContent = 'Share Code';
+    shareBtn.onclick = () =>
+      navigator.clipboard.writeText(code)
+        .then(() => showNotification('Code copied!'));
+    document.getElementById('session-code-display').appendChild(shareBtn);
+  } else {
+    // Update clipboard text if hosting again
+    shareBtn.onclick = () =>
+      navigator.clipboard.writeText(code)
+        .then(() => showNotification('Code copied!'));
+  }
+
+  showNotification('Session hosted! Share the code: ' + code);
+
+  updateChatButtonVisibility();
+  showChatButton();
+
+  //document.getElementById('transfer-host-btn').classList.remove('hidden');
+});
 socket.on('connect', () => {
   mySocketId = socket.id;
   console.log('My socket ID:', mySocketId);
@@ -2038,7 +2356,7 @@ socket.on('chat-message', ({ user, message, time }) => {
   });
 });
 */
-
+/*
 socket.on('host-transferred', ({ newHostId }) => {
   if (socket.id === newHostId) {
     isHost = true;
@@ -2050,7 +2368,7 @@ socket.on('host-transferred', ({ newHostId }) => {
     hideSessionControls();
   }
 });
-
+*/
 
 
 socket.on('participantsUpdate', list => {
@@ -2068,7 +2386,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   if (!isHost) disableControls();
   showNotification(`Joined session ${code}`);
 document.getElementById("chat-open-btn").style.display = "flex";
-});*/
+});
 socket.on('session-joined', ({ code, isHost: host }) => {
   console.log('Session joined, code:', code, 'isHost:', host);
   currentSessionCode = code;
@@ -2088,7 +2406,27 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   updateChatButtonVisibility();
   setSessionControlsDisabled(true);
   //rememberSession(sessionCode, false);
+});*/
+socket.on('session-joined', ({ code, isHost: host }) => {
+  console.log('Session joined, code:', code, 'isHost:', host);
+  currentSessionCode = code;
+  isHost = host;
+  closeListenModal();
+
+  if (!isHost) disableControls();
+
+  const chatButton = document.getElementById('chat-open-btn');
+  if (chatButton) {
+    chatButton.classList.remove('hidden');  // ✅ only this line
+    console.log('Chat button shown in session-joined');
+  } else {
+    console.error('Chat button not found in session-joined');
+  }
+
+  showNotification(`Joined session ${code}`);
+  setSessionControlsDisabled(true);
 });
+
 
 socket.on('error', ({ message }) => {
   showNotification(message);
@@ -2102,6 +2440,8 @@ socket.on('connect_error', () => {
 socket.on('disconnect', () => {
   showNotification('Disconnected from server.');
   leaveSession();
+
+
 });
 
 socket.on('user-joined', ({ userId, name, isHost }) => {
@@ -2111,15 +2451,19 @@ socket.on('user-joined', ({ userId, name, isHost }) => {
 });
 
 
-socket.on('user-left', ({ userId }) => {
+socket.on('user-left', ({ userId, name }) => {
   delete participants[userId];
   renderParticipants();
-  showNotification(`User ${userId.slice(0, 4)} left`);
+  const who = name && name.trim() ? name : userId.slice(0, 4);
+  showNotification(`${who} left`);
 });
+
+
 
 socket.on('session-ended', ({ message }) => {
   showNotification(message);
   leaveSession();
+
 });
 
 socket.on('playback-control', data => {
@@ -2176,6 +2520,7 @@ function clearSessionMemory() {
   localStorage.removeItem('sessionCode');
   localStorage.removeItem('sessionRole');
 }
+
 
 
 function handlePlaybackControl(data) {
@@ -2472,5 +2817,8 @@ window.toggleParticipants = toggleParticipants;
 window.joinSession = joinSession;
 window.closeListenModal = closeListenModal;
 window.sendChatMessage = sendChatMessage;
+// Expose functions to global scope for inline HTML
+//window.loadFavorites = loadFavorites;/
+//window.loadPlaylists = loadPlaylists;
 
 

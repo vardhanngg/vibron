@@ -838,6 +838,80 @@ body {
   opacity: 0.6;
 }
 
+/* ---------- Modal & picker styling (for Add to Playlist / Song picker) ---------- */
+.song-picker-modal .modal-content {
+  background: var(--glass-bg, rgba(8, 8, 10, 0.95));
+  padding: 18px;
+  border-radius: 12px;
+  width: 340px;
+  max-height: 80vh;
+  overflow-y: auto;
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.song-picker-modal .modal-content h4 { margin: 0 0 8px 0; font-size: 1.05rem; }
+
+#playlist-picker-list, .song-picker-list {
+  margin: 8px 0;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.playlist-picker-item, .song-picker-item {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 8px;
+  transition: background .15s ease, transform .08s ease;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.playlist-picker-item:hover, .song-picker-item:hover {
+  background: rgba(255,255,255,0.04);
+  transform: translateY(-2px);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.modal-buttons button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+.modal-buttons button:nth-child(2) {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--text);
+}
+
+/* small inline back button used in playlist view header */
+.back-inline {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.back-inline:hover { background: rgba(255,255,255,0.02); }
+
+
 .playlist-song {
   display: flex;
   align-items: center;
@@ -924,11 +998,11 @@ body {
   z-index: 10;          /* keep it above background but below modal */
 }
 
-/* Make sure Transfer Host is always on top of that area */
+/* Make sure Transfer Host is always on top of that area *//*
 #transfer-host-btn {
   position: relative;
   z-index: 20;
-}
+}*/
 #transfer-modal {
   position: fixed;
   top: 50%;
