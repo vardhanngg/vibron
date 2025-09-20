@@ -259,17 +259,16 @@ body {
 
 .card {
   display: flex;
+  align-items: center;
   border: 1px solid var(--glass-border);
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   padding: 12px;
   border-radius: 10px;
   width: 100%;
-  height: 70px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  align-items: center;
+  min-height: 70px;
 }
+
 
 .card:hover {
   transform: translateY(-5px);
@@ -285,18 +284,20 @@ body {
 }
 
 .card-body {
-  display: flex;
-  flex-direction: column;
+  flex: 1;
+  min-width: 0; /* 🔑 allows text to shrink with ellipsis */
   padding-left: 12px;
-  flex-grow: 1;
+  overflow: hidden;
 }
 
 .play-down {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-shrink: 0;   /* 🔑 buttons never shrink */
+  flex-wrap: nowrap; /* 🔑 keep all in same row */
 }
+
 
 .play-btn, .playlist-btn, .queue-btn, .add-fav, .download-btn {
   border-radius: 6px;
@@ -1481,10 +1482,22 @@ leave-btn {
     flex-direction: row;
   }
 
-  .song-name, .artist-name {
-    width: 100%;
-    text-align: center;
-  }
+.song-name, .artist-name {
+  color: var(--text);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+}
+.song-name.marquee, .artist-name.marquee {
+  animation: scroll-text 8s linear infinite;
+}
+
+@keyframes scroll-text {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
 
   .play-btn, .playlist-btn, .queue-btn, .add-fav, .download-btn {
     width: 16px;

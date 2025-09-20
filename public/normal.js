@@ -137,9 +137,11 @@ async function loadHomeContent() {
 }
 
 function askForName(action = null) {
-  pendingAction = action; 
+  pendingAction = action;
+  document.getElementById('listen-options').classList.add('hidden'); // hide host/join/cancel
   document.getElementById('name-input-modal').classList.remove('hidden');
 }
+
 /*
 function saveUserName() {
   const input = document.getElementById('user-name-input').value.trim();
@@ -565,8 +567,11 @@ function normalizeSong(song) {
 function createSongCard(song, fromArtist = false, fromAlbum = false) {
   const isFavorited = favorites.some(f => f.id === song.id);
   const safeId = encodeURIComponent(song.id);
-  const safeTitle = song.title.replace(/'/g, "\\'");
-  const safeArtist = song.artist.replace(/'/g, "\\'");
+
+  // cut long text safely
+  const safeTitle = (song.title.length > 30 ? song.title.slice(0, 30) + "..." : song.title).replace(/'/g, "\\'");
+  const safeArtist = (song.artist.length > 20 ? song.artist.slice(0, 20) + "..." : song.artist).replace(/'/g, "\\'");
+
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
@@ -586,6 +591,7 @@ function createSongCard(song, fromArtist = false, fromAlbum = false) {
   card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
   return card;
 }
+
 
 /* =================== */
 /* Download Functions */
@@ -1015,6 +1021,7 @@ function closePlaylistModal() {
   const modal = document.querySelector('.song-picker-modal');
   if (modal) modal.remove();
 }
+
 
 function showNotification(message) {
   const notification = document.createElement('div');
