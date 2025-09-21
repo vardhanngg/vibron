@@ -736,9 +736,22 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
 
 function playPause() {
   if (!isHost && currentSessionCode) {
-     showNotification('Only the host can control playback.');
-    return; 
+    // Non-hosts: update button state locally (for correct UI),
+    // but do NOT send socket events
+    if (isPlaying) {
+      audioPlayer.pause();
+      playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+      playerBar.classList.remove('playing');
+    } else {
+      audioPlayer.play().catch(() => {});
+      playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      playerBar.classList.add('playing');
+    }
+    isPlaying = !isPlaying;
+    return; // block sending host events
   }
+
+  // --- Host logic ---
   if (isPlaying) {
     audioPlayer.pause();
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -749,11 +762,17 @@ function playPause() {
     playerBar.classList.add('playing');
   }
   isPlaying = !isPlaying;
+
   if (isHost && currentSessionCode) {
     socket.emit('playback-control', { action: isPlaying ? 'play' : 'pause' });
-    socket.emit('sync-state', { song: songHistory[currentSongIndex], currentTime: audioPlayer.currentTime, isPlaying });
+    socket.emit('sync-state', {
+      song: songHistory[currentSongIndex],
+      currentTime: audioPlayer.currentTime,
+      isPlaying
+    });
   }
 }
+
 
 function playNext() {
   if (!isHost && currentSessionCode) {
