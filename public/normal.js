@@ -916,12 +916,17 @@ function toggleMute() {
 socket.on("host-play", () => {
   const playPauseBtn = document.getElementById("play-pause-btn");
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  playerBar.classList.add('playing');
+  isPlaying = true;
 });
 
 socket.on("host-pause", () => {
   const playPauseBtn = document.getElementById("play-pause-btn");
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  playerBar.classList.remove('playing');
+  isPlaying = false;
 });
+
 
 function updateSessionControls() {
   const listenBtn = document.getElementById('listen-together-btn');
@@ -2537,6 +2542,17 @@ socket.on('session-ended', ({ message }) => {
 socket.on('playback-control', data => {
   if (isHost) return;
   handlePlaybackControl(data);
+
+  // 🔹 Update play/pause button UI too
+  if (data.action === 'play' || data.action === 'play-song') {
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    playerBar.classList.add('playing');
+    isPlaying = true;
+  } else if (data.action === 'pause') {
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    playerBar.classList.remove('playing');
+    isPlaying = false;
+  }
 });
 
 socket.on('sync-state', state => {
@@ -2544,10 +2560,21 @@ socket.on('sync-state', state => {
   if (state.song) {
     loadSongWithoutPlaying(state.song);
     audioPlayer.currentTime = state.currentTime || 0;
-    if (state.isPlaying) audioPlayer.play().catch(err => console.error('Playback error:', err));
-    else audioPlayer.pause();
+
+    if (state.isPlaying) {
+      audioPlayer.play().catch(err => console.error('Playback error:', err));
+      playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      playerBar.classList.add('playing');
+    } else {
+      audioPlayer.pause();
+      playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+      playerBar.classList.remove('playing');
+    }
+
+    isPlaying = state.isPlaying;
   }
 });
+
 
 socket.on('request-state', ({ forUser }) => {
   if (!isHost) return;
