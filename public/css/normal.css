@@ -89,7 +89,9 @@ body {
   box-shadow: 0 4px 12px rgba(255, 64, 129, 0.3);
   transition: all 0.2s ease;
   margin-left: auto;
+  text-decoration: none;   /* 🔑 remove underline */
 }
+
 
 .switch-btn:hover {
   transform: translateY(-2px) scale(1.02);
@@ -1143,10 +1145,18 @@ leave-btn {
 .in-session .leave-btn {
   display: flex; /* Show when in-session class is applied */
 }
-.modal-input, .modal-options, .modal-participants {
+.modal-input, .modal-participants {
   margin-top: 0.5rem;
   text-align: center;
 }
+.modal-options {
+  display: flex;
+  flex-direction: column; /* stack vertically */
+  align-items: center;    /* center horizontally */
+  gap: 12px;              /* space between buttons */
+  margin-top: 1rem;
+}
+
 
 .modal-input input {
   padding: 0.5rem;
