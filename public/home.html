@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Vibron</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+  <link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Spline+Sans:wght@400;500;700&amp;family=Poppins:wght@300;400;500" onload="this.rel='stylesheet'" rel="stylesheet"/>
+  <link href="/v.ico" rel="icon" type="image/x-icon"/>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#f44336",
+            "background-light": "#f0f4f8",
+            "background-dark": "#121212",
+          },
+          fontFamily: {
+            "display": ["Spline Sans"],
+            "sans": ["Poppins", "sans-serif"],
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          animation: {
+            'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'wave-1': 'wave 15s linear infinite',
+            'wave-2': 'wave 20s linear infinite',
+            'wave-3': 'wave 25s linear infinite',
+            'fade-in': 'fade-in 1.5s ease-out forwards',
+            'background-shift': 'background-shift 5s linear infinite',
+          },
+          keyframes: {
+            'pulse-subtle': {
+              '0%, 100%': {
+                opacity: '1'
+              },
+              '50%': {
+                opacity: '.8'
+              },
+            },
+            'wave': {
+              '0%': {
+                transform: 'translateX(-50%) translateY(-20%) rotate(0deg)'
+              },
+              '100%': {
+                transform: 'translateX(-50%) translateY(-20%) rotate(360deg)'
+              },
+            },
+            'fade-in': {
+              '0%': { opacity: 0 },
+              '100%': { opacity: 1 }
+            },
+            'background-shift': {
+              '0%': {
+                backgroundPosition: '0% 50%'
+              },
+              '100%': {
+                backgroundPosition: '100% 50%'
+              }
+            }
+          }
+        },
+      },
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Spline Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+  <div class="relative flex h-screen w-full flex-col overflow-hidden">
+    
+    <!-- Background Animations -->
+    <div class="absolute top-0 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/4 bg-primary/20 dark:bg-primary/30 rounded-full blur-3xl animate-wave-1 opacity-50 dark:opacity-30"></div>
+    <div class="absolute top-0 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/4 bg-purple-400/20 dark:bg-purple-500/30 rounded-full blur-3xl animate-wave-2 opacity-50 dark:opacity-30"></div>
+    <div class="absolute top-0 left-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/4 bg-indigo-400/20 dark:bg-indigo-500/30 rounded-full blur-3xl animate-wave-3 opacity-50 dark:opacity-30"></div>
+    <div class="absolute top-0 left-0 right-0 bottom-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-10 animate-background-shift"></div>
+
+    <!-- Header with Vibron name removed -->
+    <header class="relative z-10 px-6 sm:px-10 py-4"></header>
+
+    <!-- Main content -->
+    <main class="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 animate-fade-in">
+      <div class="w-full max-w-2xl space-y-8">
+        <div class="flex flex-col items-center justify-center space-y-4">
+          <div class="flex items-center gap-4" style="margin-left: -38px;">
+            <img alt="Vibron icon" class="h-6 w-4 sm:h-20 sm:w-20" src="v.ico"/>
+            <h1 class="text-6xl sm:text-7xl font-bold text-gray-900 dark:text-white animate-pulse-subtle [text-shadow:0_20px_8px_rgba(0,0,0,0.1)] dark:[text-shadow:0_20px_15px_rgba(0,0,0,0.3)]">Vibron</h1>  
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-sans font-light text-gray-700 dark:text-gray-300 tracking-wide whitespace-nowrap">How are you feeling today?</h2>
+          <p class="text-base text-gray-500 dark:text-gray-400">Choose a player that matches your vibe.</p>
+        </div>
+
+        <!-- Buttons side-by-side -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
+          <a href="mood.html" class="w-40 sm:w-48 h-16 bg-red-600 dark:bg-red-700 text-white font-bold rounded-xl flex items-center justify-center shadow-md hover:bg-red-700 dark:hover:bg-red-800 transition-none">
+            Mood Player
+          </a>
+          <a href="normal.html" class="w-40 sm:w-48 h-16 bg-red-500 dark:bg-red-600 text-white font-bold rounded-xl flex items-center justify-center shadow-md hover:bg-red-600 dark:hover:bg-red-700 transition-none">
+            Normal Player
+          </a>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
