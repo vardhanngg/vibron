@@ -33,7 +33,7 @@
     },
     {
       "src": "/",
-      "dest": "/public/normal.html"
+      "dest": "/public/home.html"
     },
     {
       "src": "/(.*)",
