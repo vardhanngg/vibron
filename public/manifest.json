@@ -7,10 +7,8 @@
   "background_color": "#121212",
   "theme_color": "#ff4081",
   "icons": [
-    {
-      "src": "/v.ico",
-      "sizes": "64x64",
-      "type": "image/x-icon"
-    }
+    { "src": "/v.ico", "sizes": "64x64", "type": "image/x-icon" },
+    { "src": "/v.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/v.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
