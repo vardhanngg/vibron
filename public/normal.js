@@ -707,6 +707,13 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   isPlaying = true;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
   updateFavoriteButton();
+  audioPlayer.onended = () => {
+  console.log("✅ onended fired directly from playSong setup");
+  if (!currentSessionCode || isHost) {
+    playNext(true); // auto-advance only for solo OR host
+  }
+};
+
 
   if (fromSearch) {
     console.log('Clearing queue for new search and adding song:', song.id);
@@ -774,28 +781,45 @@ function playPause() {
 }
 
 
-function playNext() {
-  if (!isHost && currentSessionCode) {
-     showNotification('Only the host can control playback.');
-    return; 
+function playNext(auto = false) {
+  if (!auto && !isHost && currentSessionCode) {
+    showNotification('Only the host can control playback.');
+    return;
   }
+
+  let nextSong = null;
+
   if (queue.length > 0) {
-    const nextSong = queue.shift();
-    playSong(nextSong, false);
+    nextSong = queue.shift();
+    console.log('🎶 Taking from queue:', nextSong);
   } else if (currentSongIndex < songHistory.length - 1) {
     currentSongIndex++;
-    playSong(songHistory[currentSongIndex], false);
+    nextSong = songHistory[currentSongIndex];
+    console.log('🎶 Taking from history:', nextSong);
+  }
+
+  if (nextSong) {
+    console.log('▶️ Playing next song:', nextSong.title || nextSong);
+    playSong(nextSong, false);
   } else {
+    console.log('⛔ No next song found');
     showNotification('No next song. Try searching more!');
   }
+
   renderQueue();
   markStateChanged();
   saveState();
-  if (isHost && currentSessionCode) {
+
+  if (isHost && currentSessionCode && nextSong) {
     socket.emit('playback-control', { action: 'next' });
-    socket.emit('sync-state', { song: songHistory[currentSongIndex], currentTime: audioPlayer.currentTime, isPlaying: true });
+    socket.emit('sync-state', {
+      song: nextSong,
+      currentTime: 0,
+      isPlaying: true
+    });
   }
 }
+
 
 function playPrevious() {
   if (!isHost && currentSessionCode) {
@@ -2921,5 +2945,3 @@ window.sendChatMessage = sendChatMessage;
 // Expose functions to global scope for inline HTML
 //window.loadFavorites = loadFavorites;/
 //window.loadPlaylists = loadPlaylists;
-
-
