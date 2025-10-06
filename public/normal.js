@@ -2905,7 +2905,7 @@ async function joinSessionWithCode(code, wasHost) {
 }
 
 
-
+   
 // Global functions for onclick handlers
 window.playSong = playSong;
 window.addToQueue = addToQueue;
@@ -2915,6 +2915,7 @@ window.removeFromFavorites = removeFromFavorites;
 window.downloadSong = downloadSong;
 window.removeFromQueue = removeFromQueue;
 window.playPause = playPause;
+
 window.playNext = playNext;
 window.playPrevious = playPrevious;
 window.toggleLoop = toggleLoop;
