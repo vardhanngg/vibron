@@ -176,7 +176,7 @@ body {
 .glass-header {
   text-align: center;
   padding: 2rem 1rem 1.5rem 1rem;
-  background: var(--glass-bg);
+  /*background: var(--glass-bg);*/
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 20px;
