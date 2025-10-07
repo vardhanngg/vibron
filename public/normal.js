@@ -44,7 +44,14 @@ const audioPlayer = document.getElementById('audio-player');
 const albumArt = document.getElementById('album-art');
 const nowPlaying = document.getElementById('now-playing');
 const artistName = document.getElementById('artist-name');
-const moreBtn = document.getElementById('more');
+const moreBtn = document.getElementById('more');/*
+moreBtn.addEventListener('click', async () => {
+  if (currentQuery) {
+    currentPage++;   // go to next page
+    await fetchResults();
+  }
+});
+*/
 const queueList = document.getElementById('queue-list');
 const playerBar = document.getElementById('player-bar');
 const playPauseBtn = document.getElementById('play-pause-btn');
@@ -261,52 +268,91 @@ resultsList.style.display = 'block'; // ✅ ensure results are visible
 
 async function fetchResults() {
   try {
-    // main search (songs / artists / albums)
-    const response = await fetch(
+    // --- 1. Songs ---
+    const songsRes = await fetch(
+      `https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`
+    );
+    const songsJson = await songsRes.json();
+    const songsData = songsJson?.data || songsJson;
+
+    // --- 2. General (artists + albums) ---
+    const generalRes = await fetch(
       `/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`
     );
-    if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
-    const data = await response.json();
+    const generalJson = await generalRes.json();
 
-    // 🎵 extra call for playlists
-    const plResponse = await fetch(
-      `https://apivibron.vercel.app/api/search/playlists?query=${encodeURIComponent(currentQuery)}`
+    const artistsData = generalJson.artists || { results: [] };
+    const albumsData = generalJson.albums || { results: [] };
+
+    // --- 3. Playlists ---
+    const plRes = await fetch(
+      `https://apivibron.vercel.app/api/search/playlists?query=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`
     );
-    const plJson = await plResponse.json();
-    // add playlists into the same object so displayResults can see it
-    data.playlists = plJson?.data || { results: [] };
+    const plJson = await plRes.json();
+    const playlistsData = plJson?.data || { results: [] };
 
-    // no results check (include playlists now)
+    // --- Merge ---
+    const data = {
+      songs: songsData,
+      artists: artistsData,
+      albums: albumsData,
+      playlists: playlistsData,
+    };
+
+    // Clear previous results on first page
+    if (currentPage === 1) resultsList.innerHTML = '';
+
+    // No results case
     if (
       !data.songs?.results?.length &&
       !data.artists?.results?.length &&
       !data.albums?.results?.length &&
-      !data.playlists?.results?.length        // ✅ new line
+      !data.playlists?.results?.length
     ) {
-      moreBtn.classList.add('hidden');
       resultsList.innerHTML = '<span>No results found.</span>';
       return;
     }
 
-    // hand everything—including playlists—to your renderer
-    displayResults(data);
+    // Render results (append if not first page)
+    displayResults(data, currentPage > 1);
 
-    // show or hide the “Load More” button
-    if (data.songs.next || data.artists.next || data.albums.next) {
-      moreBtn.classList.remove('hidden');
-      moreBtn.style.display = 'block';
-    } else {
-      moreBtn.classList.add('hidden');
-    }
+    // 🧹 Remove any old Load More button
+    const oldBtn = document.getElementById('more');
+    if (oldBtn) oldBtn.remove();
 
-    //  keep currentPage handling exactly as you have it (don’t auto-increment)
+// 🆕 Create button dynamically (place it right below songs, not playlists)
+if (data.songs.next || data.artists.next || data.albums.next) {
+  const loadMoreBtn = document.createElement('button');
+  loadMoreBtn.id = 'more';
+  loadMoreBtn.className = 'load-more-btn';
+  loadMoreBtn.textContent = 'Load More';
+  loadMoreBtn.onclick = () => {
+    currentPage++;
+    fetchResults();
+  };
+
+  // ✅ Find the songs section and insert after it
+  const songSection = resultsList.querySelector('#songs-section, .songs-container, .song-container');
+  if (songSection && songSection.parentNode) {
+    songSection.parentNode.insertBefore(loadMoreBtn, songSection.nextSibling);
+  } else {
+    // fallback — if no song section is found
+    resultsList.insertBefore(loadMoreBtn, resultsList.firstChild);
+  }
+}
+
+
+
+    resultsList.classList.remove('hidden');
+    resultsList.style.display = 'block';
   } catch (err) {
-    moreBtn.classList.add('hidden');
-    resultsList.innerHTML = '<span>Error loading results.</span>';
     console.error('Error fetching results:', err);
+    resultsList.innerHTML = '<span>Error loading results.</span>';
     showNotification('Failed to load search results.');
   }
 }
+
+
 
 
 
@@ -386,14 +432,29 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       cards.appendChild(card);
     });
 
-    let loadMoreBtn = document.getElementById('artist-songs-load-more');
-    if (!loadMoreBtn) {
-      loadMoreBtn = document.createElement('button');
-      //loadMoreBtn.id = 'artist-songs-load-more';
-      loadMoreBtn.className = 'load-more-btn';
-      loadMoreBtn.textContent = 'Load More';
-      resultsList.appendChild(loadMoreBtn);
-    }
+// ✅ Create Load More button dynamically inside artist section
+let loadMoreBtn = document.getElementById('artist-songs-load-more');
+if (loadMoreBtn) loadMoreBtn.remove();
+
+if (songs.length > visibleArtistSongCount) {
+  const loadMore = document.createElement('button');
+  loadMore.id = 'artist-songs-load-more';
+  loadMore.className = 'load-more-btn';
+  loadMore.textContent = 'Load More';
+  loadMore.onclick = () => {
+    visibleArtistSongCount += 5;
+    fetchArtistSongs(artistId, artistName, artistPage, true);
+  };
+
+  // 🧠 Append right below artist’s cards container
+  const cardsContainer = resultsList.querySelector('.song-container .cards');
+  if (cardsContainer && cardsContainer.parentNode) {
+    cardsContainer.parentNode.appendChild(loadMore);
+  } else {
+    resultsList.appendChild(loadMore);
+  }
+}
+
     if (songs.length > visibleArtistSongCount) {
       loadMoreBtn.style.display = 'block';
       loadMoreBtn.onclick = () => {
@@ -486,6 +547,19 @@ async function fetchAlbumSongs(albumId, albumTitle) {
       });
       container.appendChild(cards);
       resultsList.appendChild(container);
+      // ✅ Add Load More button below album songs if more exist
+if (songs.length > visibleAlbumSongCount) {
+  const loadMore = document.createElement('button');
+  loadMore.id = 'album-songs-load-more';
+  loadMore.className = 'load-more-btn';
+  loadMore.textContent = 'Load More';
+  loadMore.onclick = () => {
+    visibleAlbumSongCount += 5;
+    fetchAlbumSongs(albumId, albumTitle);
+  };
+  container.appendChild(loadMore);
+}
+
 
       queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
       console.log('Album queue updated:', queue.map(q => q.id));
@@ -537,6 +611,19 @@ async function fetchPlaylistSongs(playlistId, playlistTitle) {
     });
     container.appendChild(cards);
     resultsList.appendChild(container);
+    // ✅ Add Load More button below playlist songs if more exist
+if (songs.length > visibleAlbumSongCount) {
+  const loadMore = document.createElement('button');
+  loadMore.id = 'playlist-songs-load-more';
+  loadMore.className = 'load-more-btn';
+  loadMore.textContent = 'Load More';
+  loadMore.onclick = () => {
+    visibleAlbumSongCount += 5;
+    fetchPlaylistSongs(playlistId, playlistTitle);
+  };
+  container.appendChild(loadMore);
+}
+
 
     queue = songs.map(normalizeSong);
     renderQueue();
@@ -2120,57 +2207,79 @@ function focusSearch() {
   hideBackButton();
 }
 
-function displayResults(data) {
-  resultsList.innerHTML = '';
+function displayResults(data, appendSongs = false) {
+  if (!appendSongs) {
+    resultsList.innerHTML = '';   // clear only for first page
+    lastSongResults = data.songs?.results || [];
+  } else {
+    lastSongResults = [...lastSongResults, ...(data.songs?.results || [])];
+  }
 
-  // ----- Songs -----
-  lastSongResults = data.songs.results || [];
-  if (lastSongResults.length > 0) {
-    const songsHeader = document.createElement('h3');
+// ----- Songs -----
+if (lastSongResults.length > 0) {
+  let songsHeader = document.getElementById('songs-header');
+  let container = document.getElementById('songs-container');
+  let cards = document.getElementById('songs-cards');
+  let loadMoreBtn = document.getElementById('songs-load-more');
+   /*if (!loadMoreBtn) {
+  loadMoreBtn = document.createElement('button');
+  loadMoreBtn.id = 'songs-load-more';
+  loadMoreBtn.className = 'load-more-btn';
+  loadMoreBtn.textContent = 'Load More';
+  container.appendChild(loadMoreBtn);  // ✅ stays inside songs section
+}*/
+  if (!songsHeader) {
+    // Create Songs section once
+    songsHeader = document.createElement('h3');
+    songsHeader.id = 'songs-header';
     songsHeader.textContent = 'Songs';
     resultsList.appendChild(songsHeader);
 
-    const container = document.createElement('div');
+    container = document.createElement('div');
     container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    lastSongResults.slice(0, visibleSongCount).forEach(song => {
-      const normalizedSong = normalizeSong(song);
-      if (!songHistory.some(s => s.id === normalizedSong.id)) {
-        songHistory.push(normalizedSong);
-      }
-      const card = createSongCard(normalizedSong);
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    resultsList.appendChild(container);
+    container.id = 'songs-container';
 
-    let loadMoreBtn = document.getElementById('songs-load-more');
-    if (!loadMoreBtn) {
-      loadMoreBtn = document.createElement('button');
-      loadMoreBtn.id = 'songs-load-more';
-      loadMoreBtn.className = 'load-more-btn';
-      loadMoreBtn.textContent = 'Load More';
-      resultsList.appendChild(loadMoreBtn);
-    }
-    if (lastSongResults.length > visibleSongCount) {
-      loadMoreBtn.style.display = 'block';
-      loadMoreBtn.onclick = () => {
-        visibleSongCount += 5;
-        displayResults({
-          songs: { results: lastSongResults },
-          artists: data.artists,
-          albums: data.albums,
-          playlists: data.playlists            // keep playlists when re-rendering
-        });
-      };
-    } else {
-      loadMoreBtn.style.display = 'none';
-    }
+    cards = document.createElement('div');
+    cards.className = 'cards';
+    cards.id = 'songs-cards';
+    container.appendChild(cards);
+
+    loadMoreBtn = document.createElement('button');
+    loadMoreBtn.id = 'songs-load-more';
+    loadMoreBtn.className = 'load-more-btn';
+    loadMoreBtn.textContent = 'Load More';
+    container.appendChild(loadMoreBtn);
+
+    resultsList.appendChild(container);
   }
 
+  // Append only new songs
+  data.songs.results.forEach(song => {
+    const normalizedSong = normalizeSong(song);
+    if (!songHistory.some(s => s.id === normalizedSong.id)) {
+      songHistory.push(normalizedSong);
+    }
+    const card = createSongCard(normalizedSong);
+    cards.appendChild(card);
+  });
+
+  // Handle Load More button
+  if (data.songs.next) {
+    loadMoreBtn.style.display = 'block';
+    loadMoreBtn.onclick = async () => {
+      currentPage++;
+      await fetchMoreSongs(); // fetch only songs
+    };
+  } else {
+    loadMoreBtn.style.display = 'none';
+  }
+}
+
+
+
   // ----- Artists -----
-  if (data.artists.results.length > 0) {
+  if (!appendSongs && data.artists.results?.length > 0) {
+    // render artists normally (only once, not on append)
     const artistsHeader = document.createElement('h3');
     artistsHeader.textContent = 'Artists';
     resultsList.appendChild(artistsHeader);
@@ -2188,11 +2297,6 @@ function displayResults(data) {
           <div class="song-name">${artist.name}</div>
           <div class="artist-name">${artist.role || 'Artist'}</div>
         </div>
-        <div class="play-down">
-          <div class="play-btn" title="View Songs"
-               onclick="event.stopPropagation(); fetchArtistSongs('${encodeURIComponent(artist.id)}',
-               '${artist.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
-        </div>
       `;
       card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
       cards.appendChild(card);
@@ -2202,7 +2306,8 @@ function displayResults(data) {
   }
 
   // ----- Albums -----
-  if (data.albums.results.length > 0) {
+  if (!appendSongs && data.albums.results?.length > 0) {
+    // render albums only on first load
     const albumsHeader = document.createElement('h3');
     albumsHeader.textContent = 'Albums';
     resultsList.appendChild(albumsHeader);
@@ -2220,11 +2325,6 @@ function displayResults(data) {
           <div class="song-name">${album.title}</div>
           <div class="artist-name">${album.primaryArtists} (${album.year})</div>
         </div>
-        <div class="play-down">
-          <div class="play-btn" title="View Songs"
-               onclick="event.stopPropagation(); fetchAlbumSongs('${encodeURIComponent(album.id)}',
-               '${album.title.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
-        </div>
       `;
       card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
       cards.appendChild(card);
@@ -2233,8 +2333,8 @@ function displayResults(data) {
     resultsList.appendChild(container);
   }
 
-  // ----- Playlists (NEW) -----
-  if (data.playlists?.results?.length > 0) {
+  // ----- Playlists -----
+  if (!appendSongs && data.playlists?.results?.length > 0) {
     const playlistsHeader = document.createElement('h3');
     playlistsHeader.textContent = 'Playlists';
     resultsList.appendChild(playlistsHeader);
@@ -2245,12 +2345,7 @@ function displayResults(data) {
     cards.className = 'cards';
 
     data.playlists.results.slice(0, 3).forEach(pl => {
-      // pick the best available image (fall back to default.png)
-      const img =
-        pl.image?.find(i => i.quality === '150x150')?.url ||
-        pl.image?.[0]?.url ||
-        'default.png';
-
+      const img = pl.image?.[0]?.url || 'default.png';
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
@@ -2258,11 +2353,6 @@ function displayResults(data) {
         <div class="card-body">
           <div class="song-name">${pl.name}</div>
           <div class="artist-name">${pl.language || ''} • ${pl.songCount} songs</div>
-        </div>
-        <div class="play-down">
-          <div class="play-btn" title="View Songs"
-               onclick="event.stopPropagation(); fetchPlaylistSongs('${encodeURIComponent(pl.id)}',
-               '${pl.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-play"></i></div>
         </div>
       `;
       card.addEventListener('click', () => fetchPlaylistSongs(pl.id, pl.name));
@@ -2273,19 +2363,31 @@ function displayResults(data) {
     resultsList.appendChild(container);
   }
 
-  // ----- No results -----
-  if (
-    !data.songs.results.length &&
-    !data.artists.results.length &&
-    !data.albums.results.length &&
-    !(data.playlists?.results?.length)
-  ) {
-    resultsList.innerHTML = '<span>No results found.</span>';
-  }
-
   markStateChanged();
   saveState();
 }
+
+/*
+moreBtn.addEventListener('click', async () => {
+  currentPage++;
+  await fetchResults(); // will re-render with new results
+});*/
+
+async function fetchMoreSongs() {
+  try {
+    const songsRes = await fetch(
+      `https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`
+    );
+    const songsJson = await songsRes.json();
+    const songsData = songsJson?.data || songsJson;
+
+    displayResults({ songs: songsData }, true); // append only
+  } catch (err) {
+    console.error('Error fetching more songs:', err);
+    showNotification('Failed to load more songs.');
+  }
+}
+
 
 function createSongPickerModal(playlistIdx) {
   const modal = document.createElement('div');

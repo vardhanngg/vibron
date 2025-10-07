@@ -348,12 +348,23 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
+/*
 #song-list {
   width: 90%;
   max-width: 600px;
   margin: 1rem auto;
   animation: fadeIn 0.5s ease-out;
+}
+*/
+#song-list {
+  width: 90%;
+  max-width: 600px;
+  margin: 1rem auto;
+  animation: fadeIn 0.5s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centers the button with cards */
+  gap: 12px; /* adds a nice space between cards and the button */
 }
 
 #song-list h3 {

@@ -49,12 +49,15 @@ module.exports = async function handler(req, res) {
 
     // Make parallel API calls for songs, artists, and albums
     const [songResponse, artistResponse, albumResponse] = await Promise.all([
-      axios.get(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(q)}`)
+      //axios.get(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(q)}`)
+      axios.get(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(q)}&page=${page}&limit=${limit}`)
         .catch(() => ({ data: { results: [], total: 0, start: 0 } })),  // Flatten path for safety
-      axios.get(`https://apivibron.vercel.app/api/search/artists?query=${encodeURIComponent(q)}`)
-        .catch(() => ({ data: { results: [], total: 0, start: 0 } })),
-      axios.get(`https://apivibron.vercel.app/api/search/albums?query=${encodeURIComponent(q)}`)
-        .catch(() => ({ data: { results: [], total: 0, start: 0 } }))
+    //  axios.get(`https://apivibron.vercel.app/api/search/artists?query=${encodeURIComponent(q)}`)
+    axios.get(`https://apivibron.vercel.app/api/search/artists?query=${encodeURIComponent(q)}&page=${page}&limit=${limit}`)    
+    .catch(() => ({ data: { results: [], total: 0, start: 0 } })),
+   //   axios.get(`https://apivibron.vercel.app/api/search/albums?query=${encodeURIComponent(q)}`)
+   axios.get(`https://apivibron.vercel.app/api/search/albums?query=${encodeURIComponent(q)}&page=${page}&limit=${limit}`)     
+   .catch(() => ({ data: { results: [], total: 0, start: 0 } }))
     ]);
 
     // Safer extraction: Handle single vs double 'data' nesting
