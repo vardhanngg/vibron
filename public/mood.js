@@ -179,7 +179,7 @@ async function fetchSongByMood() {
     return;
   }
   const query = emotionMap[mood].replace('{lang}', language);
-  updateBackground(mood);
+  //updateBackground(mood);
   emotionDisplay.textContent = "Finding you the best song...";
   try {
     const response = await fetch(`/api/songByMood?mood=${encodeURIComponent(query)}`);
@@ -187,7 +187,7 @@ async function fetchSongByMood() {
       const text = await response.text();
       console.error(`[client] API error: ${text}`);
       emotionDisplay.textContent = `Sorry, no songs found for ${query}. Please try a different mood or language.`;
-      document.body.style.background = `url('/public/problem.gif') no-repeat center center fixed`;
+      //document.body.style.background = `url('/public/problem.gif') no-repeat center center fixed`;
       document.body.style.backgroundSize = 'cover';
       document.body.style.backgroundColor = 'transparent';
       return;
@@ -258,17 +258,17 @@ musicPlayer.addEventListener('ended', async () => {
   console.log("Song ended, fetching next song...");
   emotionDisplay.textContent = "Loading next song...";
   await fetchSongByMood();
-});
+});/*
 musicPlayer.addEventListener('pause', () => {
   // Show pause.gif when paused
   document.body.style.background = `url('/public/pause.gif') no-repeat center center fixed`;
   document.body.style.backgroundSize = 'cover';
   document.body.style.backgroundColor = 'transparent';
-});
+});*/
 
 musicPlayer.addEventListener('play', () => {
   // Restore the mood-based GIF when playing
   const mood = testMoodSelect.value === 'auto' ? detectedMood : testMoodSelect.value;
-  updateBackground(mood);
+  //updateBackground(mood);
 });
 

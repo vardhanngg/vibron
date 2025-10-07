@@ -12,7 +12,15 @@
 }
 
 body {
-  background-image: url('/public/default.png');
+  /*background-image: url('/public/default.png');*/
+  /*
+  background: linear-gradient(135deg, #0a0f1f 0%, #161b2e 50%, #1a0033 100%);
+  background-attachment: fixed;
+  color: #f0f0f0;*/
+background: linear-gradient(-45deg, #1a1a1a, #0d0d0d, #2a2a2a, #141414);
+  background-size: 400% 400%;
+  animation: grayShift 18s ease infinite;
+  color: #f0f0f0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -22,6 +30,11 @@ body {
   color: var(--text);
 }
 
+@keyframes grayShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 .container {
   max-width: 900px;
   margin: 0 auto;
