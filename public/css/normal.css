@@ -393,7 +393,7 @@ body {
 .back-btn {
   position: fixed;
   top: 49%;
-  left: 400px;
+  left: 291px;
   transform: translateY(-50%);
   padding: 0.5rem 1rem;
   background: var(--accent);
