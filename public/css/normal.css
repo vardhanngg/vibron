@@ -1022,6 +1022,39 @@ body {
   z-index: 10;          /* keep it above background but below modal */
 }
 
+
+#category-bar {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.category-btn {
+  background: #1a1a1a;
+  color: #ccc;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.category-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+.category-btn.active {
+  background: #444;
+  color: #fff;
+}
+
+.results-section.hidden {
+  display: none;
+}
+
 /* Make sure Transfer Host is always on top of that area *//*
 #transfer-host-btn {
   position: relative;

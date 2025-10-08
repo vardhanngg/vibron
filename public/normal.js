@@ -44,14 +44,7 @@ const audioPlayer = document.getElementById('audio-player');
 const albumArt = document.getElementById('album-art');
 const nowPlaying = document.getElementById('now-playing');
 const artistName = document.getElementById('artist-name');
-const moreBtn = document.getElementById('more');/*
-moreBtn.addEventListener('click', async () => {
-  if (currentQuery) {
-    currentPage++;   // go to next page
-    await fetchResults();
-  }
-});
-*/
+const moreBtn = document.getElementById('more');
 const queueList = document.getElementById('queue-list');
 const playerBar = document.getElementById('player-bar');
 const playPauseBtn = document.getElementById('play-pause-btn');
@@ -92,55 +85,74 @@ function setGreeting() {
 /* =================== */
 /* Back Button */
 function showBackButton() {
-  let backBtn = document.getElementById('back-btn');
-  if (!backBtn) {
-    backBtn = document.createElement('button');
-    backBtn.id = 'back-btn';
-    backBtn.className = 'back-btn';
-    backBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Back';
-    backBtn.onclick = goBack;
-    resultsList.prepend(backBtn);
+  let backButton = document.getElementById('back-button');
+  if (!backButton) {
+    backButton = document.createElement('button');
+    backButton.id = 'back-button';
+    backButton.textContent = 'Back';
+    backButton.className = 'back-btn';
+    backButton.onclick = goBack;
+    document.querySelector('main').prepend(backButton);
   }
-  backBtn.style.display = 'block';
+  backButton.style.display = 'block';
+  ////////////////console.log('Back button shown');
 }
 
 function hideBackButton() {
-  const backBtn = document.getElementById('back-btn');
-  if (backBtn) {
-    backBtn.style.display = 'none';
+  const backButton = document.getElementById('back-button');
+  if (backButton) {
+    backButton.style.display = 'none';
+    ////////////////console.log('Back button hidden');
   }
 }
 
 function goBack() {
+  ////////////////console.log('goBack called with previousView:', previousView);
   if (previousView) {
-    if (previousView.type === 'home') {
-      loadHomeContent();
-    } else if (previousView.type === 'search') {
-      searchInput.value = previousView.query;
-      currentQuery = previousView.query;
-      currentPage = previousView.page;
-      visibleSongCount = previousView.visibleSongCount;
-      lastSongResults = previousView.lastSongResults;
-      fetchResults();
+    switch (previousView.type) {
+      case 'search':
+        currentQuery = previousView.query;
+        currentPage = previousView.page;
+        visibleSongCount = previousView.visibleSongCount;
+        lastSongResults = previousView.lastSongResults;
+        fetchResults();
+        break;
+      case 'home':
+        loadHomeContent();
+        break;
+      default:
+        console.error('Unknown previousView type:', previousView.type);
+        loadHomeContent(); // Fallback
     }
     previousView = null;
     hideBackButton();
   } else {
-    loadHomeContent();
-    hideBackButton();
+    console.error('No previousView defined');
+    loadHomeContent(); // Fallback to home
   }
 }
 
 /* =================== */
 /* Home Content */
 async function loadHomeContent() {
-  document.getElementById('home-content').style.display = 'block';
+  const homeContent = document.getElementById('home-content');
+  const resultsList = document.getElementById('song-list');
+  const libraryView = document.getElementById('library-view');
+  const moreBtn = document.getElementById('more');
+
+  if (!homeContent || !resultsList || !libraryView) {
+    console.error('DOM elements missing:', { homeContent, resultsList, libraryView, moreBtn });
+    return;
+  }
+
+  homeContent.style.display = 'block';
   resultsList.style.display = 'none';
   libraryView.style.display = 'none';
-  moreBtn.style.display = 'none';
+  if (moreBtn) moreBtn.style.display = 'none';
   hideBackButton();
 
   await Promise.all([loadListenAgain()]);
+  ////////////////console.log('loadHomeContent completed');
 }
 
 function askForName(action = null) {
@@ -188,7 +200,7 @@ function saveUserName() {
     return;
   }
   const input = inputEl.value.trim();
-  console.log('[CHAT DEBUG] saveUserName called. input:', input, 'pendingAction:', pendingAction);
+  ////////////////console.log('[CHAT DEBUG] saveUserName called. input:', input, 'pendingAction:', pendingAction);
   if (!input) {
     showNotification("Please enter a name.");
     return;
@@ -196,7 +208,7 @@ function saveUserName() {
 
   userName = input;
   document.getElementById('name-input-modal').classList.add('hidden');
-  console.log('[CHAT DEBUG] userName set to ->', userName);
+  ////////////////console.log('[CHAT DEBUG] userName set to ->', userName);
 
   if (pendingAction === "host") {
     hostSession();
@@ -316,12 +328,16 @@ async function fetchResults() {
     // Render results (append if not first page)
     displayResults(data, currentPage > 1);
 
-    // 🧹 Remove any old Load More button
-    const oldBtn = document.getElementById('more');
-    if (oldBtn) oldBtn.remove();
+// 🧹 Remove any old Load More button
+const oldBtn = document.getElementById('more');
+if (oldBtn) oldBtn.remove();
 
-// 🆕 Create button dynamically (place it right below songs, not playlists)
-if (data.songs.next || data.artists.next || data.albums.next) {
+// ✅ Only show Load More for SONGS — never for albums, artists, or playlists
+const hasMoreSongs =
+  (Array.isArray(data.songs?.results) && data.songs.results.length >= 10) ||
+  !!data.songs?.next;
+
+if (hasMoreSongs) {
   const loadMoreBtn = document.createElement('button');
   loadMoreBtn.id = 'more';
   loadMoreBtn.className = 'load-more-btn';
@@ -331,17 +347,21 @@ if (data.songs.next || data.artists.next || data.albums.next) {
     fetchResults();
   };
 
-  // ✅ Find the songs section and insert after it
-  const songSection = resultsList.querySelector('#songs-section, .songs-container, .song-container');
+  // ✅ Place the button immediately after the songs section
+  const songSection =
+    resultsList.querySelector('#songs-section') ||
+    resultsList.querySelector('.songs-container') ||
+    resultsList.querySelector('.song-container');
+
   if (songSection && songSection.parentNode) {
     songSection.parentNode.insertBefore(loadMoreBtn, songSection.nextSibling);
   } else {
-    // fallback — if no song section is found
-    resultsList.insertBefore(loadMoreBtn, resultsList.firstChild);
+    // fallback: append to end
+    resultsList.appendChild(loadMoreBtn);
   }
+
+  loadMoreBtn.style.display = 'block';
 }
-
-
 
     resultsList.classList.remove('hidden');
     resultsList.style.display = 'block';
@@ -354,9 +374,8 @@ if (data.songs.next || data.artists.next || data.albums.next) {
 
 
 
-
-
 async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
+  ////////////////console.log('fetchArtistSongs called with artistId:', artistId, 'artistName:', artistName, 'page:', page, 'append:', append);
   if (!artistId || artistId === 'undefined') {
     resultsList.innerHTML = '<span>Invalid artist ID.</span>';
     console.error('Invalid artistId:', artistId);
@@ -375,16 +394,19 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
 
   try {
     const url = `https://apivibron.vercel.app/api/artists/${artistId}/songs`;
-    console.log('Fetching artist songs:', url);
+    //////////////////console.log('Fetching artist songs:', url);
     const response = await fetch(url, { mode: 'cors' });
+    ////////////////////console.log('Response status:', response.status, 'OK:', response.ok);
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Artist fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
+     // console.error('Error response text:', errorText);
+      //throw new Error(`Artist fetch failed: ${response.statusText} (${response.status}) - ${errorText}`);
     }
 
     const data = await response.json();
+   // ////////////////console.log('Response data:', data);
     const songs = data.data?.songs || [];
-    console.log('Artist songs received:', songs.length, songs.map(s => s.id));
+    //////////////////console.log('Artist songs received:', songs.length, songs.map(s => s.id));
     lastArtistSongs = songs;
     visibleArtistSongCount = 10;
 
@@ -393,12 +415,12 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       libraryView.style.display = 'none';
       document.getElementById('home-content').style.display = 'none';
       searchInput.value = `Songs by ${artistName}`;
-     // resultsList.style.display = 'block';
       resultsList.classList.remove('hidden');
 
       currentArtistId = artistId;
       artistPage = page;
       showBackButton();
+
     }
 
     let cards;
@@ -415,61 +437,67 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
       resultsList.appendChild(container);
     } else {
       cards = resultsList.querySelector('.cards');
+      if (!cards) {
+       // console.error('Cards element not found for append');
+        resultsList.innerHTML = '<span>Error rendering songs. Please try again.</span>';
+        return;
+      }
     }
 
     if (!append && songs.length) {
-      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
-      console.log('Artist queue updated:', queue.map(q => q.id));
-      renderQueue();
+      try {
+        queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
+        //////////////////console.log('Artist queue updated:', queue.map(q => q.id));
+        renderQueue();
+      } catch (err) {
+        //console.error('Error updating queue:', err);
+        resultsList.innerHTML = '<span>Error rendering queue. Please try again.</span>';
+        return;
+      }
     }
 
-    songs.slice(0, visibleArtistSongCount).forEach(song => {
-      const normalizedSong = normalizeSong(song);
-      if (!songHistory.some(s => s.id === normalizedSong.id)) {
-        songHistory.push(normalizedSong);
-      }
-      const card = createSongCard(normalizedSong, true, false);
-      cards.appendChild(card);
-    });
+    try {
+      songs.slice(0, visibleArtistSongCount).forEach(song => {
+        const normalizedSong = normalizeSong(song);
+        if (!songHistory.some(s => s.id === normalizedSong.id)) {
+          songHistory.push(normalizedSong);
+        }
+        const card = createSongCard(normalizedSong, true, false);
+        cards.appendChild(card);
+      });
+    } catch (err) {
+      //console.error('Error rendering song cards:', err);
+      resultsList.innerHTML = '<span>Error rendering songs. Please try again.</span>';
+      return;
+    }
 
-// ✅ Create Load More button dynamically inside artist section
-let loadMoreBtn = document.getElementById('artist-songs-load-more');
-if (loadMoreBtn) loadMoreBtn.remove();
-
-if (songs.length > visibleArtistSongCount) {
-  const loadMore = document.createElement('button');
-  loadMore.id = 'artist-songs-load-more';
-  loadMore.className = 'load-more-btn';
-  loadMore.textContent = 'Load More';
-  loadMore.onclick = () => {
-    visibleArtistSongCount += 5;
-    fetchArtistSongs(artistId, artistName, artistPage, true);
-  };
-
-  // 🧠 Append right below artist’s cards container
-  const cardsContainer = resultsList.querySelector('.song-container .cards');
-  if (cardsContainer && cardsContainer.parentNode) {
-    cardsContainer.parentNode.appendChild(loadMore);
-  } else {
-    resultsList.appendChild(loadMore);
-  }
-}
+    let loadMoreBtn = document.getElementById('artist-songs-load-more');
+    if (loadMoreBtn) loadMoreBtn.remove();
 
     if (songs.length > visibleArtistSongCount) {
-      loadMoreBtn.style.display = 'block';
-      loadMoreBtn.onclick = () => {
+      const loadMore = document.createElement('button');
+      loadMore.id = 'artist-songs-load-more';
+      loadMore.className = 'load-more-btn';
+      loadMore.textContent = 'Load More';
+      loadMore.onclick = () => {
         visibleArtistSongCount += 5;
         fetchArtistSongs(artistId, artistName, artistPage, true);
       };
-    } else {
-      loadMoreBtn.style.display = 'none';
+
+      const cardsContainer = resultsList.querySelector('.song-container .cards');
+      if (cardsContainer && cardsContainer.parentNode) {
+        cardsContainer.parentNode.appendChild(loadMore);
+      } else {
+        //console.error('Cards container not found for load more button');
+        resultsList.appendChild(loadMore);
+      }
     }
 
     markStateChanged();
     saveState();
   } catch (err) {
     resultsList.innerHTML = '<span>Error loading artist songs. Please try again.</span>';
-    console.error(`Error fetching artist songs for ID ${artistId}:`, err.message);
+    //console.error(`Error fetching artist songs for ID ${artistId}:`, err.message);
     showNotification('Failed to load artist songs.');
   }
 }
@@ -491,7 +519,7 @@ async function fetchAlbumSongs(albumId, albumTitle) {
 
   try {
     const url = `https://apivibron.vercel.app/api/albums?id=${encodeURIComponent(albumId)}`;
-    console.log('Fetching album songs:', url);
+    ////////////////console.log('Fetching album songs:', url);
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) {
       const errorText = await response.text();
@@ -502,7 +530,7 @@ async function fetchAlbumSongs(albumId, albumTitle) {
     if (!data.success) throw new Error('API returned success: false');
 
     const songs = data.data?.songs || [];
-    console.log('Album songs received:', songs.length, songs.map(s => s.id));
+    ////////////////console.log('Album songs received:', songs.length, songs.map(s => s.id));
 
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
@@ -562,7 +590,7 @@ if (songs.length > visibleAlbumSongCount) {
 
 
       queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
-      console.log('Album queue updated:', queue.map(q => q.id));
+      ////////////////console.log('Album queue updated:', queue.map(q => q.id));
       renderQueue();
     } else {
       resultsList.innerHTML = '<span>No songs found in this album.</span>';
@@ -578,12 +606,22 @@ if (songs.length > visibleAlbumSongCount) {
 }
 
 async function fetchPlaylistSongs(playlistId, playlistTitle) {
+  // ✅ Save current state before navigating into playlist
+previousView = {
+  type: 'search',
+  query: currentQuery,
+  page: currentPage,
+  html: resultsList.innerHTML
+};
+
   try {
     const url = `https://apivibron.vercel.app/api/playlists?id=${playlistId}&page=0&limit=10`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Playlist fetch failed: ${response.statusText}`);
     const data = await response.json();
     const songs = data.data?.songs || [];
+    // Save current results before replacing (for back navigation)
+    const previousResultsHTML = resultsList.innerHTML;
 
     resultsList.innerHTML = '';
     libraryView.style.display = 'none';
@@ -592,6 +630,27 @@ async function fetchPlaylistSongs(playlistId, playlistTitle) {
     resultsList.classList.remove('hidden');
 
     showBackButton();
+    // ✅ Override back button to restore search results instead of home
+const backBtn = document.getElementById('back-btn');
+if (backBtn) {
+  backBtn.onclick = () => {
+    resultsList.innerHTML = previousResultsHTML;
+    // reattach category buttons
+    const buttons = document.querySelectorAll('.category-btn');
+    buttons.forEach(btn => {
+      btn.onclick = () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const type = btn.dataset.type;
+        document.querySelectorAll('.results-section').forEach(sec => sec.classList.add('hidden'));
+        document.querySelector(`.${type}-section`).classList.remove('hidden');
+        const loadMoreBtn = document.getElementById('more');
+        if (loadMoreBtn) loadMoreBtn.style.display = type === 'songs' ? 'block' : 'none';
+      };
+    });
+  };
+}
+
 
     const header = document.createElement('h3');
     header.textContent = `Songs from ${playlistTitle}`;
@@ -771,7 +830,7 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
      showNotification('Only the host can control playback.');
     return; 
   }
-  console.log('playSong called:', song.id, song.title, { fromSearch, fromArtist, fromAlbum });
+  ////////////////console.log('playSong called:', song.id, song.title, { fromSearch, fromArtist, fromAlbum });
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
     songHistory.push({ ...song, lastPlayed: new Date().toISOString() });
@@ -780,7 +839,7 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
     songHistory[currentSongIndex] = { ...songHistory[currentSongIndex], lastPlayed: new Date().toISOString() };
   }
 
-  console.log('Setting audioPlayer.src:', song.audioUrl);
+  ////////////////console.log('Setting audioPlayer.src:', song.audioUrl);
   audioPlayer.src = song.audioUrl;
   audioPlayer
     .play()
@@ -795,7 +854,7 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
   updateFavoriteButton();
   audioPlayer.onended = () => {
-  console.log("✅ onended fired directly from playSong setup");
+  ////////////////console.log("✅ onended fired directly from playSong setup");
   if (!currentSessionCode || isHost) {
     playNext(true); // auto-advance only for solo OR host
   }
@@ -803,15 +862,15 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
 
 
   if (fromSearch) {
-    console.log('Clearing queue for new search and adding song:', song.id);
+    ////////////////console.log('Clearing queue for new search and adding song:', song.id);
     queue = [];
     addToQueue(song.id);
     autoAddSimilar(song);
   } else if (fromArtist || fromAlbum) {
-    console.log('Preserving queue for artist/album:', queue.map(q => q.id));
+    ////////////////console.log('Preserving queue for artist/album:', queue.map(q => q.id));
     if (!queue.some(q => q.id === song.id)) {
       queue.unshift(song);
-      console.log('Added current song to queue:', song.id);
+      ////////////////console.log('Added current song to queue:', song.id);
       renderQueue();
     }
   } else {
@@ -823,7 +882,7 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
     socket.emit('sync-state', { song, currentTime: audioPlayer.currentTime, isPlaying: true });
   }
 
-  console.log('Final queue state:', queue.map(q => q.id));
+  ////////////////console.log('Final queue state:', queue.map(q => q.id));
   markStateChanged();
   saveState();
 }
@@ -878,18 +937,18 @@ function playNext(auto = false) {
 
   if (queue.length > 0) {
     nextSong = queue.shift();
-    console.log('🎶 Taking from queue:', nextSong);
+    ////////////////console.log('🎶 Taking from queue:', nextSong);
   } else if (currentSongIndex < songHistory.length - 1) {
     currentSongIndex++;
     nextSong = songHistory[currentSongIndex];
-    console.log('🎶 Taking from history:', nextSong);
+    ////////////////console.log('🎶 Taking from history:', nextSong);
   }
 
   if (nextSong) {
-    console.log('▶️ Playing next song:', nextSong.title || nextSong);
+    ////////////////console.log('▶️ Playing next song:', nextSong.title || nextSong);
     playSong(nextSong, false);
   } else {
-    console.log('⛔ No next song found');
+    ////////////////console.log('⛔ No next song found');
     showNotification('No next song. Try searching more!');
   }
 
@@ -1103,16 +1162,16 @@ function addToQueue(songId) {
 }
 
 async function autoAddSimilar(currentSong) {
-  console.log('autoAddSimilar called for song:', currentSong.id, currentSong.title);
+  ////////////////console.log('autoAddSimilar called for song:', currentSong.id, currentSong.title);
   try {
     const url = `https://apivibron.vercel.app/api/songs/${currentSong.id}/suggestions?limit=3`;
-    console.log('Fetching suggestions:', url);
+    ////////////////console.log('Fetching suggestions:', url);
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) throw new Error(`Suggestions fetch failed: ${response.statusText}`);
 
     const data = await response.json();
     const similarSongs = data.data || [];
-    console.log('Suggestions received:', similarSongs.length, similarSongs.map(s => s.id));
+    //////////////console.log('Suggestions received:', similarSongs.length, similarSongs.map(s => s.id));
 
     if (!Array.isArray(similarSongs)) {
       console.error('Invalid suggestions response:', data);
@@ -1121,25 +1180,25 @@ async function autoAddSimilar(currentSong) {
 
     similarSongs.forEach(similarSong => {
       const normalizedSong = normalizeSong(similarSong);
-      console.log('Adding to songHistory:', normalizedSong.id);
+      //////////////console.log('Adding to songHistory:', normalizedSong.id);
       if (!songHistory.some(s => s.id === normalizedSong.id)) {
         songHistory.push(normalizedSong);
       }
-      console.log('Checking queue for:', normalizedSong.id);
+      //////////////console.log('Checking queue for:', normalizedSong.id);
       if (!queue.some(q => q.id === normalizedSong.id) && normalizedSong.id !== currentSong.id) {
-        console.log('Adding to queue:', normalizedSong.id, normalizedSong.title);
+        //////////////console.log('Adding to queue:', normalizedSong.id, normalizedSong.title);
         queue.push(normalizedSong);
       }
     });
 
-    console.log('Queue after adding similar songs:', queue.map(q => q.id));
+    //////////////console.log('Queue after adding similar songs:', queue.map(q => q.id));
     if (similarSongs.length > 0) {
       showNotification(`Added ${similarSongs.length} similar songs to queue`);
       renderQueue();
       markStateChanged();
       saveState();
     } else {
-      console.log('No similar songs to add');
+      //////////////console.log('No similar songs to add');
     }
   } catch (err) {
     console.error('Error in autoAddSimilar:', err.message);
@@ -1173,7 +1232,16 @@ function removeFromQueue(idx) {
   renderQueue();
   markStateChanged();
   saveState();
+
+  // ✅ Force queue container to stay open even after re-render
+  const queueContainer = document.getElementById('queue-container');
+  setTimeout(() => {
+    if (queueContainer && !queueContainer.classList.contains('open')) {
+      queueContainer.classList.add('open');
+    }
+  }, 50);
 }
+
 
 function toggleQueue() {
   // close chat if open
@@ -1195,10 +1263,10 @@ function toggleChat() {
   // Toggle visibility
   if (chatContainer.classList.contains('hidden')) {
     chatContainer.classList.remove('hidden');
-    console.log("Chat opened");
+    //////////////console.log("Chat opened");
   } else {
     chatContainer.classList.add('hidden');
-    console.log("Chat closed");
+    //////////////console.log("Chat closed");
   }
 }
 
@@ -1734,7 +1802,7 @@ updateSessionControls();
 
 /*
 function leaveSession() {
-  console.log('Leaving session, currentSessionCode:', currentSessionCode);
+  //////////////console.log('Leaving session, currentSessionCode:', currentSessionCode);
 
   // Reset UI
   leaveSessionUIReset();
@@ -1775,7 +1843,7 @@ function leaveSession() {
 }*/
 
 function leaveSession() {
-  console.log('Leaving session, currentSessionCode:', currentSessionCode);
+  //////////////console.log('Leaving session, currentSessionCode:', currentSessionCode);
 
   leaveSessionUIReset();
 
@@ -1980,13 +2048,13 @@ async function autoRejoin() {
   // try to rejoin
   socket.emit("join-session", { code, name: userName }, (success) => {
     if (success) {
-      console.log("Auto-rejoined session:", code);
+      //////////////console.log("Auto-rejoined session:", code);
       setSessionControlsDisabled(!wasHost);
       isHost = wasHost;
       showChatButton();
       showSessionControls(code);
     } else {
-      console.log("Auto-rejoin failed, clearing session");
+      //////////////console.log("Auto-rejoin failed, clearing session");
       clearSessionMemory();
       enableListenTogetherButton();
     }
@@ -2093,7 +2161,7 @@ function sendChatMessage() {
   if (!userName || !userName.trim()) {
     pendingMessage = message;
     pendingAction = "chat";
-    console.log('[CHAT DEBUG] No userName yet - asking for it and storing pendingMessage:', pendingMessage);
+    //////////////console.log('[CHAT DEBUG] No userName yet - asking for it and storing pendingMessage:', pendingMessage);
     askForName('chat');
     return;
   }
@@ -2116,7 +2184,7 @@ function sendChatMessageWithName(message) {
     _fromClientId: mySocketId  // helpful tracer field
   };
 
-  console.log('[CHAT DEBUG] Emitting chat-message ->', data);
+  //////////////console.log('[CHAT DEBUG] Emitting chat-message ->', data);
   socket.emit('chat-message', data);
 
   // clear input after emit
@@ -2128,7 +2196,7 @@ function sendChatMessageWithName(message) {
 //socket.off('chat-message'); // remove any accidental duplicates if using hot reload
 /*
 socket.on('chat-message', (data) => {
-  console.log('[CHAT DEBUG] Received chat-message from server:', data);
+  //////////////console.log('[CHAT DEBUG] Received chat-message from server:', data);
 
   // Server should ideally forward the same user. If not present, show helpful fallback.
   const displayName = data && data.user && data.user.trim() ? data.user : (userName || "Guest");
@@ -2147,7 +2215,7 @@ socket.on('chat-message', (data) => {
 socket.off('chat-message');   // remove old listeners
 
 socket.on('chat-message', (data) => {
-  console.log('[CHAT DEBUG] Received chat-message from server:', data);
+  //////////////console.log('[CHAT DEBUG] Received chat-message from server:', data);
 
   const displayName = data && data.user && data.user.trim()
     ? data.user
@@ -2209,86 +2277,92 @@ function focusSearch() {
 
 function displayResults(data, appendSongs = false) {
   if (!appendSongs) {
-    resultsList.innerHTML = '';   // clear only for first page
-    lastSongResults = data.songs?.results || [];
-  } else {
-    lastSongResults = [...lastSongResults, ...(data.songs?.results || [])];
+    resultsList.innerHTML = '';
+
+    // Create category filter bar
+    const categoryBar = document.createElement('div');
+    categoryBar.id = 'category-bar';
+    categoryBar.innerHTML = `
+      <button class="category-btn active" data-type="songs">Songs</button>
+      <button class="category-btn" data-type="albums">Albums</button>
+      <button class="category-btn" data-type="artists">Artists</button>
+      <button class="category-btn" data-type="playlists">Playlists</button>
+    `;
+    resultsList.appendChild(categoryBar);
+
+    // Create containers for each category
+    const sections = ['songs', 'albums', 'artists', 'playlists'];
+    sections.forEach(type => {
+      const section = document.createElement('div');
+      section.className = `results-section ${type}-section`;
+      if (type !== 'songs') section.classList.add('hidden');
+      resultsList.appendChild(section);
+    });
   }
 
-// ----- Songs -----
-if (lastSongResults.length > 0) {
-  let songsHeader = document.getElementById('songs-header');
-  let container = document.getElementById('songs-container');
-  let cards = document.getElementById('songs-cards');
-  let loadMoreBtn = document.getElementById('songs-load-more');
-   /*if (!loadMoreBtn) {
-  loadMoreBtn = document.createElement('button');
-  loadMoreBtn.id = 'songs-load-more';
-  loadMoreBtn.className = 'load-more-btn';
-  loadMoreBtn.textContent = 'Load More';
-  container.appendChild(loadMoreBtn);  // ✅ stays inside songs section
-}*/
-  if (!songsHeader) {
-    // Create Songs section once
-    songsHeader = document.createElement('h3');
-    songsHeader.id = 'songs-header';
-    songsHeader.textContent = 'Songs';
-    resultsList.appendChild(songsHeader);
+  // ----- Songs -----
+  if (data.songs?.results?.length) {
+    const songsSection = document.querySelector('.songs-section');
+    if (!appendSongs) songsSection.innerHTML = '';
 
-    container = document.createElement('div');
-    container.className = 'song-container';
-    container.id = 'songs-container';
-
-    cards = document.createElement('div');
-    cards.className = 'cards';
-    cards.id = 'songs-cards';
-    container.appendChild(cards);
-
-    loadMoreBtn = document.createElement('button');
-    loadMoreBtn.id = 'songs-load-more';
-    loadMoreBtn.className = 'load-more-btn';
-    loadMoreBtn.textContent = 'Load More';
-    container.appendChild(loadMoreBtn);
-
-    resultsList.appendChild(container);
-  }
-
-  // Append only new songs
-  data.songs.results.forEach(song => {
-    const normalizedSong = normalizeSong(song);
-    if (!songHistory.some(s => s.id === normalizedSong.id)) {
-      songHistory.push(normalizedSong);
-    }
-    const card = createSongCard(normalizedSong);
-    cards.appendChild(card);
-  });
-
-  // Handle Load More button
-  if (data.songs.next) {
-    loadMoreBtn.style.display = 'block';
-    loadMoreBtn.onclick = async () => {
-      currentPage++;
-      await fetchMoreSongs(); // fetch only songs
-    };
-  } else {
-    loadMoreBtn.style.display = 'none';
-  }
-}
-
-
-
-  // ----- Artists -----
-  if (!appendSongs && data.artists.results?.length > 0) {
-    // render artists normally (only once, not on append)
-    const artistsHeader = document.createElement('h3');
-    artistsHeader.textContent = 'Artists';
-    resultsList.appendChild(artistsHeader);
-
-    const container = document.createElement('div');
-    container.className = 'song-container';
     const cards = document.createElement('div');
     cards.className = 'cards';
-    data.artists.results.slice(0, 3).forEach(artist => {
+
+    data.songs.results.forEach(song => {
+      const normalizedSong = normalizeSong(song);
+      if (!songHistory.some(s => s.id === normalizedSong.id)) {
+        songHistory.push(normalizedSong);
+      }
+      const card = createSongCard(normalizedSong);
+      cards.appendChild(card);
+    });
+    songsSection.appendChild(cards);
+/*
+    if (data.songs.next) {
+      const loadMore = document.createElement('button');
+      loadMore.className = 'load-more-btn';
+      loadMore.textContent = 'Load More';
+      loadMore.onclick = async () => {
+        currentPage++;
+        await fetchMoreSongs();
+      };
+      songsSection.appendChild(loadMore);
+    }*/
+  }
+
+  // ----- Albums -----
+  if (data.albums?.results?.length) {
+    const albumsSection = document.querySelector('.albums-section');
+    albumsSection.innerHTML = '';
+
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+
+    data.albums.results.forEach(album => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <img src="${album.image || 'default.png'}" alt="${album.title}" />
+        <div class="card-body">
+          <div class="song-name">${album.title}</div>
+          <div class="artist-name">${album.primaryArtists || ''}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
+      cards.appendChild(card);
+    });
+    albumsSection.appendChild(cards);
+  }
+
+  // ----- Artists -----
+  if (data.artists?.results?.length) {
+    const artistsSection = document.querySelector('.artists-section');
+    artistsSection.innerHTML = '';
+
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+
+    data.artists.results.forEach(artist => {
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
@@ -2301,50 +2375,18 @@ if (lastSongResults.length > 0) {
       card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
       cards.appendChild(card);
     });
-    container.appendChild(cards);
-    resultsList.appendChild(container);
-  }
-
-  // ----- Albums -----
-  if (!appendSongs && data.albums.results?.length > 0) {
-    // render albums only on first load
-    const albumsHeader = document.createElement('h3');
-    albumsHeader.textContent = 'Albums';
-    resultsList.appendChild(albumsHeader);
-
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    data.albums.results.slice(0, 2).forEach(album => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${album.image || 'default.png'}" alt="${album.title}" />
-        <div class="card-body">
-          <div class="song-name">${album.title}</div>
-          <div class="artist-name">${album.primaryArtists} (${album.year})</div>
-        </div>
-      `;
-      card.addEventListener('click', () => fetchAlbumSongs(album.id, album.title));
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    resultsList.appendChild(container);
+    artistsSection.appendChild(cards);
   }
 
   // ----- Playlists -----
-  if (!appendSongs && data.playlists?.results?.length > 0) {
-    const playlistsHeader = document.createElement('h3');
-    playlistsHeader.textContent = 'Playlists';
-    resultsList.appendChild(playlistsHeader);
+  if (data.playlists?.results?.length) {
+    const playlistsSection = document.querySelector('.playlists-section');
+    playlistsSection.innerHTML = '';
 
-    const container = document.createElement('div');
-    container.className = 'song-container';
     const cards = document.createElement('div');
     cards.className = 'cards';
 
-    data.playlists.results.slice(0, 3).forEach(pl => {
+    data.playlists.results.forEach(pl => {
       const img = pl.image?.[0]?.url || 'default.png';
       const card = document.createElement('div');
       card.className = 'card';
@@ -2352,16 +2394,34 @@ if (lastSongResults.length > 0) {
         <img src="${img}" alt="${pl.name}" />
         <div class="card-body">
           <div class="song-name">${pl.name}</div>
-          <div class="artist-name">${pl.language || ''} • ${pl.songCount} songs</div>
+          <div class="artist-name">${pl.language || ''} • ${pl.songCount || 0} songs</div>
         </div>
       `;
       card.addEventListener('click', () => fetchPlaylistSongs(pl.id, pl.name));
       cards.appendChild(card);
     });
-
-    container.appendChild(cards);
-    resultsList.appendChild(container);
+    playlistsSection.appendChild(cards);
   }
+
+  // ---- Category switching ----
+  const buttons = document.querySelectorAll('.category-btn');
+buttons.forEach(btn => {
+  btn.onclick = () => {
+    buttons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const type = btn.dataset.type;
+    document.querySelectorAll('.results-section').forEach(sec => sec.classList.add('hidden'));
+    document.querySelector(`.${type}-section`).classList.remove('hidden');
+
+    // ✅ Hide Load More when not in Songs view
+    const loadMoreBtn = document.getElementById('more');
+    if (loadMoreBtn) {
+      loadMoreBtn.style.display = type === 'songs' ? 'block' : 'none';
+    }
+  };
+});
+
 
   markStateChanged();
   saveState();
@@ -2371,8 +2431,8 @@ if (lastSongResults.length > 0) {
 moreBtn.addEventListener('click', async () => {
   currentPage++;
   await fetchResults(); // will re-render with new results
-});*/
-
+});
+*/
 async function fetchMoreSongs() {
   try {
     const songsRes = await fetch(
@@ -2411,15 +2471,15 @@ function updateChatButtonVisibility() {
     console.error('Chat button not found in DOM');
     return;
   }
-  console.log('Updating chat button visibility, currentSessionCode:', currentSessionCode);
+  //////////////console.log('Updating chat button visibility, currentSessionCode:', currentSessionCode);
   if (currentSessionCode) {
     chatButton.style.display = 'flex';
     chatButton.classList.remove('hidden');
-    console.log('Chat button set to display: flex');
+    //////////////console.log('Chat button set to display: flex');
   } else {
     chatButton.style.display = 'none';
     chatButton.classList.add('hidden');
-    console.log('Chat button set to display: none');
+    //////////////console.log('Chat button set to display: none');
   }
 }
 
@@ -2432,7 +2492,7 @@ async function loadMoreArtistSongs() {
 /* =================== */
 /* WebSocket Handlers *//*
 socket.on('session-created', ({ code }) => {
-  console.log('Session created, code:', code);
+  //////////////console.log('Session created, code:', code);
    setSessionControlsDisabled(true);
   currentSessionCode = code;
   isHost = true;
@@ -2442,14 +2502,14 @@ socket.on('session-created', ({ code }) => {
   const listenOptions = document.getElementById('listen-options');
   if (listenOptions) {
     listenOptions.classList.add('hidden');
-    console.log('Listen options hidden in session-created');
+    //////////////console.log('Listen options hidden in session-created');
   }
   closeListenModal();
   const chatButton = document.getElementById('chat-open-btn');
   if (chatButton) {
     chatButton.style.display = 'flex';
     chatButton.classList.remove('hidden');
-    console.log('Chat button shown in session-created');
+    //////////////console.log('Chat button shown in session-created');
   } else {
     console.error('Chat button not found in session-created');
   }
@@ -2465,7 +2525,7 @@ socket.on('session-created', ({ code }) => {
 });
 */
 socket.on('session-created', ({ code }) => {
-  console.log('Session created, code:', code);
+  //////////////console.log('Session created, code:', code);
   setSessionControlsDisabled(false);
   currentSessionCode = code;
   isHost = true;
@@ -2478,7 +2538,7 @@ socket.on('session-created', ({ code }) => {
   const listenOptions = document.getElementById('listen-options');
   if (listenOptions) {
     listenOptions.classList.add('hidden');
-    console.log('Listen options hidden in session-created');
+    //////////////console.log('Listen options hidden in session-created');
   }
 
   closeListenModal();
@@ -2488,7 +2548,7 @@ socket.on('session-created', ({ code }) => {
   if (chatButton) {
     chatButton.classList.remove('hidden');
     chatButton.disabled = false;
-    console.log('Chat button shown in session-created');
+    //////////////console.log('Chat button shown in session-created');
   } else {
     console.error('Chat button not found in session-created');
   }
@@ -2519,7 +2579,7 @@ socket.on('session-created', ({ code }) => {
 });
 socket.on('connect', () => {
   mySocketId = socket.id;
-  console.log('My socket ID:', mySocketId);
+  //////////////console.log('My socket ID:', mySocketId);
 });
 
 socket.on('create-session', ({ name }, callback) => {
@@ -2545,7 +2605,7 @@ socket.on('transferHost', ({ room, newHost }) => {
 });
 /*
 socket.on('chat-message', ({ user, message, time }) => {
-  console.log("Server got chat:", user, message);
+  //////////////console.log("Server got chat:", user, message);
 
   // Re-broadcast with the correct user
   io.to(room).emit('chat-message', {
@@ -2587,7 +2647,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
 document.getElementById("chat-open-btn").style.display = "flex";
 });
 socket.on('session-joined', ({ code, isHost: host }) => {
-  console.log('Session joined, code:', code, 'isHost:', host);
+  //////////////console.log('Session joined, code:', code, 'isHost:', host);
   currentSessionCode = code;
   isHost = host;
   closeListenModal();
@@ -2597,7 +2657,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   if (chatButton) {
     chatButton.style.display = 'flex';
     chatButton.classList.remove('hidden');
-    console.log('Chat button shown in session-joined');
+    //////////////console.log('Chat button shown in session-joined');
   } else {
     console.error('Chat button not found in session-joined');
   }
@@ -2607,7 +2667,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   //rememberSession(sessionCode, false);
 });*/
 socket.on('session-joined', ({ code, isHost: host }) => {
-  console.log('Session joined, code:', code, 'isHost:', host);
+  //////////////console.log('Session joined, code:', code, 'isHost:', host);
   currentSessionCode = code;
   isHost = host;
   closeListenModal();
@@ -2617,7 +2677,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   const chatButton = document.getElementById('chat-open-btn');
   if (chatButton) {
     chatButton.classList.remove('hidden');  // ✅ only this line
-    console.log('Chat button shown in session-joined');
+    //////////////console.log('Chat button shown in session-joined');
   } else {
     console.error('Chat button not found in session-joined');
   }
@@ -2962,7 +3022,7 @@ function showJoinInput() {
 }
 
 function leaveSessionUIReset() {
-  console.log('Resetting session UI');
+  //////////////console.log('Resetting session UI');
   document.getElementById('session-code-display').classList.add('hidden');
   document.getElementById('participants-list').classList.add('hidden');
   document.getElementById('chat-container').classList.add('hidden');
