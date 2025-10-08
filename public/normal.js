@@ -615,7 +615,7 @@ previousView = {
 };
 
   try {
-    const url = `https://apivibron.vercel.app/api/playlists?id=${playlistId}&page=0&limit=10`;
+    const url = `https://apivibron.vercel.app/api/playlists?id=${playlistId}&page=0&limit=30`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Playlist fetch failed: ${response.statusText}`);
     const data = await response.json();
