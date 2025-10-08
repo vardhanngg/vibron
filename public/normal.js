@@ -2833,7 +2833,7 @@ window.addEventListener('load', () => {
     document.getElementById('session-code-input').value = code;
     joinSession();
   }
-  setGreeting();
+  //setGreeting();
   loadHomeContent();
   renderQueue();
 

@@ -639,7 +639,7 @@ body {
 .queue-holder {
   position: fixed;
   right: 1rem;
-  bottom: 100px;
+  bottom: 90px;
   width: 300px;
   max-width: 90vw;
   z-index: 999;
@@ -663,7 +663,7 @@ body {
   z-index: 1001;
 }
 .chat-open-btn {
-  margin-left: 10px;
+  margin-left: 50px;
   background: var(--accent-2);
    display: none;
 }
