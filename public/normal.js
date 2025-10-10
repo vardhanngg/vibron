@@ -443,7 +443,7 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
         return;
       }
     }
-
+/*
     if (!append && songs.length) {
       try {
         queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
@@ -455,7 +455,7 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
         return;
       }
     }
-
+*/
     try {
       songs.slice(0, visibleArtistSongCount).forEach(song => {
         const normalizedSong = normalizeSong(song);
@@ -589,9 +589,9 @@ if (songs.length > visibleAlbumSongCount) {
 }
 
 
-      queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
+     // queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
       ////////////////console.log('Album queue updated:', queue.map(q => q.id));
-      renderQueue();
+      //renderQueue();
     } else {
       resultsList.innerHTML = '<span>No songs found in this album.</span>';
     }
@@ -684,8 +684,8 @@ if (songs.length > visibleAlbumSongCount) {
 }
 
 
-    queue = songs.map(normalizeSong);
-    renderQueue();
+   // queue = songs.map(normalizeSong);
+   // renderQueue();
     markStateChanged();
     saveState();
   } catch (err) {
@@ -827,23 +827,25 @@ function loadSongWithoutPlaying(song) {
 
 function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = false) {
   if (!isHost && currentSessionCode) {
-     showNotification('Only the host can control playback.');
-    return; 
+    showNotification('Only the host can control playback.');
+    return;
   }
-  ////////////////console.log('playSong called:', song.id, song.title, { fromSearch, fromArtist, fromAlbum });
+
+  // --- Update song history ---
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
   if (currentSongIndex === -1) {
     songHistory.push({ ...song, lastPlayed: new Date().toISOString() });
     currentSongIndex = songHistory.length - 1;
   } else {
-    songHistory[currentSongIndex] = { ...songHistory[currentSongIndex], lastPlayed: new Date().toISOString() };
+    songHistory[currentSongIndex] = { 
+      ...songHistory[currentSongIndex], 
+      lastPlayed: new Date().toISOString() 
+    };
   }
 
-  ////////////////console.log('Setting audioPlayer.src:', song.audioUrl);
+  // --- Start playback ---
   audioPlayer.src = song.audioUrl;
-  audioPlayer
-    .play()
-    .catch(err => console.error('Playback error:', err));
+  audioPlayer.play().catch(err => console.error('Playback error:', err));
 
   albumArt.src = song.image || 'default.png';
   nowPlaying.textContent = song.title;
@@ -853,39 +855,44 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   isPlaying = true;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
   updateFavoriteButton();
+
+  // --- On song end, play next ---
   audioPlayer.onended = () => {
-  ////////////////console.log("✅ onended fired directly from playSong setup");
-  if (!currentSessionCode || isHost) {
-    playNext(true); // auto-advance only for solo OR host
-  }
-};
-
-
-  if (fromSearch) {
-    ////////////////console.log('Clearing queue for new search and adding song:', song.id);
-    queue = [];
-    addToQueue(song.id);
-    autoAddSimilar(song);
-  } else if (fromArtist || fromAlbum) {
-    ////////////////console.log('Preserving queue for artist/album:', queue.map(q => q.id));
-    if (!queue.some(q => q.id === song.id)) {
-      queue.unshift(song);
-      ////////////////console.log('Added current song to queue:', song.id);
-      renderQueue();
+    if (!currentSessionCode || isHost) {
+      playNext(true); // auto-advance only for solo OR host
     }
+  };
+
+  // --- 🔥 Ensure current song never stays in queue ---
+  queue = queue.filter(q => q.id !== song.id);
+  renderQueue();
+
+  // --- Handle where song came from ---
+  if (fromSearch) {
+    queue = []; // clear queue on new search
+    autoAddSimilar(song); // only add similar songs
+  } else if (fromArtist || fromAlbum) {
+    // Don’t add current song; only fill queue manually when user wants
+    autoAddSimilar(song);
   } else {
-    addToQueue(song.id);
+    // General playback: only add similar songs if queue is small
     if (queue.length < 5) autoAddSimilar(song);
   }
+
+  // --- 🔄 Sync playback for host sessions ---
   if (isHost && currentSessionCode) {
     socket.emit('playback-control', { action: 'play-song', song });
-    socket.emit('sync-state', { song, currentTime: audioPlayer.currentTime, isPlaying: true });
+    socket.emit('sync-state', { 
+      song, 
+      currentTime: audioPlayer.currentTime, 
+      isPlaying: true 
+    });
   }
 
-  ////////////////console.log('Final queue state:', queue.map(q => q.id));
   markStateChanged();
   saveState();
 }
+
 
 function playPause() {
   if (!isHost && currentSessionCode) {
@@ -1191,49 +1198,52 @@ function addToQueue(songId) {
 }
 
 async function autoAddSimilar(currentSong) {
-  ////////////////console.log('autoAddSimilar called for song:', currentSong.id, currentSong.title);
   try {
     const url = `https://apivibron.vercel.app/api/songs/${currentSong.id}/suggestions?limit=3`;
-    ////////////////console.log('Fetching suggestions:', url);
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) throw new Error(`Suggestions fetch failed: ${response.statusText}`);
 
     const data = await response.json();
-    const similarSongs = data.data || [];
-    //////////////console.log('Suggestions received:', similarSongs.length, similarSongs.map(s => s.id));
+    const similarSongs = Array.isArray(data.data) ? data.data : [];
 
-    if (!Array.isArray(similarSongs)) {
-      console.error('Invalid suggestions response:', data);
-      return;
-    }
+    let addedCount = 0;
 
-    similarSongs.forEach(similarSong => {
+    for (const similarSong of similarSongs) {
       const normalizedSong = normalizeSong(similarSong);
-      //////////////console.log('Adding to songHistory:', normalizedSong.id);
+
+      // Skip invalid or duplicate songs (including current)
+      if (
+        !normalizedSong ||
+        normalizedSong.id === currentSong.id ||
+        queue.some(q => q.id === normalizedSong.id) ||
+        (currentSong && normalizedSong.id === currentSong.id)
+      ) {
+        continue;
+      }
+
+      // Add to songHistory if not already there
       if (!songHistory.some(s => s.id === normalizedSong.id)) {
         songHistory.push(normalizedSong);
       }
-      //////////////console.log('Checking queue for:', normalizedSong.id);
-      if (!queue.some(q => q.id === normalizedSong.id) && normalizedSong.id !== currentSong.id) {
-        //////////////console.log('Adding to queue:', normalizedSong.id, normalizedSong.title);
-        queue.push(normalizedSong);
-      }
-    });
 
-    //////////////console.log('Queue after adding similar songs:', queue.map(q => q.id));
-    if (similarSongs.length > 0) {
-      showNotification(`Added ${similarSongs.length} similar songs to queue`);
+      // Add to end of queue
+      queue.push(normalizedSong);
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
       renderQueue();
       markStateChanged();
       saveState();
-    } else {
-      //////////////console.log('No similar songs to add');
+      showNotification(`Added ${addedCount} similar song${addedCount > 1 ? 's' : ''} to queue`);
     }
   } catch (err) {
     console.error('Error in autoAddSimilar:', err.message);
     showNotification('Failed to add similar songs.');
   }
 }
+
+
 
 function renderQueue() {
   if (queue.length === 0) {
