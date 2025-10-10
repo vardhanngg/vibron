@@ -1147,13 +1147,42 @@ function seek(event) {
     });
   }
 }
+function downloadCurrentSong() {
+  const currentSong = songHistory[currentSongIndex];
+  if (!currentSong || !currentSong.audioUrl) {
+    showNotification('No song is currently playing.');
+    return;
+  }
+
+  fetch(currentSong.audioUrl, { mode: 'cors' })
+    .then(response => {
+      if (!response.ok) throw new Error(`Failed to fetch song: ${response.statusText}`);
+      return response.blob();
+    })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${currentSong.title} - ${currentSong.artist}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showNotification(`Downloading ${currentSong.title}`);
+    })
+    .catch(err => {
+      console.error('Download error:', err);
+      showNotification('Download failed. Please try again.');
+    });
+}
 
 /* =================== */
 /* Queue Management */
 function addToQueue(songId) {
   const song = [...songHistory, ...queue].find(s => s.id === songId);
   if (song && !queue.some(q => q.id === songId)) {
-    queue.push(song);
+    //queue.push(song);
+    queue.unshift(song);
     renderQueue();
     markStateChanged();
     saveState();
