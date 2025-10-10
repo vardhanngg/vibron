@@ -770,6 +770,26 @@ body {
   transform: scale(1.1);
 }
 
+.queue-item .promote-btn,
+.queue-item .remove-btn {
+  background: var(--accent);
+  padding: 6px;
+  border-radius: 6px;
+  opacity: 1;
+  transition: all 0.2s ease;
+}
+
+.queue-item .promote-btn:hover {
+  background: #00d084; /* greenish for up arrow hover */
+  transform: scale(1.1);
+}
+
+.queue-item .remove-btn:hover {
+  background: #ff2a4a; /* red for delete hover */
+  transform: scale(1.1);
+}
+
+
 .auto-queue-hint {
   font-size: 0.75rem;
   color: var(--muted);
@@ -792,6 +812,29 @@ body {
 .empty-queue:hover {
   background: #ff2a4a;
   transform: scale(1.05);
+}
+
+.queue-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.queue-buttons button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-light, #fff);
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.queue-buttons button:hover {
+  color: #00d084;
+}
+
+.remove-btn:hover {
+  color: #ff4d4d;
 }
 
 #library-view {

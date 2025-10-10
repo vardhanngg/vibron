@@ -1255,16 +1255,30 @@ function renderQueue() {
     .map(
       (song, idx) => `
     <div class="queue-item">
-      <span onclick="playSong({id: '${encodeURIComponent(song.id)}', title: '${song.title.replace(/'/g, "\\'")}', artist: '${song.artist.replace(/'/g, "\\'")}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false)">
+      <span 
+        onclick="playSong(
+          {id: '${encodeURIComponent(song.id)}', title: '${song.title.replace(/'/g, "\\'")}', artist: '${song.artist.replace(/'/g, "\\'")}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, 
+          false
+        )">
         ${song.title} - ${song.artist}
       </span>
-      <button onclick="removeFromQueue(${idx})"><i class="fa-solid fa-trash"></i></button>
-      <button class="download-btn" onclick="downloadSong('${encodeURIComponent(song.id)}')"><i class="fa-solid fa-download"></i></button>
+      <div class="queue-buttons">
+        <button class="promote-btn" title="Move to Top" onclick="promoteSong(${idx})">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="download-btn" title="Download" onclick="downloadSong('${encodeURIComponent(song.id)}')">
+          <i class="fa-solid fa-download"></i>
+        </button>
+        <button class="remove-btn" title="Remove" onclick="removeFromQueue(${idx})">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
     </div>
   `
     )
     .join('');
 }
+
 
 function removeFromQueue(idx) {
   queue.splice(idx, 1);
@@ -1280,6 +1294,26 @@ function removeFromQueue(idx) {
     }
   }, 50);
 }
+
+function promoteSong(index) {
+  if (index <= 0 || index >= queue.length) return;
+
+  const [song] = queue.splice(index, 1);
+  queue.unshift(song);
+  renderQueue();
+  markStateChanged();
+  saveState();
+  //showNotification(`${song.title} moved to top of queue`);
+
+  // ✅ Keep queue open after promoting
+  const queueContainer = document.getElementById('queue-container');
+  setTimeout(() => {
+    if (queueContainer && !queueContainer.classList.contains('open')) {
+      queueContainer.classList.add('open');
+    }
+  }, 50);
+}
+
 
 
 function toggleQueue() {
