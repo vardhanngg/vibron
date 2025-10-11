@@ -175,7 +175,7 @@ async function fetchSongByMood() {
     mood = detectedMood;
   }
   if (!mood || !emotionMap[mood]) {
-    emotionDisplay.textContent = 'Please select a valid mood or wait for detection.';
+    emotionDisplay.textContent = 'Please select a valid mood';
     return;
   }
   const query = emotionMap[mood].replace('{lang}', language);
