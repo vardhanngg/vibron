@@ -1344,6 +1344,17 @@ leave-btn {
   transform: translateY(-50%) translateX(-100%);
   opacity: 0;
 }
+#emoji-btn {
+  font-size: 1.6rem;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+#emoji-btn:hover {
+  transform: scale(1.2);
+}
 
 #participants-ul, #participants-modal-ul {
   max-height: 150px;
@@ -1424,30 +1435,42 @@ leave-btn {
   font-size: 0.85rem;
   animation: fadeIn 0.3s ease-out;
 }
+#chat-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid #333;
+  background: #121212;
+  box-sizing: border-box;
+  width: 100%;
+}
 
 #chat-input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
-  color: var(--text);
-  border-radius: 10px;
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #1e1e1e;
+  color: #fff;
+  font-size: 14px;
   outline: none;
+  min-width: 0; /* prevents overflow that pushes send btn out */
 }
+
 
 #send-chat-btn {
-  background: var(--accent);
+  background: #28a745;
+  color: #fff;
   border: none;
-  color: white;
-  padding: 0.5rem;
-  border-radius: 10px;
+  border-radius: 8px;
+  padding: 8px 14px;
   cursor: pointer;
-  width: 100%;
-  margin-top: 0.5rem;
-}
+  font-weight: 600;
+} 
 
 #send-chat-btn:hover {
-  background: #ff2a4a;
+  background: #34c759;
 }
 
 .toggle-btn {

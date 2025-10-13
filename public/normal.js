@@ -3014,7 +3014,7 @@ document.getElementById('host-session-btn').addEventListener('click', hostSessio
   document.getElementById('play-pause-btn').addEventListener('click', playPause);
   document.getElementById('fav-btn').addEventListener('click', addToFavoritesFromPlayer);
   document.getElementById('loop-btn').addEventListener('click', toggleLoop);
-  document.getElementById('queue-open-btn').addEventListener('click', dropQueue);
+  //document.getElementById('queue-open-btn').addEventListener('click', dropQueue);
   document.getElementById('empty-queue').addEventListener('click', emptyQueue);
 
 if (moreBtn) {
@@ -3103,7 +3103,12 @@ function leaveSessionUIReset() {
   document.getElementById('listen-options').classList.remove('hidden');
   document.getElementById('join-input').classList.add('hidden');
   updateChatButtonVisibility();
-}/*
+}
+// === Emoji Picker Setup ===
+
+
+/*
+
 document.addEventListener('DOMContentLoaded', () => {
   const code = localStorage.getItem('sessionCode');
   const role = localStorage.getItem('sessionRole');
@@ -3155,7 +3160,7 @@ window.playNext = playNext;
 window.playPrevious = playPrevious;
 window.toggleLoop = toggleLoop;
 window.addToFavoritesFromPlayer = addToFavoritesFromPlayer;
-window.dropQueue = dropQueue;
+//window.dropQueue = dropQueue;
 window.emptyQueue = emptyQueue;
 window.loadFavorites = loadFavorites;
 window.loadPlaylists = loadPlaylists;
@@ -3181,3 +3186,52 @@ window.sendChatMessage = sendChatMessage;
 // Expose functions to global scope for inline HTML
 //window.loadFavorites = loadFavorites;/
 //window.loadPlaylists = loadPlaylists;
+// === Emoji Picker Setup ===
+// === Emoji Picker Setup (with console logs for debugging) ===
+// === Emoji Picker Setup (robust version with console logs) ===
+// === Emoji Picker Setup (with console logs for debugging) ===
+window.addEventListener("DOMContentLoaded", () => {
+  const emojiBtn = document.getElementById("emoji-btn");
+  const chatInput = document.getElementById("chat-input");
+
+  if (!emojiBtn || !chatInput) {
+    console.error("Emoji button or chat input not found!");
+    return;
+  }
+
+  // Initialize Emoji Picker (make sure EmojiButton is loaded and available)
+  const picker = new EmojiButton({
+    position: 'top-end',
+    theme: 'dark',
+    showPreview: false,
+    autoHide: false,
+  });
+
+  // Toggle emoji picker on emoji button click
+  emojiBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    picker.togglePicker(emojiBtn);
+  });
+
+  // When emoji selected, append to input and focus input
+  picker.on('emoji', (selection) => {
+    chatInput.value += selection.emoji;
+    chatInput.focus();
+  });
+
+  // Listen for Enter key on chat input to send message
+  chatInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      sendChatMessageWithName(message);
+    }
+  });
+});
+
+
+
+
+

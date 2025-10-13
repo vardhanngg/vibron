@@ -10,6 +10,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" onload="console.log('Font Awesome loaded')" onerror="console.error('Font Awesome failed to load')" />
   <link rel="manifest" href="/manifest.json" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
+<script type="module">
+  import { EmojiButton } from 'https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js';
+  window.EmojiButton = EmojiButton;
+</script>
+
 </head>
 <body>
   <header class="top-bar">
@@ -187,8 +192,13 @@
 
     </div>
     <div id="chat-messages"></div>
-    <input type="text" id="chat-input" placeholder="Type a message..." />
-    <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
+<div id="chat-controls">
+  <button id="emoji-btn" title="Add Emoji">😊</button>
+  <input type="text" id="chat-input" placeholder="Type a message..." />
+  <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
+</div>
+
+
     <button onclick="leaveSession()">Leave Session</button>
     <span id="chat-badge" class="hidden">0</span>
   </div>
