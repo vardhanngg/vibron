@@ -3403,6 +3403,19 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+  const chatMessages = document.getElementById("chat-messages");
+  if (chatMessages && !chatMessages.dataset.defaultMsgSet) {
+    const infoMsg = document.createElement("div");
+    infoMsg.className = "chat-system-message";
+    infoMsg.innerHTML = `
+      🕒 <b>Session Notice:</b> Chats and media here are <b>temporary</b> and visible only while this session is active.
+      Once you leave, the conversation will disappear.
+    `;
+    chatMessages.appendChild(infoMsg);
+    chatMessages.dataset.defaultMsgSet = "true";
+  }
+});
 
 
 
