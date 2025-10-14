@@ -2264,6 +2264,117 @@ function sendChatMessageWithName(message) {
   const input = document.getElementById('chat-input');
   if (input) input.value = '';
 }
+// =======================
+// =======================
+// 📎 Real Media Share Feature
+// =======================
+const mediaInput = document.getElementById('media-input');
+const chatMessages = document.getElementById('chat-messages');
+const UPLOAD_URL = 'https://vibron-sockets.onrender.com/upload'; // Backend upload URL
+
+// Maximum file size (10MB in this case)
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+
+mediaInput.addEventListener('change', handleMediaUpload);
+
+// Handle media upload when a file is selected
+async function handleMediaUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Check file size before uploading
+  if (file.size > MAX_FILE_SIZE) {
+    showNotification('File is too large. Max size is 10MB.');
+    return;
+  }
+
+  // Prepare the form data including user's display name
+  const formData = new FormData();
+  formData.append("media", file);
+  formData.append("name", userName);  // Pass the user's display name here
+
+  try {
+    // Upload the file to the backend
+    const res = await fetch(UPLOAD_URL, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    const data = await res.json();
+
+    if (!data.fileUrl) {
+      showNotification('Upload failed.');
+      return;
+    }
+
+    // Display the media locally in the chat for the sender (not broadcasted yet)
+    displayMediaMessage(userName || 'You', data.fileUrl, data.fileType, true);
+
+    // Emit the media share to other users in the session (excluding the sender)
+    if (currentSessionCode && socket) {
+      socket.emit('media-share', {
+        code: currentSessionCode,
+        fileUrl: data.fileUrl,
+        fileType: data.fileType,
+        user: userName || 'Guest',
+      });
+    }
+  } catch (err) {
+    console.error('Upload failed:', err);
+    showNotification('Upload failed.');
+  }
+
+  // Reset the file input after upload
+  event.target.value = '';
+}
+
+// Receive shared media from others in the session
+socket.on('media-share', ({ user, fileUrl, fileType }) => {
+  // If the sender is not the current user, display the media
+  if (user !== userName) {
+    displayMediaMessage(user, fileUrl, fileType, false);  // Don't mark as sender
+  }
+});
+
+// Helper to display media messages in the chat
+function displayMediaMessage(user, fileUrl, fileType, isSender) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'chat-message media-message';
+  
+  let mediaHTML = '';
+
+  // Render different types of media based on the file type
+  if (fileType.startsWith('image/')) {
+    mediaHTML = `<img src="${fileUrl}" alt="shared image" class="chat-media" />`;
+  } else if (fileType.startsWith('audio/')) {
+    mediaHTML = `<audio controls src="${fileUrl}" class="chat-media"></audio>`;
+  } else if (fileType.startsWith('video/')) {
+    mediaHTML = `<video controls src="${fileUrl}" class="chat-media"></video>`;
+  } else if (fileType.startsWith('application/pdf')) {
+    mediaHTML = `<a href="${fileUrl}" target="_blank" class="chat-media-link">View PDF</a>`;
+  } else if (fileType.startsWith('application/msword') || fileType.startsWith('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+    mediaHTML = `<a href="${fileUrl}" target="_blank" class="chat-media-link">Download Word File</a>`;
+  } else {
+    mediaHTML = `<a href="${fileUrl}" target="_blank" class="chat-media-link">Download File</a>`;
+  }
+
+  // Always append the media to the chat, regardless of whether the sender or others
+  wrapper.innerHTML = `<strong>${user}:</strong> ${mediaHTML}`;
+  chatMessages.appendChild(wrapper);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Helper function to show notifications
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'notification';
+  notification.innerText = message;
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+
 
 // single receiver — keep only one listener
 //socket.off('chat-message'); // remove any accidental duplicates if using hot reload

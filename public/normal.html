@@ -194,9 +194,15 @@
     <div id="chat-messages"></div>
 <div id="chat-controls">
   <button id="emoji-btn" title="Add Emoji">😊</button>
+
+  <!-- 📎 Media Upload -->
+  <label for="media-input" id="media-label" title="Attach media">📎</label>
+<input type="file" id="media-input" accept="image/*,video/*" hidden />
+
   <input type="text" id="chat-input" placeholder="Type a message..." />
   <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
 </div>
+
 
 
     <button onclick="leaveSession()">Leave Session</button>

@@ -1458,6 +1458,26 @@ leave-btn {
   min-width: 0; /* prevents overflow that pushes send btn out */
 }
 
+.chat-media {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+
+.media-message {
+  margin-bottom: 10px;
+}
+
+#media-label {
+  cursor: pointer;
+  font-size: 1.2rem;
+  margin-right: 8px;
+}
+
+.chat-media-link {
+  color: #4da3ff;
+  text-decoration: none;
+}
 
 #send-chat-btn {
   background: #28a745;
