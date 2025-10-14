@@ -2362,7 +2362,68 @@ function displayMediaMessage(user, fileUrl, fileType, isSender) {
   wrapper.innerHTML = `<strong>${user}:</strong> ${mediaHTML}`;
   chatMessages.appendChild(wrapper);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  // Disable right-click (context menu) and left-click (default action) on the media elements
+  const mediaElement = wrapper.querySelector('.chat-media');
+  if (mediaElement) {
+    // Disable right-click
+    mediaElement.addEventListener('contextmenu', (event) => {
+      event.preventDefault(); // Prevent right-click menu
+      showNotification('Right-click is disabled on media.');
+    });
+
+    // Disable left-click (e.g., opening an image)
+    mediaElement.addEventListener('click', (event) => {
+      event.preventDefault(); // Prevent left-click behavior
+      showNotification('Left-click is disabled on media.');
+    });
+
+    // Disable dragging on the media
+    mediaElement.setAttribute('draggable', 'false');
+    mediaElement.addEventListener('dragstart', (event) => {
+      event.preventDefault(); // Prevent dragging behavior
+      showNotification('Dragging media is disabled.');
+    });
+    mediaElement.addEventListener('drag', (event) => {
+      event.preventDefault(); // Prevent dragging behavior
+    });
+    mediaElement.addEventListener('dragend', (event) => {
+      event.preventDefault(); // Prevent dragging behavior
+    });
+  }
+
+  // Disable right-click and left-click on the download/view links
+  const mediaLink = wrapper.querySelector('.chat-media-link');
+  if (mediaLink) {
+    // Disable right-click on the download link
+    mediaLink.addEventListener('contextmenu', (event) => {
+      event.preventDefault(); // Prevent right-click menu
+      showNotification('Right-click is disabled on download links.');
+    });
+
+    // Disable left-click (e.g., opening a file in a new tab)
+    mediaLink.addEventListener('click', (event) => {
+      event.preventDefault(); // Prevent left-click behavior
+      showNotification('Left-click is disabled on download links.');
+    });
+
+    // Disable dragging on the media link
+    mediaLink.setAttribute('draggable', 'false');
+    mediaLink.addEventListener('dragstart', (event) => {
+      event.preventDefault(); // Prevent dragging behavior
+      showNotification('Dragging links is disabled.');
+    });
+    mediaLink.addEventListener('drag', (event) => {
+      event.preventDefault(); // Prevent dragging behavior
+    });
+    mediaLink.addEventListener('dragend', (event) => {
+      event.preventDefault(); // Prevent dragging behavior
+    });
+  }
 }
+
+
+
 
 // Helper function to show notifications
 function showNotification(message) {
