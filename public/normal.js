@@ -2369,20 +2369,20 @@ function displayMediaMessage(user, fileUrl, fileType, isSender) {
     // Disable right-click
     mediaElement.addEventListener('contextmenu', (event) => {
       event.preventDefault(); // Prevent right-click menu
-      showNotification('Right-click is disabled on media.');
+      //showNotification('Right-click is disabled on media.');
     });
 
     // Disable left-click (e.g., opening an image)
     mediaElement.addEventListener('click', (event) => {
       event.preventDefault(); // Prevent left-click behavior
-      showNotification('Left-click is disabled on media.');
+     // showNotification('Left-click is disabled on media.');
     });
 
     // Disable dragging on the media
     mediaElement.setAttribute('draggable', 'false');
     mediaElement.addEventListener('dragstart', (event) => {
       event.preventDefault(); // Prevent dragging behavior
-      showNotification('Dragging media is disabled.');
+      //showNotification('Dragging media is disabled.');
     });
     mediaElement.addEventListener('drag', (event) => {
       event.preventDefault(); // Prevent dragging behavior
@@ -2398,20 +2398,20 @@ function displayMediaMessage(user, fileUrl, fileType, isSender) {
     // Disable right-click on the download link
     mediaLink.addEventListener('contextmenu', (event) => {
       event.preventDefault(); // Prevent right-click menu
-      showNotification('Right-click is disabled on download links.');
+     // showNotification('Right-click is disabled on download links.');
     });
 
     // Disable left-click (e.g., opening a file in a new tab)
     mediaLink.addEventListener('click', (event) => {
       event.preventDefault(); // Prevent left-click behavior
-      showNotification('Left-click is disabled on download links.');
+     // showNotification('Left-click is disabled on download links.');
     });
 
     // Disable dragging on the media link
     mediaLink.setAttribute('draggable', 'false');
     mediaLink.addEventListener('dragstart', (event) => {
       event.preventDefault(); // Prevent dragging behavior
-      showNotification('Dragging links is disabled.');
+      //showNotification('Dragging links is disabled.');
     });
     mediaLink.addEventListener('drag', (event) => {
       event.preventDefault(); // Prevent dragging behavior
