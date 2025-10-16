@@ -3416,7 +3416,24 @@ document.addEventListener("DOMContentLoaded", () => {
     chatMessages.dataset.defaultMsgSet = "true";
   }
 });
+async function loadFunFact() {
+  const factContainer = document.getElementById('fact-text');
+  factContainer.textContent = 'Loading fun fact...';
 
+  try {
+    const response = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en', {
+      headers: { Accept: 'application/json' }
+    });
+    const data = await response.json();
 
+    factContainer.textContent = data.text;
+  } catch (error) {
+    console.error('Error loading fun fact:', error);
+    factContainer.textContent = 'Could not load a fun fact right now. Please try again later.';
+  }
+}
 
+document.getElementById('change-fact-btn').addEventListener('click', loadFunFact);
 
+// Load fact on page load
+window.addEventListener('DOMContentLoaded', loadFunFact);

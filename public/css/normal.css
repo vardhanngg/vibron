@@ -1102,7 +1102,26 @@ body {
 #transfer-host-btn {
   position: relative;
   z-index: 20;
-}*/
+}
+#fun-fact {
+  padding: 1rem;
+  background-color: #222;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+  color: #eee;
+}
+#fun-fact h3 {
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+#fact-content p {
+  margin: 0;
+}
+*/
+#fun-fact h3 {
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
 #transfer-modal {
   position: fixed;
   top: 50%;
