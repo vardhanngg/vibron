@@ -78,6 +78,25 @@ let useTinyFace = true;
 let modelsLoaded = false;
 let currentEmotion = null;
 
+
+function loadFunFact() {
+  const factContainer = document.getElementById('fact-text');
+  if (!factContainer) return;
+  factContainer.textContent = 'Loading fun fact...';
+
+  fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en', {
+    headers: { Accept: 'application/json' }
+  })
+    .then(response => response.json())
+    .then(data => {
+      factContainer.textContent = data.text;
+    })
+    .catch(error => {
+      console.error('Error loading fun fact:', error);
+      factContainer.textContent = 'Could not load a fun fact right now. Please try again later.';
+    });
+}
+
 async function detectOnce() {
   if (!modelsLoaded || !video.srcObject) return false;
   try {
@@ -147,7 +166,15 @@ async function startAll() {
     video.srcObject = stream;
     await new Promise((r) => (video.onloadedmetadata = r));
     await video.play();
-    emotionDisplay.textContent = "Detecting emotion...";
+
+// Hide fun fact once camera starts
+const funFactBox = document.getElementById('fun-fact');
+if (funFactBox) {
+  funFactBox.style.display = 'none';
+}
+
+emotionDisplay.textContent = "Detecting emotion...";
+
     testMoodSelect.value = 'auto';
     isCameraDetection = true;
     const emotion = await detectOnce();
@@ -272,3 +299,19 @@ musicPlayer.addEventListener('play', () => {
   //updateBackground(mood);
 });
 
+document.addEventListener('DOMContentLoaded', () => {
+  // Attach fun fact button handler
+  const changeFactBtn = document.getElementById('change-fact-btn');
+  if (changeFactBtn) {
+    changeFactBtn.addEventListener('click', loadFunFact);
+  }
+
+  // Load a fact immediately
+  loadFunFact();
+
+  // Initially show fun fact until camera starts
+  const funFactBox = document.getElementById('fun-fact');
+  if (funFactBox) {
+    funFactBox.style.display = 'flex';
+  }
+});
