@@ -147,10 +147,13 @@ async function detectOnce() {
 }
 
 async function startAll() {
+  const funFactBox = document.getElementById('fun-fact'); // ✅ Declare once
+
   try {
     emotionDisplay.textContent = "Loading models...";
     await faceapi.tf.setBackend("cpu");
     await faceapi.tf.ready();
+
     try {
       await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
       useTinyFace = true;
@@ -159,24 +162,29 @@ async function startAll() {
       await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
       useTinyFace = false;
     }
+
     await faceapi.nets.faceExpressionNet.loadFromUri("/models");
     modelsLoaded = true;
+
     emotionDisplay.textContent = "Requesting camera...";
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false
+    });
+
     video.srcObject = stream;
     await new Promise((r) => (video.onloadedmetadata = r));
     await video.play();
 
-// Hide fun fact once camera starts
-const funFactBox = document.getElementById('fun-fact');
-if (funFactBox) {
-  funFactBox.style.display = 'none';
-}
+    // ✅ Hide fun fact during camera detection
+    if (funFactBox) {
+      funFactBox.style.display = 'none';
+    }
 
-emotionDisplay.textContent = "Detecting emotion...";
-
+    emotionDisplay.textContent = "Detecting emotion...";
     testMoodSelect.value = 'auto';
     isCameraDetection = true;
+
     const emotion = await detectOnce();
     if (emotion) {
       captureFrame(video);
@@ -187,13 +195,27 @@ emotionDisplay.textContent = "Detecting emotion...";
     } else {
       emotionDisplay.textContent = "Failed to detect emotion. Use Test Mood to play music.";
     }
+
+    // ✅ Stop camera
     video.srcObject.getTracks().forEach(track => track.stop());
     video.srcObject = null;
+
+    // ✅ Show fun fact again after camera stops
+    if (funFactBox) {
+      funFactBox.style.display = 'flex';
+    }
+
   } catch (err) {
     console.error("Init error:", err);
     emotionDisplay.textContent = "Camera or models failed. Use Test Mood to play music.";
+
+    // ✅ Show fun fact if camera fails too
+    if (funFactBox) {
+      funFactBox.style.display = 'flex';
+    }
   }
 }
+
 
 async function fetchSongByMood() {
   let mood = testMoodSelect.value;
