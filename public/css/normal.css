@@ -613,6 +613,7 @@ body {
 #volume-slider {
   width: 80px;
   -webkit-appearance: none;
+  appearance: none;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
   height: 6px;
