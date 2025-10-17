@@ -677,25 +677,20 @@ body {
 }
 
 .queue-container {
-  display: none; /* Controlled by JS or media query */
+  display: none;
   flex-direction: column;
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  border-radius: 2vw; /* Responsive rounded corners */
-  padding: 4vw; /* Responsive padding */
+  border-radius: 15px;
+  padding: 1rem;
   box-shadow: var(--shadow-light);
-
-  width: 90%;             /* Relative width */
-  max-width: 500px;       /* Optional: prevent it from becoming too wide on large screens */
-  max-height: 60vh;       /* Relative to screen height */
+  max-height: 400px;
   overflow: hidden;
-
   transition: all 0.3s ease;
   opacity: 0;
-  transform: translateY(2vh) scale(0.95); /* Responsive transform */
-  margin: 0 auto;          /* Center horizontally */
+  transform: translateY(10px) scale(0.95);
 }
 
 
