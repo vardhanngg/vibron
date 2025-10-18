@@ -1317,10 +1317,41 @@ function promoteSong(index) {
 
 
 function toggleQueue() {
-  // close chat if open
-  document.getElementById('chat-container').classList.remove('open');
+  const queueContainer = document.getElementById('queue-container');
+  const chatContainer = document.getElementById('chat-container');
+
+  if (!queueContainer) {
+    console.error("Queue container not found");
+    return;
+  }
+
+  // ✅ Close chat if open
+  if (chatContainer && !chatContainer.classList.contains('hidden')) {
+    chatContainer.classList.add('hidden');
+  }
+
+  // ✅ Toggle queue visibility
   queueContainer.classList.toggle('open');
 }
+
+function toggleChat() {
+  const chatContainer = document.getElementById('chat-container');
+  const queueContainer = document.getElementById('queue-container');
+
+  if (!chatContainer) {
+    console.error("Chat container not found");
+    return;
+  }
+
+  // ✅ Close queue if open
+  if (queueContainer && queueContainer.classList.contains('open')) {
+    queueContainer.classList.remove('open');
+  }
+
+  // ✅ Toggle chat visibility
+  chatContainer.classList.toggle('hidden');
+}
+
 /*function toggleChat() {
   // close queue if open
   queueContainer.classList.remove('open');
