@@ -1,7 +1,11 @@
 import express from 'express';
 import path from 'path';
+import { inject } from '@vercel/analytics';
 
 const app = express();
+
+// Initialize Vercel Analytics
+inject();
 const PORT = process.env.PORT || 3000;
 
 // Parse JSON for APIs
