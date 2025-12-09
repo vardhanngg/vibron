@@ -5,26 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vibron - Mood Player</title>
   <link rel="icon" type="image/x-icon" href="/v.ico" />
-  <!-- Correct CSS path -->
   <link rel="stylesheet" href="/css/mood.css" />
+
+  <!-- RIGHT SIDE AD CSS -->
+  <style>
+    #side-ad {
+      position: fixed;
+      right: 20px;
+      top: 150px;
+      width: 260px;
+      background: rgba(24, 25, 32, 0.85);
+      border: 1px solid #2a2a35;
+      border-radius: 18px;
+      padding: 14px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+    }
+
+    /* Hide ad on small screens */
+    @media (max-width: 1024px) {
+      #side-ad {
+        display: none;
+      }
+    }
+  </style>
+
 </head>
-<body> 
-  <!-- Top bar with branding and switch button -->
-  <!-- Floating Right Ad (Desktop Only) -->
-<div id="side-ad"
-     class="hidden lg:block fixed right-8 top-40 w-72 bg-[#181920]/85 backdrop-blur-xl border border-[#2a2a35] rounded-3xl shadow-2xl p-4 text-center z-50">
+<body>
 
-  <span class="text-sm text-pink-400 mb-3 block tracking-wide">Related</span>
+  <!-- RIGHT FLOATING AD (DESKTOP ONLY) -->
+  <div id="side-ad">
+    <span style="color:#ff77c7; font-size:13px; font-weight:500; display:block; margin-bottom:8px;">
+      Related
+    </span>
 
-  <div class="rounded-xl overflow-hidden">
-    <script async data-cfasync="false"
-      src="//pl28221067.effectivegatecpm.com/8a4266c3a517c03606a83bf1626b757c/invoke.js">
-    </script>
-    <div id="container-8a4266c3a517c03606a83bf1626b757c"></div>
+    <div style="border-radius:12px; overflow:hidden;">
+      <script async data-cfasync="false"
+        src="//pl28221067.effectivegatecpm.com/8a4266c3a517c03606a83bf1626b757c/invoke.js">
+      </script>
+      <div id="container-8a4266c3a517c03606a83bf1626b757c"></div>
+    </div>
   </div>
 
-</div>
-
+  <!-- Top bar -->
   <header class="top-bar">
     <div class="branding">
       <img src="/v.ico" alt="Vibron Logo" class="logo" />
@@ -40,21 +65,29 @@
     <button class="primary" id="startBtn">Use Camera</button>
 
     <div class="stage" style="position: relative;">
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="overlay"></canvas>
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
 
-  <!-- Fun Fact Placeholder -->
-<div id="fun-fact" class="fun-fact-placeholder" style="display: flex; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  justify-content: center; align-items: center; flex-direction: column; color: white; text-align: center; padding: 1rem; pointer-events: none; z-index: 1;">
-  <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Did You Know?</h3>
-  <p id="fact-text" style="font-style: italic; font-size: 1.1rem; margin: 0.5rem 0;">Loading fun fact...</p>
-  <button id="change-fact-btn" style="padding: 6px 12px; background: rgba(255,255,255,0.1); border: 1px solid #ccc; color: #fff; cursor: pointer; border-radius: 4px; pointer-events: auto;">
-    Change Fact
-  </button>
-</div>
+      <!-- Fun Fact Overlay -->
+      <div id="fun-fact" class="fun-fact-placeholder" 
+        style="display: flex; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        justify-content: center; align-items: center; flex-direction: column; color: white;
+        text-align: center; padding: 1rem; pointer-events: none; z-index: 1;">
+        
+        <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Did You Know?</h3>
+        <p id="fact-text" style="font-style: italic; font-size: 1.1rem; margin: 0.5rem 0;">
+          Loading fun fact...
+        </p>
 
-</div>
+        <button id="change-fact-btn"
+          style="padding: 6px 12px; background: rgba(255,255,255,0.1);
+          border: 1px solid #ccc; color: #fff; cursor: pointer;
+          border-radius: 4px; pointer-events: auto;">
+          Change Fact
+        </button>
+      </div>
 
+    </div>
 
     <div class="emotion-display" id="emotion-display"></div>
 
@@ -98,12 +131,13 @@
     </div>
   </div>
 
-  <!-- TensorFlow.js v1.7.4 for face-api.js -->
+  <!-- TensorFlow.js -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
-  <!-- Correct JS paths -->
+  <!-- Scripts -->
   <script src="/mood.js"></script>
   <script src="/shared.js"></script>
+
 </body>
 </html>
