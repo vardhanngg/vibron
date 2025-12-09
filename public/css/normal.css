@@ -1895,3 +1895,14 @@ leave-btn {
 .queue-container.open + .right-ad-normal {
   top: 590px !important;
 }
+/* Make the ad stay BEHIND queue but below chat */
+.right-ad-normal {
+  z-index: 300 !important;
+}
+
+/* Queue must be above ad */
+.queue-holder,
+.queue-open-btn,
+.queue-container {
+  z-index: 999 !important;
+}
