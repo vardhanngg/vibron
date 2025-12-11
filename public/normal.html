@@ -5,32 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Vibron - Discover music that matches your mood. Share, and vibe ,Listen together." />
   <meta name="keywords" content="music, mood, ai, playlist, vibron, emotion songs, vibe music" />
- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9150365943921533"
+
+  <!-- AdSense (inactive but safe to keep) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9150365943921533"
      crossorigin="anonymous"></script>
 
   <script defer data-domain="vibron.vercel.app" src="https://plausible.io/js/script.js"></script>
+
   <title>Vibron - Normal Mode</title>
   <link rel="icon" type="image/x-icon" href="/v.ico" />
   <link rel="stylesheet" href="css/normal.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" onload="console.log('Font Awesome loaded')" onerror="console.error('Font Awesome failed to load')" />
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+    onload="console.log('Font Awesome loaded')"
+    onerror="console.error('Font Awesome failed to load')" />
   <link rel="manifest" href="/manifest.json" />
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
-<script type="module">
-  import { EmojiButton } from 'https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js';
-  window.EmojiButton = EmojiButton;
-</script>
+
+  <script type="module">
+    import { EmojiButton } from 'https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js';
+    window.EmojiButton = EmojiButton;
+  </script>
+
+  <style>
+    /* Keep your right-ad box styling but remove inner native banner */
+    .right-ad-normal {
+      position: fixed;
+      right: 20px;
+      top: 150px;
+      width: 260px;
+      background: rgba(24, 25, 32, 0.85);
+      border: 1px solid #2a2a35;
+      border-radius: 18px;
+      padding: 14px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+    }
+    .right-ad-title {
+      color: #ff77c7;
+      font-size: 13px;
+      font-weight: 500;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .right-ad-box { border-radius: 12px; overflow: hidden; }
+
+    @media (max-width: 1024px) {
+      .right-ad-normal { display: none; }
+    }
+  </style>
 
 </head>
 <body>
+
   <header class="top-bar">
     <a href="#" class="branding" onclick="event.preventDefault(); loadHomeContent();" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
       <img src="/v.ico" alt="Vibron Logo" class="logo" />
       <span class="brand-name">Vibron</span>
     </a>
+
     <button id="sidebar-toggle" class="sidebar-toggle">
       <i class="fa-solid fa-bars"></i>
-      <!-- <span class="fallback-text">Menu</span> -->
     </button>
+
     <a href="mood.html" class="switch-btn">Switch to Mood Player</a>
   </header>
 
@@ -44,10 +84,6 @@
   </nav>
 
   <main>
-    <!--header class="glass-header">
-      <h1 id="greeting">Good afternoon</h1>
-      <p class="subtitle">Search, stream, and enjoy your music</p>
-    </header-->
 
     <div class="search-container">
       <input type="text" id="searchInput" placeholder="Search for songs, artists, or albums..." />
@@ -55,17 +91,19 @@
     </div>
 
     <div class="listen-wrapper">
+
       <button id="listen-together-btn" class="listen-btn">
         <i class="fas fa-users"></i> Listen Together
       </button>
-      <button id="transfer-host-btn"
-        class="listen-btn hidden"
-        onclick="showTransferModal()">Transfer Host</button>
+
+      <button id="transfer-host-btn" class="listen-btn hidden" onclick="showTransferModal()">
+        Transfer Host
+      </button>
 
       <div id="session-code-display" class="session-code hidden">
-  <p>Share this code: <span id="session-code"></span></p>
-  <button class="modal-btn leave-btn hidden" onclick="leaveSession()">Leave Session</button>
-</div>
+        <p>Share this code: <span id="session-code"></span></p>
+        <button class="modal-btn leave-btn hidden" onclick="leaveSession()">Leave Session</button>
+      </div>
 
       <div id="participants-list" class="participants-container hidden">
         <div class="toggle-header">
@@ -76,108 +114,90 @@
         </div>
         <ul id="participants-ul"></ul>
       </div>
+
       <div id="listen-together-modal" class="modal-content listen-modal hidden">
         <span class="close" onclick="closeListenModal()">×</span>
+
         <h2>Listen Together</h2>
+
         <div id="listen-options" class="modal-options">
-         <!--<button id="host-session-btn" class="modal-btn host-btn" onclick="hostSession()">Host a Session</button>
-        -->
-        <button id="host-session-btn" class="modal-btn host-btn">Host a Session</button> 
-        <button id="join-session-btn" class="modal-btn join-btn" onclick="showJoinInput()">Join a Session</button>
+          <button id="host-session-btn" class="modal-btn host-btn">Host a Session</button>
+          <button id="join-session-btn" class="modal-btn join-btn" onclick="showJoinInput()">Join a Session</button>
           <button class="modal-btn cancel-btn" onclick="closeListenModal()">Cancel</button>
         </div>
-        <div id="name-input-modal" class="modal-content hidden">
-  <span class="close" onclick="closeNameModal()">×</span>
-  <h3>Enter your Name</h3>
-  <input type="text" id="user-name-input" placeholder="Your name..." />
-  <!--<button class="modal-btn" onclick="saveUserName()">OK</button>-->
-  <button class="modal-btn" id="save-username-btn" onclick="saveUserName()">OK</button>
 
-</div>
+        <div id="name-input-modal" class="modal-content hidden">
+          <span class="close" onclick="closeNameModal()">×</span>
+          <h3>Enter your Name</h3>
+          <input type="text" id="user-name-input" placeholder="Your name..." />
+          <button class="modal-btn" id="save-username-btn" onclick="saveUserName()">OK</button>
+        </div>
 
         <div id="join-input" class="modal-input hidden">
           <input type="text" id="session-code-input" placeholder="Enter 6-char code" maxlength="6" />
           <div class="modal-buttons">
-            <!--<button class="modal-btn join-btn" onclick="joinSession()">Join</button>-->
             <button class="modal-btn join-btn" id="join-session-btn" onclick="joinSession()">Join</button>
             <button class="modal-btn cancel-btn" onclick="closeListenModal()">Cancel</button>
           </div>
         </div>
+
         <div id="participants-modal" class="modal-participants hidden">
           <h3>Participants</h3>
           <ul id="participants-modal-ul"></ul>
-         <!--  <button class="modal-btn leave-btn" onclick="leaveSession()">Leave Session</button>-->
           <button class="modal-btn leave-btn hidden" onclick="leaveSession()">Leave Session</button>
-<!-- repeat for the second leave button -->
-
         </div>
       </div>
+
     </div>
-<!--<div id="transfer-modal" class="modal-content hidden">
-  <span class="close" onclick="closeTransferModal()">×</span>
-  <h3>Transfer Host To:</h3>
-  <ul id="transfer-list"></ul>
-</div>
--->
+
     <div id="home-content" class="home-content">
-      <section id="listen-again" class="home-section">
-        <!--h3>Listen Again</h3>
-        <div class="section-list"></div>
-      </section>
-      <section id="trending" class="home-section">
-        <div class="section-list"></div>
-      </section>
-      <section id="top-charts" class="home-section">
-        <div class="section-list"></div>
-      </section>
-      <section id="new-releases" class="home-section">
-        <div class="section-list"></div>
-      </section-->
+
 <section id="fun-fact" class="home-section" style="margin: 1rem 0;">
   <h3 style="color: #eee; font-weight: 600;">Did You Know?</h3>
-  <p id="fact-text" style="color: #ccc; font-style: italic; font-size: 1.1rem; margin-top: 0.3rem;">
+  <p id="fact-text"
+     style="color: #ccc; font-style: italic; font-size: 1.1rem; margin-top: 0.3rem;">
     Loading fun fact...
   </p>
-  <button id="change-fact-btn" style="margin-top: 0.5rem; padding: 6px 12px; background: none; border: 1px solid #ccc; color: #ccc; cursor: pointer; border-radius: 4px;">
+  <button id="change-fact-btn"
+     style="margin-top: 0.5rem; padding: 6px 12px; background: none; border: 1px solid #ccc; color: #ccc; cursor: pointer; border-radius: 4px;">
     Change Fact
   </button>
 </section>
 
-
     </div>
 
     <div id="library-view" class="hidden"></div>
-    <div id="song-list" class="song-list hidden">
-  <!--button id="more" class="load-more-btn hidden">Load More</button-->
-</div>
-    <!-- Floating Right Ad (Desktop Only) -->
-<div id="right-ad-normal" class="right-ad-normal hidden-mobile">
-  <span class="right-ad-title">Related</span>
 
-  <div class="right-ad-box">
-    <script async data-cfasync="false"
-      src="//pl28221067.effectivegatecpm.com/9d85b14e4b95d81cf405dd0b3d1b2345/invoke.js"></script>
-    <div id="container-9d85b14e4b95d81cf405dd0b3d1b2345"></div>
-  </div>
-</div>
+    <div id="song-list" class="song-list hidden"></div>
+
+    <!-- Floating Right Ad (DESKTOP) — Now EMPTY but kept for design -->
+    <div id="right-ad-normal" class="right-ad-normal hidden-mobile">
+      <span class="right-ad-title">Related</span>
+      <div class="right-ad-box">
+        <!-- Removed native banner; Social Bar will float globally -->
+      </div>
+    </div>
 
   </main>
 
-<div class="queue-holder">
-  <button id="queue-open-btn" class="queue-open-btn q-open-btn" onclick="toggleQueue()">Q</button>
-  <button id="chat-open-btn" class="queue-open-btn chat-open-btn" onclick="toggleChat()">💬</button>
-  <div class="queue-container" id="queue-container">
+  <div class="queue-holder">
+    <button id="queue-open-btn" class="queue-open-btn q-open-btn" onclick="toggleQueue()">Q</button>
+    <button id="chat-open-btn" class="queue-open-btn chat-open-btn" onclick="toggleChat()">💬</button>
 
+    <div class="queue-container" id="queue-container">
       <div class="queue-header-holder">
         <h3 class="queue-title">Queue</h3>
         <button class="player-play-btn" onclick="playNext()"><i class="fa-solid fa-forward"></i> Next</button>
       </div>
+
       <div id="queue-list" class="queue-list">
         <span>No songs in queue</span>
       </div>
+
       <button class="empty-queue" onclick="emptyQueue()">Empty Queue</button>
       <div class="auto-queue-hint">Auto-adding similar songs...</div>
     </div>
+
   </div>
 
   <footer id="player-bar">
@@ -188,56 +208,64 @@
         <div id="artist-name">---</div>
       </div>
     </div>
-    <div class="player-controls">
-      <button id="prev-btn" onclick="playPrevious()" title="Previous"><i class="fa-solid fa-backward"></i></button>
-      <button id="play-pause-btn" onclick="playPause()" title="Play/Pause"><i class="fa-solid fa-play"></i></button>
-      <button id="next-btn" onclick="playNext()" title="Next"><i class="fa-solid fa-forward"></i></button>
-      <button id="fav-btn" onclick="addToFavoritesFromPlayer()" title="Add to Favorites"><i class="fa-regular fa-heart"></i></button>
-      <button id="loop-btn" onclick="toggleLoop()" title="Toggle Loop"><i class="fa-solid fa-repeat"></i></button>
-      <button id="download-btn" onclick="downloadCurrentSong()" title="Download Current Song">
-  <i class="fa-solid fa-download"></i>
-</button>
 
+    <div class="player-controls">
+      <button id="prev-btn" onclick="playPrevious()"><i class="fa-solid fa-backward"></i></button>
+      <button id="play-pause-btn" onclick="playPause()"><i class="fa-solid fa-play"></i></button>
+      <button id="next-btn" onclick="playNext()"><i class="fa-solid fa-forward"></i></button>
+      <button id="fav-btn" onclick="addToFavoritesFromPlayer()"><i class="fa-regular fa-heart"></i></button>
+      <button id="loop-btn" onclick="toggleLoop()"><i class="fa-solid fa-repeat"></i></button>
+      <button id="download-btn" onclick="downloadCurrentSong()"><i class="fa-solid fa-download"></i></button>
     </div>
+
     <div class="player-progress" onclick="seek(event)">
       <div id="progress" class="progress-bar"></div>
       <div id="progress-circle" class="progress-circle"></div>
     </div>
+
     <div class="time-display">
-      <span id="current-time">0:00</span> / <span id="duration">0:00</span>
+      <span id="current-time">0:00</span> /
+      <span id="duration">0:00</span>
     </div>
-<button id="mute-btn" onclick="toggleMute()" title="Mute/Unmute"><i class="fa-solid fa-volume-up"></i></button>
-<input type="range" id="volume-slider" min="0" max="100" step="1" value="100" title="Volume" />
+
+    <button id="mute-btn" onclick="toggleMute()"><i class="fa-solid fa-volume-up"></i></button>
+    <input type="range" id="volume-slider" min="0" max="100" step="1" value="100" />
   </footer>
 
   <div id="chat-container" class="hidden">
     <div class="toggle-header">
       <h3>Chat</h3>
-     <button class="toggle-btn" onclick="toggleChat()" title="Close Chat">
-    <i class="fas fa-times"></i>
-</button>
-
+      <button class="toggle-btn" onclick="toggleChat()">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
+
     <div id="chat-messages"></div>
-<div id="chat-controls">
-  <button id="emoji-btn" title="Add Emoji">😊</button>
 
-  <!-- 📎 Media Upload -->
-  <label for="media-input" id="media-label" title="Attach temporary media">📎</label>
-<input type="file" id="media-input" accept="image/*,video/*" hidden />
+    <div id="chat-controls">
+      <button id="emoji-btn">😊</button>
 
-  <input type="text" id="chat-input" placeholder="Type a message..." />
-  <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
-</div>
+      <label for="media-input" id="media-label">📎</label>
+      <input type="file" id="media-input" accept="image/*,video/*" hidden />
 
-
+      <input type="text" id="chat-input" placeholder="Type a message..." />
+      <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
+    </div>
 
     <button onclick="leaveSession()">Leave Session</button>
     <span id="chat-badge" class="hidden">0</span>
   </div>
 
   <audio id="audio-player" preload="metadata"></audio>
+
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <script src="normal.js"></script>
+
+  <!-- ⭐ ADSTERRA SOCIAL BAR (100% fill rate + visible always) -->
+  <script
+    type="text/javascript"
+    src="//pl28235763.effectivegatecpm.com/23/2a/bf/232abf52f9d0e6e5ee743afc81834a03.js">
+  </script>
+
 </body>
 </html>
