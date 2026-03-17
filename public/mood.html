@@ -2,93 +2,296 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vibron - Mood Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#ff4fa3" />
+  <title>Vibron — Mood Player</title>
   <link rel="icon" type="image/x-icon" href="/v.ico" />
-  <!-- Correct CSS path -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="/css/mood.css" />
 </head>
-<body> 
-  <!-- Top bar with branding and switch button -->
+<body>
+
+  <!-- TOP BAR -->
   <header class="top-bar">
     <div class="branding">
       <img src="/v.ico" alt="Vibron Logo" class="logo" />
       <span class="brand-name">Vibron</span>
     </div>
-    <button class="switch-btn" onclick="window.location.href='/normal.html'">
-      Switch to Normal Player
-    </button>
+    <a href="normal.html" class="switch-btn">
+      <i class="fa-solid fa-music"></i> Normal Player
+    </a>
   </header>
 
   <div class="container">
-    <h1>Mood-based Music Player</h1>
-    <button class="primary" id="startBtn">Use Camera</button>
+    <h1>🎭 Mood Player</h1>
+    <p class="subtitle">Let your face choose the music — or pick a mood below.</p>
 
-    <div class="stage" style="position: relative;">
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="overlay"></canvas>
+    <!-- Camera Stage -->
+    <div class="stage-wrap">
+      <div class="stage">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
 
-  <!-- Fun Fact Placeholder -->
-<div id="fun-fact" class="fun-fact-placeholder" style="display: flex; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  justify-content: center; align-items: center; flex-direction: column; color: white; text-align: center; padding: 1rem; pointer-events: none; z-index: 1;">
-  <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Did You Know?</h3>
-  <p id="fact-text" style="font-style: italic; font-size: 1.1rem; margin: 0.5rem 0;">Loading fun fact...</p>
-  <button id="change-fact-btn" style="padding: 6px 12px; background: rgba(255,255,255,0.1); border: 1px solid #ccc; color: #fff; cursor: pointer; border-radius: 4px; pointer-events: auto;">
-    Change Fact
-  </button>
-</div>
+        <!-- Fun Fact overlay (shown when camera is off) -->
+        <div id="fun-fact">
+          <h3>✨ Did You Know?</h3>
+          <p id="fact-text">Loading fun fact…</p>
+          <button id="change-fact-btn">New Fact</button>
+        </div>
 
-</div>
+        <!-- Mood badge -->
+        <div class="mood-badge" id="mood-badge"></div>
+      </div>
+    </div>
 
+    <!-- Start button -->
+    <button class="primary" id="startBtn">
+      <i class="fa-solid fa-camera"></i> Detect My Mood
+    </button>
 
-    <div class="emotion-display" id="emotion-display"></div>
+    <!-- Emotion display -->
+    <div class="emotion-display" id="emotion-display">
+      Choose a mood below or tap "Detect My Mood" to use your camera!
+    </div>
 
+    <!-- Controls -->
     <div class="controls">
-      <button class="secondary" id="prevSongBtn">Previous Song</button>
-      <button class="secondary" id="changeSongBtn">Change Song</button>
-
-      <div>
-        <label for="testMood">Test Mood:</label>
+      <div class="select-group">
+        <label for="testMood">Mood</label>
         <select id="testMood">
-          <option value="auto">Auto (from face)</option>
-          <option value="happy">happy → party</option>
-          <option value="sad">sad → sad</option>
-          <option value="angry">angry → item</option>
-          <option value="neutral">neutral → love</option>
-          <option value="surprised">surprised → mass</option>
-          <option value="disgusted">disgusted → instrumental</option>
-          <option value="fearful">fearful → romantic</option>
+          <option value="auto">🤖 Auto (from face)</option>
+          <option value="happy">😄 Happy → Party</option>
+          <option value="sad">😢 Sad → Sad</option>
+          <option value="angry">😠 Angry → Item</option>
+          <option value="neutral">😐 Neutral → Love</option>
+          <option value="surprised">😮 Surprised → Mass</option>
+          <option value="disgusted">🤢 Disgusted → Instrumental</option>
+          <option value="fearful">😨 Fearful → Romantic</option>
         </select>
       </div>
 
-      <div>
-        <label for="languageSelect">Language:</label>
+      <div class="select-group">
+        <label for="languageSelect">Language</label>
         <select id="languageSelect">
-          <option value="english">English</option>
-          <option value="hindi">Hindi</option>
-          <option value="kannada">Kannada</option>
-          <option value="malayalam">Malayalam</option>
-          <option value="marathi">Marathi</option>
-          <option value="punjabi">Punjabi</option>
-          <option value="tamil">Tamil</option>
-          <option value="telugu">Telugu</option>
+          <option value="english">🌍 English</option>
+          <option value="hindi">🇮🇳 Hindi</option>
+          <option value="kannada">🌿 Kannada</option>
+          <option value="malayalam">🌴 Malayalam</option>
+          <option value="marathi">🏔️ Marathi</option>
+          <option value="punjabi">🌾 Punjabi</option>
+          <option value="tamil">🎊 Tamil</option>
+          <option value="telugu">🌺 Telugu</option>
         </select>
       </div>
     </div>
 
-    <audio id="musicPlayer" controls></audio>
+    <!-- Previous / Next buttons -->
+    <div style="display:flex;justify-content:center;gap:10px;margin-bottom:1.5rem;">
+      <button class="secondary" id="prevSongBtn">
+        <i class="fa-solid fa-backward-step"></i> Previous
+      </button>
+      <button class="secondary" id="changeSongBtn">
+        <i class="fa-solid fa-forward-step"></i> Next Song
+      </button>
+    </div>
+
+    <!-- Custom Player (replaces native <audio controls>) -->
+    <div class="mood-player" id="mood-player-ui" style="display:none;">
+      <div class="mood-player-info">
+        <img id="mood-album-art" src="/v.png" alt="Album Art" />
+        <div class="mood-song-details">
+          <div id="mood-now-playing">Not Playing</div>
+          <div id="mood-artist-name">—</div>
+        </div>
+      </div>
+
+      <div class="mood-progress-area">
+        <div class="mood-progress" id="mood-progress-bar" onclick="moodSeek(event)">
+          <div id="mood-progress-fill"></div>
+        </div>
+        <div class="mood-time">
+          <span id="mood-current-time">0:00</span>
+          <span id="mood-duration">0:00</span>
+        </div>
+      </div>
+
+      <div class="mood-controls">
+        <button id="mood-prev-btn" onclick="playPreviousSong()" title="Previous">
+          <i class="fa-solid fa-backward-step"></i>
+        </button>
+        <button id="mood-play-btn" onclick="moodPlayPause()" title="Play/Pause">
+          <i class="fa-solid fa-play"></i>
+        </button>
+        <button id="mood-next-btn" onclick="fetchSongByMood()" title="Next">
+          <i class="fa-solid fa-forward-step"></i>
+        </button>
+        <button id="mood-fav-btn" onclick="moodAddFavorite()" title="Add to Favorites" style="font-size:1.1rem;">
+          <i class="fa-regular fa-heart"></i>
+        </button>
+        <button id="mood-download-btn" onclick="moodDownload()" title="Download" style="font-size:1rem;">
+          <i class="fa-solid fa-download"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Hidden actual audio element -->
+    <audio id="musicPlayer" preload="metadata" style="display:none;"></audio>
 
     <div class="hint">
-      If camera fails or models aren’t present, choose a test mood to play music anyway.
+      <i class="fa-solid fa-circle-info" style="color:var(--accent-3);margin-right:6px;"></i>
+      If camera fails or models aren't present, choose a mood from the dropdown to play music anyway.
     </div>
   </div>
 
-  <!-- TensorFlow.js v1.7.4 for face-api.js -->
+  <!-- TensorFlow + face-api -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-
-  <!-- Correct JS paths -->
   <script src="/mood.js"></script>
-  <script src="/shared.js"></script>
+
+  <!-- Custom player UI wiring -->
+  <script>
+    const _player = document.getElementById('musicPlayer');
+    const _playBtn = document.getElementById('mood-play-btn');
+    const _progressFill = document.getElementById('mood-progress-fill');
+    const _currentTime = document.getElementById('mood-current-time');
+    const _durationEl = document.getElementById('mood-duration');
+    const _playerUI = document.getElementById('mood-player-ui');
+    let _moodIsPlaying = false;
+
+    function formatTime(s) {
+      if (isNaN(s)) return '0:00';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    _player.addEventListener('timeupdate', () => {
+      if (_player.duration) {
+        const pct = (_player.currentTime / _player.duration) * 100;
+        _progressFill.style.width = pct + '%';
+        _currentTime.textContent = formatTime(_player.currentTime);
+        _durationEl.textContent = formatTime(_player.duration);
+      }
+    });
+    _player.addEventListener('loadedmetadata', () => {
+      _durationEl.textContent = formatTime(_player.duration);
+    });
+    _player.addEventListener('play', () => {
+      _moodIsPlaying = true;
+      _playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      _playerUI.style.display = 'block';
+    });
+    _player.addEventListener('pause', () => {
+      _moodIsPlaying = false;
+      _playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    });
+
+    /* Intercept mood.js's player updates to also update our UI */
+    const _origPlay = HTMLMediaElement.prototype.play;
+    // Instead we watch src changes
+    const _srcObserver = new MutationObserver(() => {});
+    _player.addEventListener('loadstart', () => {
+      _playerUI.style.display = 'block';
+    });
+
+    function moodPlayPause() {
+      if (_moodIsPlaying) { _player.pause(); }
+      else { _player.play().catch(() => {}); }
+    }
+
+    function moodSeek(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      _player.currentTime = pct * _player.duration;
+    }
+
+    /* Hook into mood.js's fetchSongByMood to update album art / title */
+    const _origFetch = window.fetchSongByMood;
+    /* We'll observe emotion-display changes to update badge */
+    const emotionObs = new MutationObserver(() => {
+      const txt = document.getElementById('emotion-display').textContent;
+      const badge = document.getElementById('mood-badge');
+      if (txt && txt !== 'Choose a mood below or tap "Detect My Mood" to use your camera!') {
+        badge.textContent = txt.split('→')[0].trim().replace('Detected Mood:', '').replace('Test Mood:', '').trim();
+        badge.classList.add('visible');
+      }
+      // Update song info in custom player
+      const match = txt.match(/Playing: (.+) by (.+)$/);
+      if (match) {
+        document.getElementById('mood-now-playing').textContent = match[1].trim();
+        document.getElementById('mood-artist-name').textContent = match[2].trim();
+      }
+    });
+    emotionObs.observe(document.getElementById('emotion-display'), { childList: true, subtree: true, characterData: true });
+
+    /* Mood → body class for ambient background */
+    function applyMoodTheme(mood) {
+      document.body.className = '';
+      if (mood) document.body.classList.add(`mood-${mood}`);
+    }
+    document.getElementById('testMood').addEventListener('change', e => {
+      if (e.target.value !== 'auto') applyMoodTheme(e.target.value);
+    });
+
+    /* Favorite from mood player */
+    let moodFavorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    let moodCurrentSong = null;
+    // Watch src changes to know current song
+    _player.addEventListener('loadstart', () => {
+      // Try to read from mood.js globals
+      try {
+        const hist = window.songHistory;
+        if (hist && hist.length > 0) moodCurrentSong = hist[hist.length - 1];
+      } catch(e) {}
+    });
+    function moodAddFavorite() {
+      if (!moodCurrentSong) { showMoodNotif('No song playing'); return; }
+      const already = moodFavorites.some(f => f.id === moodCurrentSong.id);
+      if (already) {
+        moodFavorites = moodFavorites.filter(f => f.id !== moodCurrentSong.id);
+        document.getElementById('mood-fav-btn').innerHTML = '<i class="fa-regular fa-heart"></i>';
+        showMoodNotif('Removed from favorites');
+      } else {
+        moodFavorites.push(moodCurrentSong);
+        document.getElementById('mood-fav-btn').innerHTML = '<i class="fa-solid fa-heart" style="color:var(--accent)"></i>';
+        showMoodNotif('Added to favorites! ❤️');
+      }
+      localStorage.setItem('favorites', JSON.stringify(moodFavorites));
+    }
+    function moodDownload() {
+      if (!moodCurrentSong || !moodCurrentSong.audioUrl) { showMoodNotif('No song to download'); return; }
+      fetch(moodCurrentSong.audioUrl, { mode: 'cors' })
+        .then(r => r.blob())
+        .then(blob => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `${moodCurrentSong.title} - ${moodCurrentSong.artist}.mp3`;
+          a.click(); URL.revokeObjectURL(a.href);
+          showMoodNotif('Downloading…');
+        }).catch(() => showMoodNotif('Download failed'));
+    }
+
+    function showMoodNotif(msg) {
+      const n = document.createElement('div');
+      n.style.cssText = `position:fixed;top:80px;right:16px;background:rgba(22,23,42,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 18px;color:#f0f0ff;font-size:0.88rem;font-weight:500;z-index:9999;animation:fadeUp 0.3s ease;`;
+      n.textContent = msg;
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), 3000);
+    }
+
+    /* Keyboard shortcuts */
+    document.addEventListener('keydown', e => {
+      const tag = document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT') return;
+      if (e.code === 'Space') { e.preventDefault(); moodPlayPause(); }
+      else if (e.code === 'ArrowRight') { _player.currentTime += 10; }
+      else if (e.code === 'ArrowLeft')  { _player.currentTime -= 10; }
+      else if (e.code === 'KeyN') { document.getElementById('changeSongBtn').click(); }
+      else if (e.code === 'KeyP') { document.getElementById('prevSongBtn').click(); }
+    });
+  </script>
 </body>
 </html>
