@@ -1218,12 +1218,11 @@ main {
 #nonhost-banner {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 10px;
   background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.12));
   border: 1px solid rgba(168,85,247,0.25);
   border-radius: var(--radius-sm);
-  padding: 10px 18px;
+  padding: 10px 14px;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--accent);

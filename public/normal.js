@@ -1189,7 +1189,24 @@ function setSessionControlsDisabled(disabled) {
     if (!banner) {
       banner = document.createElement('div');
       banner.id = 'nonhost-banner';
-      banner.innerHTML = `<i class="fa-solid fa-lock" style="margin-right:6px;"></i>Listening mode — only the host controls playback`;
+      banner.innerHTML = `
+        <span><i class="fa-solid fa-lock" style="margin-right:6px;"></i>Listening mode — only the host controls playback</span>
+        <button onclick="leaveSession()" style="
+          margin-left:auto; flex-shrink:0;
+          background:rgba(255,107,107,0.15);
+          border:1px solid rgba(255,107,107,0.35);
+          color:#ff6b6b;
+          border-radius:20px;
+          padding:4px 14px;
+          font-family:'Outfit',sans-serif;
+          font-size:0.78rem;
+          font-weight:600;
+          cursor:pointer;
+          transition:all 0.2s;
+        " onmouseover="this.style.background='rgba(255,107,107,0.3)'"
+           onmouseout="this.style.background='rgba(255,107,107,0.15)'">
+          <i class="fa-solid fa-sign-out-alt" style="margin-right:4px;"></i>Leave
+        </button>`;
       document.querySelector('main').prepend(banner);
     }
 
