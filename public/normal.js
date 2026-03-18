@@ -713,19 +713,11 @@ function createSongCard(song, fromArtist = false, fromAlbum = false) {
   const isFavorited = favorites.some(f => f.id === song.id);
   const safeId = encodeURIComponent(song.id);
 
-  // cut long text safely
   const safeTitle = (song.title.length > 30 ? song.title.slice(0, 30) + "..." : song.title).replace(/'/g, "\\'");
   const safeArtist = (song.artist.length > 20 ? song.artist.slice(0, 20) + "..." : song.artist).replace(/'/g, "\\'");
 
   const card = document.createElement('div');
   card.className = 'card';
-
-  // Non-hosts in a session get a "Suggest" button instead of Play
-  const isNonHost = !isHost && currentSessionCode;
-  const actionBtn = isNonHost
-    ? `<div class="suggest-btn" title="Suggest to host" onclick="event.stopPropagation(); suggestSong({id: '${safeId}', title: '${safeTitle}', artist: '${safeArtist}', image: '${song.image}', audioUrl: '${song.audioUrl}'})"><i class="fa-solid fa-hand"></i></div>`
-    : `<div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${safeId}', title: '${safeTitle}', artist: '${safeArtist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>`;
-
   card.innerHTML = `
     <img src="${song.image || 'default.png'}" alt="${safeTitle}" />
     <div class="card-body">
@@ -733,16 +725,61 @@ function createSongCard(song, fromArtist = false, fromAlbum = false) {
       <div class="artist-name">${safeArtist}</div>
     </div>
     <div class="play-down">
-      ${actionBtn}
+      <div class="card-action-btn" title="Play / Suggest">
+        <i class="fa-solid fa-play"></i>
+      </div>
       <div class="playlist-btn" title="Add to Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${safeId}')"><i class="fa-solid fa-plus"></i></div>
       <div class="add-fav${isFavorited ? ' favorited' : ''}" title="${isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}" onclick="event.stopPropagation(); toggleFavorites('${safeId}')"><i class="fa${isFavorited ? '-solid' : '-regular'} fa-heart"></i></div>
       <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${safeId}')"><i class="fa-solid fa-list"></i></div>
       <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${safeId}')"><i class="fa-solid fa-download"></i></div>
     </div>
   `;
-  if (!isNonHost) {
-    card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
-  }
+
+  // ── Runtime check: decide play vs suggest at click time, not render time ──
+  const actionBtn = card.querySelector('.card-action-btn');
+
+  const handleAction = (e) => {
+    e.stopPropagation();
+    if (!isHost && currentSessionCode) {
+      // Non-host in a session → suggest
+      actionBtn.innerHTML = '<i class="fa-solid fa-hand"></i>';
+      actionBtn.classList.add('suggest-btn');
+      actionBtn.classList.remove('play-btn');
+      suggestSong({ id: song.id, title: song.title, artist: song.artist, image: song.image, audioUrl: song.audioUrl });
+    } else {
+      // Host or solo → play
+      playSong(song, false, fromArtist, fromAlbum);
+    }
+  };
+
+  // Update icon appearance whenever the card becomes visible
+  // (handles case where user joins session after cards were rendered)
+  const refreshActionBtn = () => {
+    if (!isHost && currentSessionCode) {
+      actionBtn.innerHTML = '<i class="fa-solid fa-hand"></i>';
+      actionBtn.title = 'Suggest to host';
+      actionBtn.classList.add('suggest-btn');
+      actionBtn.classList.remove('play-btn');
+    } else {
+      actionBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+      actionBtn.title = 'Play';
+      actionBtn.classList.add('play-btn');
+      actionBtn.classList.remove('suggest-btn');
+    }
+  };
+
+  refreshActionBtn();
+  actionBtn.addEventListener('click', handleAction);
+
+  // Also refresh on card mouseenter so it's always current
+  card.addEventListener('mouseenter', refreshActionBtn);
+
+  // Card click → play (only if not non-host)
+  card.addEventListener('click', () => {
+    if (!isHost && currentSessionCode) return;
+    playSong(song, false, fromArtist, fromAlbum);
+  });
+
   return card;
 }
 
@@ -2382,13 +2419,11 @@ function suggestSong(song) {
   showNotification(`✋ "${song.title}" suggested to host!`);
 }
 
-// Host receives a suggestion
+// Suggestions are received via dedicated song-suggested event from server
 socket.on('song-suggested', ({ song, from }) => {
   if (!isHost) return;
   _suggestions.push({ song, from, id: Date.now() });
   _renderSuggestions();
-
-  // Badge the suggestions btn
   const badge = document.getElementById('suggestions-badge');
   if (badge) {
     badge.textContent = _suggestions.length;
@@ -3193,9 +3228,7 @@ socket.on('host-transferred', ({ newHostId }) => {
 */
 
 
-socket.on('participantsUpdate', list => {
-  participants = list;
-});
+// participantsUpdate handled below near user-joined/user-left
 
 
 
@@ -3266,17 +3299,21 @@ socket.on('disconnect', () => {
 
 });
 
-socket.on('user-joined', ({ userId, name, isHost }) => {
-  participants[userId] = { name, isHost };
+socket.on('participantsUpdate', list => {
+  participants = list;
+  renderParticipants(); // server sent authoritative list — always re-render
+});
+
+socket.on('user-joined', ({ userId, name, isHost: uIsHost }) => {
+  participants[userId] = { name, isHost: uIsHost };
   renderParticipants();
   showNotification(`${name} joined`);
 });
 
-
 socket.on('user-left', ({ userId, name }) => {
-  delete participants[userId];
+  if (userId) delete participants[userId];
   renderParticipants();
-  const who = name && name.trim() ? name : userId.slice(0, 4);
+  const who = (name && name.trim()) ? name : `User ${(userId || '????').slice(0, 4)}`;
   showNotification(`${who} left`);
 });
 
