@@ -230,6 +230,42 @@
     <p id="sleep-timer-display" style="text-align:center;margin-top:12px;color:var(--accent-4);font-weight:600;font-size:0.9rem;"></p>
   </div>
 
+  <!-- NOW PLAYING MODAL -->
+  <div id="now-playing-modal">
+    <div class="npm-backdrop" onclick="closeNowPlayingModal()"></div>
+    <div class="npm-inner">
+      <button class="npm-close" onclick="closeNowPlayingModal()"><i class="fa-solid fa-chevron-down"></i></button>
+      <div class="npm-art-wrap">
+        <img id="npm-album-art" src="default.png" alt="Album Art" />
+      </div>
+      <div class="npm-song-info">
+        <div class="npm-title" id="npm-title">Not Playing</div>
+        <div class="npm-artist" id="npm-artist">—</div>
+      </div>
+      <div class="npm-progress-area">
+        <div class="npm-progress-bar" id="npm-progress-bar">
+          <div class="npm-progress-fill" id="npm-progress-fill"></div>
+          <div class="npm-progress-thumb"></div>
+        </div>
+        <div class="npm-times">
+          <span id="npm-current-time">0:00</span>
+          <span id="npm-duration">0:00</span>
+        </div>
+      </div>
+      <div class="npm-controls">
+        <button onclick="playPrevious()" title="Previous"><i class="fa-solid fa-backward-step"></i></button>
+        <button id="npm-play-btn" onclick="playPause()" title="Play/Pause"><i class="fa-solid fa-play"></i></button>
+        <button onclick="playNext()" title="Next"><i class="fa-solid fa-forward-step"></i></button>
+      </div>
+      <div class="npm-secondary-controls">
+        <button id="npm-loop-btn" onclick="toggleLoop()" title="Repeat"><i class="fa-solid fa-repeat"></i></button>
+        <button id="npm-fav-btn" onclick="addToFavoritesFromPlayer()" title="Favorite"><i class="fa-regular fa-heart"></i></button>
+        <button onclick="downloadCurrentSong()" title="Download"><i class="fa-solid fa-download"></i></button>
+        <button id="npm-shuffle-btn" onclick="toggleShuffle()" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
+      </div>
+    </div>
+  </div>
+
   <!-- AUDIO -->
   <audio id="audio-player" preload="metadata"></audio>
 
@@ -241,8 +277,14 @@
   <script>
     /* ── SIDEBAR TOGGLE ── */
     function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('open');
+      const sb = document.getElementById('sidebar');
+      sb.classList.toggle('open');
     }
+    // Also wire the button directly in case onclick attr has timing issues
+    document.getElementById('sidebar-toggle').addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleSidebar();
+    });
     document.addEventListener('click', e => {
       const sidebar = document.getElementById('sidebar');
       if (sidebar.classList.contains('open') &&
@@ -263,6 +305,8 @@
       shuffleOn = !shuffleOn;
       const btn = document.getElementById('shuffle-btn');
       btn.classList.toggle('active', shuffleOn);
+      const npmBtn = document.getElementById('npm-shuffle-btn');
+      if (npmBtn) npmBtn.classList.toggle('active', shuffleOn);
       showNotification(shuffleOn ? '🔀 Shuffle on' : 'Shuffle off');
     }
 
@@ -304,16 +348,34 @@
     document.addEventListener('keydown', e => {
       const tag = document.activeElement.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.code === 'Space') { e.preventDefault(); playPause(); }
-      else if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('audio-player').currentTime += 10; }
-      else if (e.code === 'ArrowLeft')  { e.preventDefault(); document.getElementById('audio-player').currentTime -= 10; }
-      else if (e.code === 'ArrowUp')    { e.preventDefault(); const v = document.getElementById('volume-slider'); v.value = Math.min(100, +v.value + 10); v.dispatchEvent(new Event('input')); }
-      else if (e.code === 'ArrowDown')  { e.preventDefault(); const v = document.getElementById('volume-slider'); v.value = Math.max(0, +v.value - 10); v.dispatchEvent(new Event('input')); }
-      else if (e.code === 'KeyN')       { playNext(); }
-      else if (e.code === 'KeyP')       { playPrevious(); }
-      else if (e.code === 'KeyL')       { toggleLoop(); }
-      else if (e.code === 'KeyS')       { toggleShuffle(); }
-      else if (e.code === 'KeyF')       { addToFavoritesFromPlayer(); }
+      // Block all playback shortcuts for non-hosts in a session
+      const isNonHostSession = !isHost && currentSessionCode;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!isNonHostSession) playPause();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        if (!isNonHostSession) document.getElementById('audio-player').currentTime += 10;
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        if (!isNonHostSession) document.getElementById('audio-player').currentTime -= 10;
+      } else if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        const v = document.getElementById('volume-slider'); v.value = Math.min(100, +v.value + 10); v.dispatchEvent(new Event('input'));
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        const v = document.getElementById('volume-slider'); v.value = Math.max(0, +v.value - 10); v.dispatchEvent(new Event('input'));
+      } else if (e.code === 'KeyN') {
+        if (!isNonHostSession) playNext();
+      } else if (e.code === 'KeyP') {
+        if (!isNonHostSession) playPrevious();
+      } else if (e.code === 'KeyL') {
+        if (!isNonHostSession) toggleLoop();
+      } else if (e.code === 'KeyS') {
+        toggleShuffle();
+      } else if (e.code === 'KeyF') {
+        addToFavoritesFromPlayer();
+      }
     });
 
     /* ── ALBUM ART PULSE ── */
@@ -324,7 +386,7 @@
       document.getElementById('album-art').classList.remove('playing');
     });
 
-    /* ── MEDIA SESSION API (lock screen controls) ── */
+    /* ── MEDIA SESSION API ── */
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play',          () => { document.getElementById('audio-player').play(); });
       navigator.mediaSession.setActionHandler('pause',         () => { document.getElementById('audio-player').pause(); });
@@ -343,7 +405,96 @@
           artwork: [{ src: song.image || '/v.png', sizes: '512x512', type: 'image/png' }]
         });
       }
+      // Update now-playing modal if open
+      syncNowPlayingModal(song);
     };
+
+    /* ── NOW PLAYING MODAL ── */
+    function openNowPlayingModal() {
+      const modal = document.getElementById('now-playing-modal');
+      if (!modal) return;
+      // Sync current song info
+      const audio = document.getElementById('audio-player');
+      document.getElementById('npm-album-art').src = document.getElementById('album-art').src;
+      document.getElementById('npm-title').textContent = document.getElementById('now-playing').textContent;
+      document.getElementById('npm-artist').textContent = document.getElementById('artist-name').textContent;
+      // Sync play state
+      const npmPlay = document.getElementById('npm-play-btn');
+      if (audio.paused) {
+        npmPlay.innerHTML = '<i class="fa-solid fa-play"></i>';
+      } else {
+        npmPlay.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      }
+      // Sync fav
+      syncNpmFavBtn();
+      modal.classList.add('open');
+    }
+
+    function closeNowPlayingModal() {
+      document.getElementById('now-playing-modal').classList.remove('open');
+    }
+
+    function syncNowPlayingModal(song) {
+      if (!song) return;
+      document.getElementById('npm-album-art').src = song.image || 'default.png';
+      document.getElementById('npm-title').textContent = song.title || 'Unknown';
+      document.getElementById('npm-artist').textContent = song.artist || '—';
+      syncNpmFavBtn();
+    }
+
+    function syncNpmFavBtn() {
+      try {
+        const favBtn = document.getElementById('npm-fav-btn');
+        const currentSong = window.songHistory && window.songHistory[window.currentSongIndex];
+        const isFav = currentSong && window.favorites && window.favorites.some(f => f.id === currentSong.id);
+        if (isFav) {
+          favBtn.classList.add('favorited');
+          favBtn.querySelector('i').className = 'fa-solid fa-heart';
+        } else {
+          favBtn.classList.remove('favorited');
+          favBtn.querySelector('i').className = 'fa-regular fa-heart';
+        }
+      } catch(e) {}
+    }
+
+    // Sync progress bar in modal
+    document.getElementById('audio-player').addEventListener('timeupdate', () => {
+      const audio = document.getElementById('audio-player');
+      if (!audio.duration) return;
+      const pct = (audio.currentTime / audio.duration) * 100;
+      const fill = document.getElementById('npm-progress-fill');
+      const cur = document.getElementById('npm-current-time');
+      const dur = document.getElementById('npm-duration');
+      if (fill) fill.style.width = pct + '%';
+      if (cur) cur.textContent = formatTime(audio.currentTime);
+      if (dur) dur.textContent = formatTime(audio.duration);
+      // Sync play/pause icon in modal
+      const npmPlay = document.getElementById('npm-play-btn');
+      if (npmPlay) npmPlay.innerHTML = audio.paused ? '<i class="fa-solid fa-play"></i>' : '<i class="fa-solid fa-pause"></i>';
+    });
+
+    // Seek from modal progress bar
+    document.getElementById('npm-progress-bar').addEventListener('click', function(e) {
+      if (!isHost && currentSessionCode) { showNotification('Only the host can control playback.'); return; }
+      const rect = this.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      const audio = document.getElementById('audio-player');
+      audio.currentTime = pct * audio.duration;
+    });
+
+    // Clicking player info opens modal
+    document.querySelector('.player-info').addEventListener('click', function() {
+      if (document.getElementById('now-playing').textContent !== 'Not Playing') {
+        openNowPlayingModal();
+      }
+    });
+
+    function formatTime(s) {
+      if (isNaN(s) || !isFinite(s)) return '0:00';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2,'0')}`;
+    }
   </script>
 </body>
 </html>

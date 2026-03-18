@@ -896,22 +896,11 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
 
 function playPause() {
   if (!isHost && currentSessionCode) {
-    // Non-hosts: update button state locally (for correct UI),
-    // but do NOT send socket events
-    if (isPlaying) {
-      audioPlayer.pause();
-      playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-      playerBar.classList.remove('playing');
-    } else {
-      audioPlayer.play().catch(() => {});
-      playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-      playerBar.classList.add('playing');
-    }
-    isPlaying = !isPlaying;
-    return; // block sending host events
+    showNotification('Only the host can control playback.');
+    return;
   }
 
-  // --- Host logic ---
+  // --- Host / solo logic ---
   if (isPlaying) {
     audioPlayer.pause();
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -1143,6 +1132,10 @@ function hideChatButton() {
 
 
 function seek(event) {
+  if (!isHost && currentSessionCode) {
+    showNotification('Only the host can control playback.');
+    return;
+  }
   const rect = event.currentTarget.getBoundingClientRect();
   const percent = (event.clientX - rect.left) / rect.width;
   audioPlayer.currentTime = percent * audioPlayer.duration;
