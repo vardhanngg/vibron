@@ -12,6 +12,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="/css/mood.css" />
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function() {
+        navigator.serviceWorker.register("/sw.js", { scope: "/" })
+          .then(function(r) { console.log("[SW] Registered", r.scope); })
+          .catch(function(e) { console.warn("[SW] Failed", e); });
+      });
+    }
+  </script>
 </head>
 <body>
 

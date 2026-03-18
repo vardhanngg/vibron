@@ -20,6 +20,15 @@
   </script>
   <!-- Analytics -->
   <script defer data-domain="vibron.vercel.app" src="https://plausible.io/js/script.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function() {
+        navigator.serviceWorker.register("/sw.js", { scope: "/" })
+          .then(function(r) { console.log("[SW] Registered", r.scope); })
+          .catch(function(e) { console.warn("[SW] Failed", e); });
+      });
+    }
+  </script>
 </head>
 <body>
 
