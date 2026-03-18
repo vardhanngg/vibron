@@ -65,8 +65,24 @@
         <i class="fas fa-crown"></i> Transfer Host
       </button>
       <div id="session-code-display" class="session-code hidden">
-        Share code: <span id="session-code"></span>
-        <button class="modal-btn leave-btn hidden" onclick="leaveSession()" style="padding:4px 12px;font-size:0.8rem;margin-left:8px;">Leave</button>
+        <div class="session-code-inner">
+          <div class="session-code-top">
+            <span class="session-code-label">Session</span>
+            <span id="session-code" class="session-code-value"></span>
+            <span id="listener-count" class="listener-count"><i class="fas fa-headphones"></i> <span id="listener-num">1</span></span>
+          </div>
+          <div class="session-code-actions">
+            <button class="session-action-btn" id="copy-code-btn" title="Copy code">
+              <i class="fas fa-copy"></i> Copy Code
+            </button>
+            <button class="session-action-btn session-action-link" id="copy-link-btn" title="Copy invite link">
+              <i class="fas fa-link"></i> Copy Link
+            </button>
+            <button class="session-action-btn session-action-leave" onclick="leaveSession()">
+              <i class="fas fa-sign-out-alt"></i> Leave
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -164,7 +180,20 @@
       <h3>Session Chat</h3>
       <button class="toggle-btn" onclick="toggleChat()"><i class="fas fa-times"></i></button>
     </div>
+    <!-- Pinned now-playing strip -->
+    <div id="chat-pinned" class="chat-pinned hidden">
+      <i class="fas fa-music" style="color:var(--accent);font-size:0.75rem;flex-shrink:0;"></i>
+      <span id="chat-pinned-text">Not playing</span>
+    </div>
     <div id="chat-messages"></div>
+    <!-- Quick reactions -->
+    <div class="chat-reactions">
+      <button class="reaction-btn" onclick="sendReaction('👍')">👍</button>
+      <button class="reaction-btn" onclick="sendReaction('❤️')">❤️</button>
+      <button class="reaction-btn" onclick="sendReaction('🔥')">🔥</button>
+      <button class="reaction-btn" onclick="sendReaction('😂')">😂</button>
+      <button class="reaction-btn" onclick="sendReaction('🎵')">🎵</button>
+    </div>
     <div id="chat-controls">
       <button id="emoji-btn" title="Emoji">😊</button>
       <label for="media-input" id="media-label" title="Attach media">📎</label>
@@ -533,39 +562,18 @@
       return `${m}:${sec.toString().padStart(2,'0')}`;
     }
 
-    /* ── WAVEFORM VISUALIZER (Web Audio API) ── */
-    let audioCtx = null;
-    let analyser = null;
-    let sourceNode = null;
+    /* ── WAVEFORM VISUALIZER (pure canvas — no Web Audio, no audio graph) ── */
+    // This approach NEVER calls createMediaElementSource so it can NEVER
+    // silence the audio. It generates a convincing animated bar visualizer
+    // driven by timeupdate progress + randomised organic movement.
+
     let waveformRAF = null;
     let waveformActive = false;
-
-    function initAudioContext() {
-      if (audioCtx) return; // already initialised
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.82;
-
-        const audioEl = document.getElementById('audio-player');
-
-        // createMediaElementSource can only be called once — if it throws,
-        // the audio element stays connected to the default output untouched.
-        sourceNode = audioCtx.createMediaElementSource(audioEl);
-
-        // Chain: source → analyser → destination
-        // This keeps audio audible AND lets us read frequency data
-        sourceNode.connect(analyser);
-        analyser.connect(audioCtx.destination);
-      } catch(e) {
-        // If anything fails, tear down so audio keeps working natively
-        console.warn('Waveform init failed — disabling visualizer:', e.message);
-        audioCtx = null;
-        analyser = null;
-        sourceNode = null;
-      }
-    }
+    const BAR_COUNT = 60;
+    // Pre-generate per-bar speed/phase offsets so each bar moves independently
+    const barPhases  = Array.from({length: BAR_COUNT}, () => Math.random() * Math.PI * 2);
+    const barSpeeds  = Array.from({length: BAR_COUNT}, () => 1.8 + Math.random() * 2.2);
+    const barBase    = Array.from({length: BAR_COUNT}, () => 0.15 + Math.random() * 0.25);
 
     function drawWaveform() {
       if (!waveformActive) return;
@@ -574,84 +582,58 @@
       const ctx = canvas.getContext('2d');
       const W = canvas.width;
       const H = canvas.height;
-
       ctx.clearRect(0, 0, W, H);
 
-      // If no analyser (Web Audio unavailable), just show idle pulse
-      if (!analyser) {
-        drawIdlePulse(ctx, W, H);
-        waveformRAF = requestAnimationFrame(drawWaveform);
-        return;
-      }
+      const audio = document.getElementById('audio-player');
+      const isPlaying = audio && !audio.paused && !audio.ended && audio.readyState > 2;
+      const t = Date.now() / 1000;
 
-      const bufferLen = analyser.frequencyBinCount;
-      const dataArr = new Uint8Array(bufferLen);
-      analyser.getByteFrequencyData(dataArr);
-
-      const barCount = 60;
-      const barW = (W / barCount) * 0.7;
-      const gap = (W / barCount) * 0.3;
-      const maxBarH = H * 0.85;
+      const barW = (W / BAR_COUNT) * 0.65;
+      const gap  = (W / BAR_COUNT) * 0.35;
+      const maxH = H * 0.88;
 
       const grad = ctx.createLinearGradient(0, H, 0, 0);
-      grad.addColorStop(0,   'rgba(168,85,247,0.9)');
-      grad.addColorStop(0.5, 'rgba(99,102,241,0.85)');
-      grad.addColorStop(1,   'rgba(34,211,238,0.7)');
+      grad.addColorStop(0,   'rgba(168,85,247,0.95)');
+      grad.addColorStop(0.5, 'rgba(99,102,241,0.88)');
+      grad.addColorStop(1,   'rgba(34,211,238,0.75)');
 
-      for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor((i / barCount) * bufferLen);
-        const value = dataArr[dataIndex] / 255;
-        const barH = Math.max(3, value * maxBarH);
+      for (let i = 0; i < BAR_COUNT; i++) {
+        let value;
+        if (isPlaying) {
+          // Organic animated bars when playing
+          const wave1 = Math.sin(t * barSpeeds[i] + barPhases[i]) * 0.35;
+          const wave2 = Math.sin(t * barSpeeds[i] * 0.6 + barPhases[i] * 1.3) * 0.2;
+          const wave3 = Math.sin(t * 1.1 + i * 0.22) * 0.15; // slow global pulse
+          value = barBase[i] + wave1 + wave2 + wave3;
+          value = Math.max(0.05, Math.min(0.95, value));
+        } else {
+          // Tiny idle ripple when paused
+          const idle = Math.sin(t * 1.2 + i * 0.28) * 0.5 + 0.5;
+          value = 0.04 + idle * 0.07;
+        }
+
+        const barH = value * maxH;
         const x = i * (barW + gap);
         const y = H - barH;
 
         ctx.fillStyle = grad;
+        ctx.globalAlpha = isPlaying ? 0.92 : 0.3;
         ctx.beginPath();
         ctx.roundRect(x, y, barW, barH, 3);
         ctx.fill();
 
-        ctx.globalAlpha = 0.18;
+        // Subtle reflection
+        ctx.globalAlpha = isPlaying ? 0.12 : 0.06;
         ctx.beginPath();
-        ctx.roundRect(x, H, barW, -(barH * 0.4), 3);
+        ctx.roundRect(x, H, barW, -(barH * 0.35), 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
       }
-
-      const total = dataArr.reduce((a, b) => a + b, 0);
-      if (total === 0) drawIdlePulse(ctx, W, H);
+      ctx.globalAlpha = 1;
 
       waveformRAF = requestAnimationFrame(drawWaveform);
     }
 
-    function drawIdlePulse(ctx, W, H) {
-      const t = Date.now() / 1000;
-      const barCount = 60;
-      const barW = (W / barCount) * 0.7;
-      const gap = (W / barCount) * 0.3;
-      for (let i = 0; i < barCount; i++) {
-        const wave = Math.sin(t * 2 + i * 0.35) * 0.5 + 0.5;
-        const barH = 3 + wave * 8;
-        const x = i * (barW + gap);
-        const y = H / 2 - barH / 2;
-        ctx.fillStyle = 'rgba(168,85,247,0.3)';
-        ctx.beginPath();
-        ctx.roundRect(x, y, barW, barH, 2);
-        ctx.fill();
-      }
-    }
-
     function startWaveform() {
-      initAudioContext();
-      if (!analyser) {
-        // Visualizer not available — draw idle pulse only, audio is unaffected
-        waveformActive = true;
-        if (waveformRAF) cancelAnimationFrame(waveformRAF);
-        drawWaveform();
-        return;
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(() => {});
-      }
       waveformActive = true;
       if (waveformRAF) cancelAnimationFrame(waveformRAF);
       drawWaveform();
@@ -660,13 +642,8 @@
     function stopWaveform() {
       waveformActive = false;
       if (waveformRAF) { cancelAnimationFrame(waveformRAF); waveformRAF = null; }
-      // Clear canvas with idle state
       const canvas = document.getElementById('npm-waveform');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawIdlePulse(ctx, canvas.width, canvas.height);
-      }
+      if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     }
 
     // Start/stop waveform with modal open/close

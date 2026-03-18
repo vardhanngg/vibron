@@ -888,6 +888,8 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
 
   markStateChanged();
   saveState();
+  // Update chat pinned strip with current song
+  updateChatPinnedSong(song.title, song.artist);
 }
 
 
@@ -1374,11 +1376,15 @@ function toggleChat() {
   const chatContainer = document.getElementById('chat-container');
   const queueContainer = document.getElementById('queue-container');
   if (!chatContainer) return;
-  // Close queue if open
   if (queueContainer && queueContainer.classList.contains('open')) {
     queueContainer.classList.remove('open');
   }
   chatContainer.classList.toggle('hidden');
+  // Clear badge when opening
+  if (!chatContainer.classList.contains('hidden')) {
+    const badge = document.getElementById('chat-badge');
+    if (badge) { badge.textContent = '0'; badge.classList.add('hidden'); }
+  }
 }
 
 
@@ -2191,12 +2197,52 @@ async function autoRejoin() {
 
 function renderParticipants() {
   const ul = document.getElementById('participants-ul');
-  ul.innerHTML = '';
-  Object.keys(participants).forEach(userId => {
-    const li = document.createElement('li');
-    li.textContent = `${userId.slice(0, 4)} ${participants[userId].isHost ? '(Host)' : ''}`;
-    ul.appendChild(li);
+  if (ul) {
+    ul.innerHTML = '';
+    Object.entries(participants).forEach(([userId, p]) => {
+      const li = document.createElement('li');
+      const name = (p.name && p.name.trim()) ? p.name : `User ${userId.slice(0,4)}`;
+      li.textContent = `${name}${p.isHost ? ' 👑' : ''}`;
+      ul.appendChild(li);
+    });
+  }
+
+  // Update listener count badge
+  const count = Object.keys(participants).length || 1;
+  const numEl = document.getElementById('listener-num');
+  if (numEl) numEl.textContent = count;
+  const listenerEl = document.getElementById('listener-count');
+  if (listenerEl) listenerEl.title = `${count} listener${count !== 1 ? 's' : ''}`;
+
+  // Show participants panel when in session
+  const panel = document.getElementById('participants-list');
+  if (panel && currentSessionCode) panel.classList.remove('hidden');
+}
+
+/* Update pinned now-playing strip in chat */
+function updateChatPinnedSong(title, artist) {
+  const pinned = document.getElementById('chat-pinned');
+  const pinnedText = document.getElementById('chat-pinned-text');
+  if (!pinned || !pinnedText) return;
+  if (title && title !== 'Not Playing') {
+    pinnedText.textContent = `${title}${artist && artist !== '—' ? ' — ' + artist : ''}`;
+    pinned.classList.remove('hidden');
+  } else {
+    pinned.classList.add('hidden');
+  }
+}
+
+/* Send a quick reaction emoji to the chat */
+function sendReaction(emoji) {
+  if (!currentSessionCode) { showNotification('Join a session to react!'); return; }
+  socket.emit('chat-message', {
+    user: userName || 'Guest',
+    message: emoji,
+    isReaction: true,
+    time: new Date().toISOString()
   });
+  // Show locally immediately
+  _appendChatMessage(userName || 'You', emoji, true);
 }
 
 function disableControls() {
@@ -2478,6 +2524,31 @@ function displayMediaMessage(user, fileUrl, fileType, isSender) {
 
 // Helper function to show notifications
 // single receiver — keep only one listener
+/* Helper: append a message to chat, handling reactions vs normal text */
+function _appendChatMessage(user, message, isReaction) {
+  const chatMessages = document.getElementById('chat-messages');
+  if (!chatMessages) return;
+  const msgDiv = document.createElement('div');
+  if (isReaction) {
+    msgDiv.className = 'chat-reaction-msg';
+    msgDiv.textContent = message;
+  } else {
+    msgDiv.innerHTML = `<strong>${user}:</strong> ${message}`;
+  }
+  chatMessages.appendChild(msgDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  // Badge: if chat is hidden, increment badge
+  const chatContainer = document.getElementById('chat-container');
+  if (chatContainer && chatContainer.classList.contains('hidden')) {
+    const badge = document.getElementById('chat-badge');
+    if (badge) {
+      const cur = parseInt(badge.textContent || '0') + 1;
+      badge.textContent = cur;
+      badge.classList.remove('hidden');
+    }
+  }
+}
 //socket.off('chat-message'); // remove any accidental duplicates if using hot reload
 /*
 socket.on('chat-message', (data) => {
@@ -2814,57 +2885,51 @@ socket.on('session-created', ({ code }) => {
 });
 */
 socket.on('session-created', ({ code }) => {
-  //////////////console.log('Session created, code:', code);
   setSessionControlsDisabled(false);
   currentSessionCode = code;
   isHost = true;
 
-  // ✅ Update code text
   document.getElementById('session-code').textContent = code;
   document.getElementById('session-code-display').classList.remove('hidden');
 
-  // Hide listen options
   const listenOptions = document.getElementById('listen-options');
-  if (listenOptions) {
-    listenOptions.classList.add('hidden');
-    //////////////console.log('Listen options hidden in session-created');
-  }
+  if (listenOptions) listenOptions.classList.add('hidden');
 
   closeListenModal();
 
-  // Ensure chat button is visible
   const chatButton = document.getElementById('chat-open-btn');
-  if (chatButton) {
-    chatButton.classList.remove('hidden');
-    chatButton.disabled = false;
-    //////////////console.log('Chat button shown in session-created');
-  } else {
-    console.error('Chat button not found in session-created');
+  if (chatButton) { chatButton.classList.remove('hidden'); chatButton.disabled = false; }
+
+  // Wire Copy Code button
+  const copyCodeBtn = document.getElementById('copy-code-btn');
+  if (copyCodeBtn) {
+    copyCodeBtn.onclick = () => {
+      navigator.clipboard.writeText(code)
+        .then(() => {
+          copyCodeBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          setTimeout(() => { copyCodeBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code'; }, 2000);
+          showNotification('Code copied!');
+        });
+    };
   }
 
-  // ✅ Only add Share button once
-  let shareBtn = document.getElementById('share-code-btn');
-  if (!shareBtn) {
-    shareBtn = document.createElement('button');
-    shareBtn.id = 'share-code-btn';        // mark it
-    shareBtn.textContent = 'Share Code';
-    shareBtn.onclick = () =>
-      navigator.clipboard.writeText(code)
-        .then(() => showNotification('Code copied!'));
-    document.getElementById('session-code-display').appendChild(shareBtn);
-  } else {
-    // Update clipboard text if hosting again
-    shareBtn.onclick = () =>
-      navigator.clipboard.writeText(code)
-        .then(() => showNotification('Code copied!'));
+  // Wire Copy Link button — generates a proper join URL
+  const copyLinkBtn = document.getElementById('copy-link-btn');
+  if (copyLinkBtn) {
+    const joinUrl = `${window.location.origin}${window.location.pathname}?session=${code}`;
+    copyLinkBtn.onclick = () => {
+      navigator.clipboard.writeText(joinUrl)
+        .then(() => {
+          copyLinkBtn.innerHTML = '<i class="fas fa-check"></i> Link Copied!';
+          setTimeout(() => { copyLinkBtn.innerHTML = '<i class="fas fa-link"></i> Copy Link'; }, 2000);
+          showNotification('🔗 Invite link copied!');
+        });
+    };
   }
 
   showNotification('Session hosted! Share the code: ' + code);
-
   updateChatButtonVisibility();
   showChatButton();
-
-  //document.getElementById('transfer-host-btn').classList.remove('hidden');
 });
 socket.on('connect', () => {
   mySocketId = socket.id;
@@ -3046,15 +3111,9 @@ socket.on('chat-message', ({ user, message }) => {
 });
 */
 
-socket.on('chat-message', ({ user, message }) => {
-  const chatMessages = document.getElementById('chat-messages');
-  const msgDiv = document.createElement('div');
-  
-  // If no user provided, fallback to my own local userName or "Guest"
-  const displayName = user && user.trim() ? user : (userName || "Guest");
-  
-  msgDiv.innerHTML = `<strong>${displayName}:</strong> ${message}`;
-  chatMessages.appendChild(msgDiv);
+socket.on('chat-message', ({ user, message, isReaction }) => {
+  const displayName = user && user.trim() ? user : (userName || 'Guest');
+  _appendChatMessage(displayName, message, !!isReaction);
 });
 
 
