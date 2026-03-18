@@ -1036,6 +1036,13 @@ function setSessionControlsDisabled(disabled) {
     '#play-pause-btn, #next-btn, #prev-btn, #loop-btn, #fav-btn'
   );
 
+  // Progress bar cursor
+  const progressBar = document.querySelector('.player-progress');
+
+  // Queue controls (non-hosts shouldn't skip/clear)
+  const queueControls = document.querySelector('.queue-header-holder .player-play-btn');
+  const emptyQueueBtn = document.querySelector('.empty-queue');
+
   if (disabled) {
     [listenBtn, moodBtn, homeLink].forEach(el => {
       if (!el) return;
@@ -1045,8 +1052,20 @@ function setSessionControlsDisabled(disabled) {
     });
 
     playerControls.forEach(btn => { if (btn) btn.disabled = true; });
+    if (progressBar) progressBar.style.cursor = 'not-allowed';
+    if (queueControls) queueControls.disabled = true;
+    if (emptyQueueBtn) emptyQueueBtn.disabled = true;
 
-    if (chatBtn) chatBtn.disabled = false;
+    // Show non-host banner
+    let banner = document.getElementById('nonhost-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'nonhost-banner';
+      banner.innerHTML = `<i class="fa-solid fa-lock" style="margin-right:6px;"></i>Listening mode — only the host controls playback`;
+      document.querySelector('main').prepend(banner);
+    }
+
+    if (chatBtn) { chatBtn.disabled = false; chatBtn.style.cursor = ''; }
 
   } else {
     [listenBtn, moodBtn, homeLink].forEach(el => {
@@ -1057,8 +1076,15 @@ function setSessionControlsDisabled(disabled) {
     });
 
     playerControls.forEach(btn => { if (btn) btn.disabled = false; });
+    if (progressBar) progressBar.style.cursor = 'pointer';
+    if (queueControls) queueControls.disabled = false;
+    if (emptyQueueBtn) emptyQueueBtn.disabled = false;
 
-    if (chatBtn) chatBtn.disabled = false;
+    // Remove non-host banner
+    const banner = document.getElementById('nonhost-banner');
+    if (banner) banner.remove();
+
+    if (chatBtn) { chatBtn.disabled = false; }
   }
 }
 
@@ -1330,41 +1356,12 @@ function toggleQueue() {
 function toggleChat() {
   const chatContainer = document.getElementById('chat-container');
   const queueContainer = document.getElementById('queue-container');
-
-  if (!chatContainer) {
-    console.error("Chat container not found");
-    return;
-  }
-
-  // ✅ Close queue if open
+  if (!chatContainer) return;
+  // Close queue if open
   if (queueContainer && queueContainer.classList.contains('open')) {
     queueContainer.classList.remove('open');
   }
-
-  // ✅ Toggle chat visibility
   chatContainer.classList.toggle('hidden');
-}
-
-/*function toggleChat() {
-  // close queue if open
-  queueContainer.classList.remove('open');
-  document.getElementById('chat-container').classList.toggle('open');
-}*/
-function toggleChat() {
-  const chatContainer = document.getElementById('chat-container');
-  if (!chatContainer) {
-    console.error("Chat container not found");
-    return;
-  }
-
-  // Toggle visibility
-  if (chatContainer.classList.contains('hidden')) {
-    chatContainer.classList.remove('hidden');
-    //////////////console.log("Chat opened");
-  } else {
-    chatContainer.classList.add('hidden');
-    //////////////console.log("Chat closed");
-  }
 }
 
 
@@ -1497,6 +1494,17 @@ function updateFavoriteButton() {
     favBtn.querySelector('i').classList.add('fa-regular');
     favBtn.querySelector('i').classList.remove('fa-solid');
   }
+  // Sync modal fav button
+  const npmFav = document.getElementById('npm-fav-btn');
+  if (npmFav) {
+    if (currentSong && favorites.some(f => f.id === currentSong.id)) {
+      npmFav.classList.add('favorited');
+      npmFav.querySelector('i').className = 'fa-solid fa-heart';
+    } else {
+      npmFav.classList.remove('favorited');
+      npmFav.querySelector('i').className = 'fa-regular fa-heart';
+    }
+  }
 }
 
 function playAllFavorites(shuffle = false) {
@@ -1563,7 +1571,7 @@ function loadFavorites() {
     : '<span>No favorites yet</span>';
 
   libraryView.innerHTML = html;
-  moreBtn.style.display = 'none';
+  if (moreBtn) moreBtn.style.display = 'none';
   hideBackButton();
 }
 
@@ -1664,7 +1672,7 @@ function loadPlaylists() {
     : '<span>No playlists yet. Create one with + New</span>';
 
   libraryView.innerHTML = header + `<div class="playlist-list">${listHtml}</div>`;
-  moreBtn.style.display = 'none';
+  if (moreBtn) moreBtn.style.display = 'none';
   hideBackButton();
 }
 // Allow pressing Enter inside an input to trigger its related button
@@ -1713,7 +1721,7 @@ function openPlaylist(idx) {
   if (!pl.songs || pl.songs.length === 0) {
     html += `<div><span>No songs in this playlist.</span><div style="margin-top:8px;"><button onclick="createSongPickerModal(${idx})">+ Add Song</button></div></div>`;
     libraryView.innerHTML = html;
-    moreBtn.style.display = 'none';
+    if (moreBtn) moreBtn.style.display = 'none';
     hideBackButton();
     return;
   }
@@ -1747,7 +1755,7 @@ function openPlaylist(idx) {
   html += `<div style="margin-top:10px;"><button onclick="createSongPickerModal(${idx})">+ Add Song</button></div>`;
 
   libraryView.innerHTML = html;
-  moreBtn.style.display = 'none';
+  if (moreBtn) moreBtn.style.display = 'none';
   hideBackButton();
 }
 
@@ -1882,12 +1890,11 @@ function joinSession() {
 
  socket.emit("join-session", { code, name: userName }, (success) => {
   if (success) {
-   //document.getElementById("chat-open-btn").style.display = "flex";
     closeListenModal();
     showChatButton();
-    //rememberSession(code, false);
     setSessionControlsDisabled(true);
     isHost = false;
+    document.body.classList.add('nonhost-session');
   } else {
     showNotification("Invalid session code");
   }
@@ -1971,6 +1978,7 @@ function leaveSession() {
 
   enableControls();
   setSessionControlsDisabled(false);
+  document.body.classList.remove('nonhost-session');
 
   hideChatButton();
 
@@ -2530,6 +2538,10 @@ function toggleLoop() {
   }
   audioPlayer.loop = !audioPlayer.loop;
   loopBtn.innerHTML = audioPlayer.loop ? '<i class="fa-solid fa-repeat"></i>' : '<i class="fa-regular fa-repeat"></i>';
+  loopBtn.classList.toggle('active', audioPlayer.loop);
+  // Sync modal loop button
+  const npmLoop = document.getElementById('npm-loop-btn');
+  if (npmLoop) npmLoop.classList.toggle('active', audioPlayer.loop);
 }
 
 function setVolume(value) {
@@ -2848,29 +2860,6 @@ socket.on('session-created', ({ code }) => {
 });
 socket.on('connect', () => {
   mySocketId = socket.id;
-  //////////////console.log('My socket ID:', mySocketId);
-});
-
-socket.on('create-session', ({ name }, callback) => {
-  const code = generateSessionCode();
-  rooms[code] = {
-    host: socket.id,
-    participants: {
-      [socket.id]: { id: socket.id, name: name || "Host", isHost: true }
-    }
-  };
-  socket.join(code);
-  callback(code);
-  io.to(code).emit('participantsUpdate', rooms[code].participants);
-});
-
-
-socket.on('transferHost', ({ room, newHost }) => {
-  const roomObj = rooms[room];
-  if (!roomObj) return;
-  if (socket.id !== roomObj.host) return; // only current host can transfer
-  roomObj.host = newHost;
-  io.to(room).emit('hostTransferred', newHost);
 });
 /*
 socket.on('chat-message', ({ user, message, time }) => {
@@ -3190,11 +3179,15 @@ document.getElementById('host-session-btn').addEventListener('click', hostSessio
   audioPlayer.addEventListener('play', () => {
     isPlaying = true;
     playerBar.classList.add('playing');
+    const npmPlay = document.getElementById('npm-play-btn');
+    if (npmPlay) npmPlay.innerHTML = '<i class="fa-solid fa-pause"></i>';
   });
 
   audioPlayer.addEventListener('pause', () => {
     isPlaying = false;
     playerBar.classList.remove('playing');
+    const npmPlay = document.getElementById('npm-play-btn');
+    if (npmPlay) npmPlay.innerHTML = '<i class="fa-solid fa-play"></i>';
   });
 
   audioPlayer.addEventListener('ended', playNext);

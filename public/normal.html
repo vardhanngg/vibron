@@ -242,6 +242,8 @@
         <div class="npm-title" id="npm-title">Not Playing</div>
         <div class="npm-artist" id="npm-artist">—</div>
       </div>
+      <!-- Waveform visualizer -->
+      <canvas id="npm-waveform" width="380" height="64" style="width:100%;height:64px;margin-bottom:0.75rem;border-radius:12px;opacity:0.85;"></canvas>
       <div class="npm-progress-area">
         <div class="npm-progress-bar" id="npm-progress-bar">
           <div class="npm-progress-fill" id="npm-progress-fill"></div>
@@ -413,18 +415,25 @@
     function openNowPlayingModal() {
       const modal = document.getElementById('now-playing-modal');
       if (!modal) return;
-      // Sync current song info
       const audio = document.getElementById('audio-player');
       document.getElementById('npm-album-art').src = document.getElementById('album-art').src;
       document.getElementById('npm-title').textContent = document.getElementById('now-playing').textContent;
       document.getElementById('npm-artist').textContent = document.getElementById('artist-name').textContent;
+      // Sync progress immediately (no waiting for timeupdate)
+      if (audio.duration) {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        document.getElementById('npm-progress-fill').style.width = pct + '%';
+        document.getElementById('npm-current-time').textContent = formatTime(audio.currentTime);
+        document.getElementById('npm-duration').textContent = formatTime(audio.duration);
+      }
       // Sync play state
       const npmPlay = document.getElementById('npm-play-btn');
-      if (audio.paused) {
-        npmPlay.innerHTML = '<i class="fa-solid fa-play"></i>';
-      } else {
-        npmPlay.innerHTML = '<i class="fa-solid fa-pause"></i>';
-      }
+      npmPlay.innerHTML = audio.paused
+        ? '<i class="fa-solid fa-play"></i>'
+        : '<i class="fa-solid fa-pause"></i>';
+      // Sync loop btn
+      const npmLoop = document.getElementById('npm-loop-btn');
+      if (npmLoop) npmLoop.classList.toggle('active', audio.loop);
       // Sync fav
       syncNpmFavBtn();
       modal.classList.add('open');
@@ -482,19 +491,149 @@
       audio.currentTime = pct * audio.duration;
     });
 
-    // Clicking player info opens modal
-    document.querySelector('.player-info').addEventListener('click', function() {
-      if (document.getElementById('now-playing').textContent !== 'Not Playing') {
-        openNowPlayingModal();
-      }
-    });
-
     function formatTime(s) {
       if (isNaN(s) || !isFinite(s)) return '0:00';
       const m = Math.floor(s / 60);
       const sec = Math.floor(s % 60);
       return `${m}:${sec.toString().padStart(2,'0')}`;
     }
+
+    /* ── WAVEFORM VISUALIZER (Web Audio API) ── */
+    let audioCtx = null;
+    let analyser = null;
+    let sourceNode = null;
+    let waveformRAF = null;
+    let waveformActive = false;
+
+    function initAudioContext() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.82;
+
+        const audioEl = document.getElementById('audio-player');
+        sourceNode = audioCtx.createMediaElementSource(audioEl);
+        sourceNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+      } catch(e) {
+        console.warn('Web Audio API not available:', e);
+      }
+    }
+
+    function drawWaveform() {
+      if (!analyser || !waveformActive) return;
+      const canvas = document.getElementById('npm-waveform');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      const bufferLen = analyser.frequencyBinCount;
+      const dataArr = new Uint8Array(bufferLen);
+      analyser.getByteFrequencyData(dataArr);
+
+      ctx.clearRect(0, 0, W, H);
+
+      const barCount = 60;
+      const barW = (W / barCount) * 0.7;
+      const gap = (W / barCount) * 0.3;
+      const maxBarH = H * 0.85;
+
+      // Build gradient
+      const grad = ctx.createLinearGradient(0, H, 0, 0);
+      grad.addColorStop(0,   'rgba(168,85,247,0.9)');
+      grad.addColorStop(0.5, 'rgba(99,102,241,0.85)');
+      grad.addColorStop(1,   'rgba(34,211,238,0.7)');
+
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = Math.floor((i / barCount) * bufferLen);
+        const value = dataArr[dataIndex] / 255;
+        const barH = Math.max(3, value * maxBarH);
+        const x = i * (barW + gap);
+        const y = H - barH;
+
+        // Mirrored bar (top + bottom)
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, 3);
+        ctx.fill();
+
+        // Reflection (faded, flipped)
+        ctx.globalAlpha = 0.18;
+        ctx.beginPath();
+        ctx.roundRect(x, H, barW, -(barH * 0.4), 3);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Idle pulse if silent
+      const total = dataArr.reduce((a, b) => a + b, 0);
+      if (total === 0) {
+        drawIdlePulse(ctx, W, H);
+      }
+
+      waveformRAF = requestAnimationFrame(drawWaveform);
+    }
+
+    function drawIdlePulse(ctx, W, H) {
+      const t = Date.now() / 1000;
+      const barCount = 60;
+      const barW = (W / barCount) * 0.7;
+      const gap = (W / barCount) * 0.3;
+      for (let i = 0; i < barCount; i++) {
+        const wave = Math.sin(t * 2 + i * 0.35) * 0.5 + 0.5;
+        const barH = 3 + wave * 8;
+        const x = i * (barW + gap);
+        const y = H / 2 - barH / 2;
+        ctx.fillStyle = 'rgba(168,85,247,0.3)';
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, 2);
+        ctx.fill();
+      }
+    }
+
+    function startWaveform() {
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      waveformActive = true;
+      if (waveformRAF) cancelAnimationFrame(waveformRAF);
+      drawWaveform();
+    }
+
+    function stopWaveform() {
+      waveformActive = false;
+      if (waveformRAF) { cancelAnimationFrame(waveformRAF); waveformRAF = null; }
+      // Clear canvas with idle state
+      const canvas = document.getElementById('npm-waveform');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawIdlePulse(ctx, canvas.width, canvas.height);
+      }
+    }
+
+    // Start/stop waveform with modal open/close
+    const _origOpenModal = window.openNowPlayingModal;
+    window.openNowPlayingModal = function() {
+      _origOpenModal && _origOpenModal();
+      startWaveform();
+    };
+    const _origCloseModal = window.closeNowPlayingModal;
+    window.closeNowPlayingModal = function() {
+      _origCloseModal && _origCloseModal();
+      stopWaveform();
+    };
+
+    // Also wire player-info click to use new patched version
+    document.querySelector('.player-info').addEventListener('click', function() {
+      if (document.getElementById('now-playing').textContent !== 'Not Playing') {
+        openNowPlayingModal();
+      }
+    });
   </script>
 </body>
 </html>
