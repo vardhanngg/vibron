@@ -2422,6 +2422,13 @@ function suggestSong(song) {
 // Suggestions are received via dedicated song-suggested event from server
 socket.on('song-suggested', ({ song, from }) => {
   if (!isHost) return;
+
+  // Cap at 5 suggestions
+  if (_suggestions.length >= 5) {
+    showNotification('Suggestion queue full (5 max) — act on existing ones first');
+    return;
+  }
+
   _suggestions.push({ song, from, id: Date.now() });
   _renderSuggestions();
   const badge = document.getElementById('suggestions-badge');
@@ -2812,47 +2819,6 @@ function _appendChatMessage(user, message, isReaction) {
     }
   }
 }
-//socket.off('chat-message'); // remove any accidental duplicates if using hot reload
-/*
-socket.on('chat-message', (data) => {
-  //////////////console.log('[CHAT DEBUG] Received chat-message from server:', data);
-
-  // Server should ideally forward the same user. If not present, show helpful fallback.
-  const displayName = data && data.user && data.user.trim() ? data.user : (userName || "Guest");
-
-  const chatMessages = document.getElementById('chat-messages');
-  if (!chatMessages) {
-    console.error('[CHAT DEBUG] chat-messages element not found');
-    return;
-  }
-  const msgDiv = document.createElement('div');
-  msgDiv.innerHTML = `<strong>${displayName}:</strong> ${data.message}`;
-  chatMessages.appendChild(msgDiv);
-});
-
-*/
-socket.off('chat-message');   // remove old listeners
-
-socket.on('chat-message', (data) => {
-  //////////////console.log('[CHAT DEBUG] Received chat-message from server:', data);
-
-  const displayName = data && data.user && data.user.trim()
-    ? data.user
-    : (userName || "Guest");
-
-  const chatMessages = document.getElementById('chat-messages');
-  if (!chatMessages) {
-    console.error('[CHAT DEBUG] chat-messages element not found');
-    return;
-  }
-
-  const msgDiv = document.createElement('div');
-  msgDiv.innerHTML = `<strong>${displayName}:</strong> ${data.message}`;
-  //chatMessages.appendChild(msgDiv);
-});
-
-
-
 function toggleParticipants() {
   const list = document.getElementById('participants-ul');
   const btn = event.target;
