@@ -138,7 +138,7 @@
       <span id="chat-badge" class="hidden">0</span>
     </button>
     <button id="queue-open-btn" class="queue-open-btn" onclick="toggleQueue()" title="Queue">
-      <i class="fa-solid fa-list-music" style="font-size:0.9rem;"></i>
+      <i class="fa-solid fa-list" style="font-size:0.9rem;"></i>
       <span id="queue-count-badge" class="queue-count-badge hidden">0</span>
     </button>
   </div>
@@ -541,7 +541,7 @@
     let waveformActive = false;
 
     function initAudioContext() {
-      if (audioCtx) return;
+      if (audioCtx) return; // already initialised
       try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
@@ -549,34 +549,50 @@
         analyser.smoothingTimeConstant = 0.82;
 
         const audioEl = document.getElementById('audio-player');
+
+        // createMediaElementSource can only be called once — if it throws,
+        // the audio element stays connected to the default output untouched.
         sourceNode = audioCtx.createMediaElementSource(audioEl);
+
+        // Chain: source → analyser → destination
+        // This keeps audio audible AND lets us read frequency data
         sourceNode.connect(analyser);
         analyser.connect(audioCtx.destination);
       } catch(e) {
-        console.warn('Web Audio API not available:', e);
+        // If anything fails, tear down so audio keeps working natively
+        console.warn('Waveform init failed — disabling visualizer:', e.message);
+        audioCtx = null;
+        analyser = null;
+        sourceNode = null;
       }
     }
 
     function drawWaveform() {
-      if (!analyser || !waveformActive) return;
+      if (!waveformActive) return;
       const canvas = document.getElementById('npm-waveform');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const W = canvas.width;
       const H = canvas.height;
 
+      ctx.clearRect(0, 0, W, H);
+
+      // If no analyser (Web Audio unavailable), just show idle pulse
+      if (!analyser) {
+        drawIdlePulse(ctx, W, H);
+        waveformRAF = requestAnimationFrame(drawWaveform);
+        return;
+      }
+
       const bufferLen = analyser.frequencyBinCount;
       const dataArr = new Uint8Array(bufferLen);
       analyser.getByteFrequencyData(dataArr);
-
-      ctx.clearRect(0, 0, W, H);
 
       const barCount = 60;
       const barW = (W / barCount) * 0.7;
       const gap = (W / barCount) * 0.3;
       const maxBarH = H * 0.85;
 
-      // Build gradient
       const grad = ctx.createLinearGradient(0, H, 0, 0);
       grad.addColorStop(0,   'rgba(168,85,247,0.9)');
       grad.addColorStop(0.5, 'rgba(99,102,241,0.85)');
@@ -589,13 +605,11 @@
         const x = i * (barW + gap);
         const y = H - barH;
 
-        // Mirrored bar (top + bottom)
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.roundRect(x, y, barW, barH, 3);
         ctx.fill();
 
-        // Reflection (faded, flipped)
         ctx.globalAlpha = 0.18;
         ctx.beginPath();
         ctx.roundRect(x, H, barW, -(barH * 0.4), 3);
@@ -603,11 +617,8 @@
         ctx.globalAlpha = 1;
       }
 
-      // Idle pulse if silent
       const total = dataArr.reduce((a, b) => a + b, 0);
-      if (total === 0) {
-        drawIdlePulse(ctx, W, H);
-      }
+      if (total === 0) drawIdlePulse(ctx, W, H);
 
       waveformRAF = requestAnimationFrame(drawWaveform);
     }
@@ -631,8 +642,15 @@
 
     function startWaveform() {
       initAudioContext();
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+      if (!analyser) {
+        // Visualizer not available — draw idle pulse only, audio is unaffected
+        waveformActive = true;
+        if (waveformRAF) cancelAnimationFrame(waveformRAF);
+        drawWaveform();
+        return;
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
       }
       waveformActive = true;
       if (waveformRAF) cancelAnimationFrame(waveformRAF);
