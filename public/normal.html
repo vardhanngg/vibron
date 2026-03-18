@@ -41,6 +41,37 @@
     <button id="sidebar-toggle" class="sidebar-toggle" onclick="toggleSidebar()">
       <i class="fa-solid fa-bars"></i>
     </button>
+
+    <!-- Theme picker -->
+    <div id="theme-picker-wrap">
+      <button id="theme-picker-btn" class="theme-picker-btn" onclick="toggleThemePicker()" title="Customize theme">
+        <span class="theme-dot"></span>
+      </button>
+      <div id="theme-picker-panel" class="theme-picker-panel hidden">
+        <div class="theme-slider-row">
+          <span class="rgb-label" style="color:#ff6b6b;">R</span>
+          <input type="range" id="slider-r" min="0" max="255" value="168" oninput="applyTheme()">
+        </div>
+        <div class="theme-slider-row">
+          <span class="rgb-label" style="color:#6bff9e;">G</span>
+          <input type="range" id="slider-g" min="0" max="255" value="85" oninput="applyTheme()">
+        </div>
+        <div class="theme-slider-row">
+          <span class="rgb-label" style="color:#6bb5ff;">B</span>
+          <input type="range" id="slider-b" min="0" max="255" value="247" oninput="applyTheme()">
+        </div>
+        <div class="theme-presets">
+          <button onclick="setPreset(168,85,247)" style="background:#a855f7" title="Purple"></button>
+          <button onclick="setPreset(99,102,241)" style="background:#6366f1" title="Indigo"></button>
+          <button onclick="setPreset(236,72,153)" style="background:#ec4899" title="Pink"></button>
+          <button onclick="setPreset(34,211,238)" style="background:#22d3ee" title="Cyan"></button>
+          <button onclick="setPreset(245,158,11)" style="background:#f59e0b" title="Amber"></button>
+          <button onclick="setPreset(16,185,129)" style="background:#10b981" title="Green"></button>
+          <button onclick="setPreset(239,68,68)"  style="background:#ef4444" title="Red"></button>
+          <button onclick="setPreset(255,255,255)" style="background:#fff" title="White"></button>
+        </div>
+      </div>
+    </div>
     <a href="/mood" class="switch-btn">
       <i class="fa-solid fa-masks-theater"></i> Mood Player
     </a>
@@ -388,8 +419,11 @@
     function toggleSidebar() {
       const sb = document.getElementById('sidebar');
       sb.classList.toggle('open');
+      // Hide theme picker when sidebar opens
+      if (sb.classList.contains('open')) {
+        document.getElementById('theme-picker-panel').classList.add('hidden');
+      }
     }
-    // Also wire the button directly in case onclick attr has timing issues
     document.getElementById('sidebar-toggle').addEventListener('click', function(e) {
       e.stopPropagation();
       toggleSidebar();
@@ -401,7 +435,72 @@
           !e.target.closest('#sidebar-toggle')) {
         sidebar.classList.remove('open');
       }
+      // Close theme picker on outside click
+      const panel = document.getElementById('theme-picker-panel');
+      if (panel && !panel.classList.contains('hidden') &&
+          !e.target.closest('#theme-picker-wrap')) {
+        panel.classList.add('hidden');
+      }
     });
+
+    /* ── THEME PICKER ── */
+    function toggleThemePicker() {
+      const panel = document.getElementById('theme-picker-panel');
+      panel.classList.toggle('hidden');
+      // Close sidebar if open
+      document.getElementById('sidebar').classList.remove('open');
+    }
+
+    function applyTheme() {
+      const r = document.getElementById('slider-r').value;
+      const g = document.getElementById('slider-g').value;
+      const b = document.getElementById('slider-b').value;
+
+      const hex = '#' + [r,g,b].map(v => parseInt(v).toString(16).padStart(2,'0')).join('');
+      // Darker version for accent-2
+      const r2 = Math.max(0, parseInt(r) - 60);
+      const g2 = Math.max(0, parseInt(g) - 20);
+      const b2 = Math.min(255, parseInt(b) + 20);
+      const hex2 = '#' + [r2,g2,b2].map(v => v.toString(16).padStart(2,'0')).join('');
+
+      const root = document.documentElement;
+      root.style.setProperty('--accent', hex);
+      root.style.setProperty('--accent-2', hex2);
+      root.style.setProperty('--glow-purple', `0 0 28px rgba(${r},${g},${b},0.35)`);
+
+      // Update the dot preview
+      document.querySelector('.theme-dot').style.background =
+        `linear-gradient(135deg, ${hex}, ${hex2})`;
+
+      // Update slider thumbs color
+      document.querySelectorAll('.theme-slider-row input').forEach(s => {
+        s.style.setProperty('--accent', hex);
+      });
+
+      // Persist to localStorage
+      localStorage.setItem('vibron-theme', JSON.stringify({r, g, b}));
+    }
+
+    function setPreset(r, g, b) {
+      document.getElementById('slider-r').value = r;
+      document.getElementById('slider-g').value = g;
+      document.getElementById('slider-b').value = b;
+      applyTheme();
+    }
+
+    // Restore saved theme on load
+    (function() {
+      const saved = localStorage.getItem('vibron-theme');
+      if (saved) {
+        try {
+          const {r, g, b} = JSON.parse(saved);
+          document.getElementById('slider-r').value = r;
+          document.getElementById('slider-g').value = g;
+          document.getElementById('slider-b').value = b;
+          applyTheme();
+        } catch(e) {}
+      }
+    })();
 
     /* ── FOCUS SEARCH ── */
     function focusSearch() {
