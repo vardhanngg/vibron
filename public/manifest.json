@@ -1,14 +1,44 @@
 {
   "name": "Vibron",
   "short_name": "Vibron",
-  "description": "Search, stream, and enjoy your music",
+  "description": "Music that matches your mood. Search, stream, and listen together.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#ff4081",
+  "orientation": "portrait-primary",
+  "background_color": "#080810",
+  "theme_color": "#a855f7",
+  "categories": ["music", "entertainment"],
   "icons": [
-    { "src": "/v.ico", "sizes": "64x64", "type": "image/x-icon" },
-    { "src": "/v.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/v.png", "sizes": "512x512", "type": "image/png" }
-  ]
+    {
+      "src": "/v.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/v.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Normal Player",
+      "short_name": "Player",
+      "description": "Search and play music",
+      "url": "/normal",
+      "icons": [{ "src": "/v.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mood Player",
+      "short_name": "Mood",
+      "description": "Play music based on your mood",
+      "url": "/mood",
+      "icons": [{ "src": "/v.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }
