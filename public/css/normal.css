@@ -597,7 +597,47 @@ main {
 .favorites-download-btn, .playlist-download-btn {
   background: linear-gradient(135deg, var(--accent-2), var(--accent)) !important;
   color: #fff !important; border: none !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 8px 14px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.85rem !important; font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
 }
+.favorites-download-btn:hover, .playlist-download-btn:hover {
+  filter: brightness(1.1); transform: translateY(-1px);
+}
+
+/* Delete playlist button */
+.delete-playlist {
+  background: rgba(255,107,107,0.12);
+  border: 1px solid rgba(255,107,107,0.3);
+  color: #ff6b6b;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.delete-playlist:hover {
+  background: rgba(255,107,107,0.25);
+  border-color: #ff6b6b;
+}
+
+/* Queue promote / remove buttons */
+.promote-btn {
+  background: none; border: none; color: var(--accent-3);
+  cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  font-size: 0.78rem; transition: all 0.15s;
+}
+.promote-btn:hover { background: rgba(34,211,238,0.12); }
+
+.remove-btn {
+  background: none; border: none; color: #ff6b6b;
+  cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  font-size: 0.78rem; transition: all 0.15s;
+}
+.remove-btn:hover { background: rgba(255,107,107,0.12); }
 
 /* Playlist item */
 .playlist-item {
