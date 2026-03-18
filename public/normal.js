@@ -1633,8 +1633,8 @@ function createPlaylistModal(songId = '') {
       <h4>Create Playlist</h4>
       <input type="text" id="playlist-name-input" placeholder="Enter playlist name..." />
       <div class="modal-buttons">
-        <button id="create-playlist-btn" onclick="createPlaylist(document.getElementById('playlist-name-input').value, '${encodeURIComponent(songId)}'); closePlaylistModal()">Create</button>
-        <button onclick="closePlaylistModal()">Cancel</button>
+        <button id="create-playlist-btn" class="modal-btn host-btn" onclick="createPlaylist(document.getElementById('playlist-name-input').value, '${encodeURIComponent(songId)}'); closePlaylistModal()">Create</button>
+        <button class="modal-btn cancel-btn" onclick="closePlaylistModal()">Cancel</button>
       </div>
     </div>
   `;
@@ -1768,8 +1768,8 @@ function loadFavorites() {
         <h4 style="margin:0">Favorites</h4>
       </div>
       <div>
-        <button onclick="playAllFavorites()" ${favorites.length === 0 ? 'disabled' : ''}>Play All</button>
-        <button onclick="playAllFavorites(true)" ${favorites.length === 0 ? 'disabled' : ''}>Shuffle All</button>
+        <button class="modal-btn join-btn" onclick="playAllFavorites()" ${favorites.length === 0 ? 'disabled' : ''}>▶ Play All</button>
+        <button class="modal-btn join-btn" onclick="playAllFavorites(true)" ${favorites.length === 0 ? 'disabled' : ''}>🔀 Shuffle All</button>
         <button class="favorites-download-btn" onclick="downloadPlaylist(favorites, 'Favorites')" ${favorites.length === 0 ? 'disabled' : ''}>Download All</button>
       </div>
     </div>
@@ -1882,7 +1882,7 @@ function loadPlaylists() {
         <button class="back-inline" onclick="loadHomeContent()">← Home</button>
         <h4 style="margin:0">Playlists</h4>
       </div>
-      <button onclick="createPlaylistModal()">+ New</button>
+      <button class="modal-btn host-btn" onclick="createPlaylistModal()">+ New</button>
     </div>
   `;
 
@@ -1941,15 +1941,15 @@ function openPlaylist(idx) {
         <h4 style="margin:0">${pl.name}</h4>
       </div>
       <div>
-        <button onclick="playPlaylist(${idx})" ${pl.songs.length === 0 ? 'disabled' : ''}>Play All</button>
-        <button onclick="playPlaylist(${idx}, true)" ${pl.songs.length === 0 ? 'disabled' : ''}>Shuffle</button>
+        <button class="modal-btn join-btn" onclick="playPlaylist(${idx})" ${pl.songs.length === 0 ? 'disabled' : ''}>▶ Play All</button>
+        <button class="modal-btn join-btn" onclick="playPlaylist(${idx}, true)" ${pl.songs.length === 0 ? 'disabled' : ''}>🔀 Shuffle</button>
         <button class="playlist-download-btn" onclick="downloadPlaylist(playlists[${idx}].songs, '${pl.name.replace(/'/g, "\\'")}')" ${pl.songs.length === 0 ? 'disabled' : ''}>Download</button>
       </div>
     </div>
   `;
 
   if (!pl.songs || pl.songs.length === 0) {
-    html += `<div><span>No songs in this playlist.</span><div style="margin-top:8px;"><button onclick="createSongPickerModal(${idx})">+ Add Song</button></div></div>`;
+    html += `<div><span style="color:var(--muted)">No songs in this playlist.</span><div style="margin-top:12px;"><button class="modal-btn host-btn" onclick="createSongPickerModal(${idx})">+ Add Song</button></div></div>`;
     libraryView.innerHTML = html;
     if (moreBtn) moreBtn.style.display = 'none';
     hideBackButton();
@@ -1982,7 +1982,7 @@ function openPlaylist(idx) {
     .join('');
 
   html += `<div class="song-container"><div class="cards">${songsHtml}</div></div>`;
-  html += `<div style="margin-top:10px;"><button onclick="createSongPickerModal(${idx})">+ Add Song</button></div>`;
+  html += `<div style="margin-top:12px;"><button class="modal-btn host-btn" onclick="createSongPickerModal(${idx})">+ Add Song</button></div>`;
 
   libraryView.innerHTML = html;
   if (moreBtn) moreBtn.style.display = 'none';
@@ -2034,8 +2034,8 @@ function showAddToPlaylistModal(songId) {
         }
       </div>
       <div class="modal-buttons">
-        <button onclick="closeAddToPlaylistModal(); createPlaylistModal('${songId}');">Create New</button>
-        <button onclick="closeAddToPlaylistModal()">Cancel</button>
+        <button class="modal-btn host-btn" onclick="closeAddToPlaylistModal(); createPlaylistModal('${songId}');">+ Create New</button>
+        <button class="modal-btn cancel-btn" onclick="closeAddToPlaylistModal()">Cancel</button>
       </div>
     </div>
   `;
@@ -3068,7 +3068,7 @@ function createSongPickerModal(playlistIdx) {
       <input type="text" id="song-picker-search" placeholder="Search songs..." oninput="filterSongPicker(this.value)" />
       <div class="song-picker-list" id="song-picker-list" data-playlist-idx="${playlistIdx}"></div>
       <div class="modal-buttons">
-        <button onclick="closeSongPickerModal()">Cancel</button>
+        <button class="modal-btn cancel-btn" onclick="closeSongPickerModal()">Cancel</button>
       </div>
     </div>
   `;
