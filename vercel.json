@@ -24,6 +24,21 @@
       "dest": "/api/ui.js"
     },
     {
+      "src": "/public/normal.html",
+      "headers": { "Location": "/normal" },
+      "status": 301
+    },
+    {
+      "src": "/public/mood.html",
+      "headers": { "Location": "/mood" },
+      "status": 301
+    },
+    {
+      "src": "/public/home.html",
+      "headers": { "Location": "/" },
+      "status": 301
+    },
+    {
       "src": "/normal",
       "dest": "/public/normal.html"
     },
