@@ -2067,40 +2067,11 @@ function showSessionControls(sessionCode) {
   const codeDisplay = document.getElementById('session-code-display');
   if (codeDisplay) codeDisplay.classList.remove('hidden');
 
-  //const transferBtn = document.getElementById('transfer-host-btn');
-  //if (transferBtn) {
-  //  transferBtn.classList.remove('hidden');
-   // transferBtn.disabled = false;
-  //  transferBtn.onclick = openTransferModal; // or your modal handler
- // }
-
-  // ✅ Bind playback buttons for host
-  const playBtn = document.getElementById("play-pause-btn");
-  const nextBtn = document.getElementById("next-btn");
-  const prevBtn = document.getElementById("prev-btn");
-  const loopBtn = document.getElementById("loop-btn");
-  const favBtn  = document.getElementById("fav-btn");
-
-  if (playBtn) {
-    playBtn.disabled = false;
-    playBtn.onclick = () => socket.emit("play-pause", { code: sessionCode });
-  }
-  if (nextBtn) {
-    nextBtn.disabled = false;
-    nextBtn.onclick = () => socket.emit("next-track", { code: sessionCode });
-  }
-  if (prevBtn) {
-    prevBtn.disabled = false;
-    prevBtn.onclick = () => socket.emit("prev-track", { code: sessionCode });
-  }
-  if (loopBtn) {
-    loopBtn.disabled = false;
-    loopBtn.onclick = () => socket.emit("toggle-loop", { code: sessionCode });
-  }
-  if (favBtn) {
-    favBtn.disabled = false;
-    favBtn.onclick = () => socket.emit("toggle-fav", { code: sessionCode });
-  }
+  // Just re-enable the buttons — their click handlers are already wired
+  // in init via addEventListener. Never override onclick here or it breaks
+  // non-session playback permanently.
+  document.querySelectorAll('#play-pause-btn, #next-btn, #prev-btn, #loop-btn, #fav-btn')
+    .forEach(btn => { if (btn) btn.disabled = false; });
 }
 
 // Hide session controls for non-hosts
@@ -3172,8 +3143,24 @@ window.addEventListener('load', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get('session');
   if (code) {
-    document.getElementById('session-code-input').value = code;
-    joinSession();
+    // Pre-fill code
+    document.getElementById('session-code-input').value = code.toUpperCase();
+
+    // Show the listen-together modal with the name input immediately
+    // so user can enter their name and then auto-join
+    document.getElementById('listen-together-modal').classList.remove('hidden');
+    document.getElementById('listen-options').classList.add('hidden');
+    document.getElementById('join-input').classList.add('hidden');
+
+    // Show name input with a friendly message
+    const nameModal = document.getElementById('name-input-modal');
+    nameModal.classList.remove('hidden');
+
+    // After they enter name, joinSession() will read the pre-filled code
+    pendingAction = 'join';
+
+    // Clean URL so refresh doesn't re-trigger
+    window.history.replaceState({}, '', window.location.pathname);
   }
   //setGreeting();
   loadHomeContent();
@@ -3287,12 +3274,8 @@ document.getElementById('host-session-btn').addEventListener('click', hostSessio
 
   document.querySelector('.search-container button').addEventListener('click', searchSongs);
 
-  document.getElementById('next-btn').addEventListener('click', playNext);
-  document.getElementById('prev-btn').addEventListener('click', playPrevious);
-  document.getElementById('play-pause-btn').addEventListener('click', playPause);
-  document.getElementById('fav-btn').addEventListener('click', addToFavoritesFromPlayer);
-  document.getElementById('loop-btn').addEventListener('click', toggleLoop);
-  //document.getElementById('queue-open-btn').addEventListener('click', dropQueue);
+  // Note: play-pause, next, prev, loop, fav buttons already have onclick
+  // attributes in HTML — no need to also add addEventListener here
   const emptyQueueEl = document.getElementById('empty-queue');
   if (emptyQueueEl) emptyQueueEl.addEventListener('click', emptyQueue);
 
