@@ -1,4 +1,5 @@
 {
+  "id": "com.vibron.app",
   "name": "Vibron",
   "short_name": "Vibron",
   "description": "Music that matches your mood. Search, stream, and listen together.",
@@ -8,6 +9,8 @@
   "orientation": "portrait-primary",
   "background_color": "#080810",
   "theme_color": "#a855f7",
+  "lang": "en",
+  "dir": "ltr",
   "categories": ["music", "entertainment"],
   "icons": [
     {
@@ -21,6 +24,21 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/v.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/v.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vibron home screen"
     }
   ],
   "shortcuts": [
@@ -39,6 +57,5 @@
       "icons": [{ "src": "/v.png", "sizes": "192x192" }]
     }
   ],
-  "screenshots": [],
   "prefer_related_applications": false
 }
