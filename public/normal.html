@@ -132,6 +132,22 @@
 
     <!-- Home Content -->
     <div id="home-content" class="home-content">
+
+      <!-- Genre tiles -->
+      <section class="home-section" id="genre-section">
+        <h3>🎵 What are you feeling?</h3>
+        <div class="genre-grid">
+          <div class="genre-tile" style="--gc:#7c3aed;" onclick="loadGenre('hip hop hits')"><span>🎤</span>Hip Hop</div>
+          <div class="genre-tile" style="--gc:#0ea5e9;" onclick="loadGenre('chill lofi songs')"><span>☁️</span>Chill</div>
+          <div class="genre-tile" style="--gc:#f59e0b;" onclick="loadGenre('party songs')"><span>🎉</span>Party</div>
+          <div class="genre-tile" style="--gc:#10b981;" onclick="loadGenre('workout gym songs')"><span>💪</span>Workout</div>
+          <div class="genre-tile" style="--gc:#ec4899;" onclick="loadGenre('romantic love songs')"><span>💕</span>Romance</div>
+          <div class="genre-tile" style="--gc:#6366f1;" onclick="loadGenre('focus study music')"><span>🧠</span>Focus</div>
+          <div class="genre-tile" style="--gc:#14b8a6;" onclick="loadGenre('trending pop songs 2024')"><span>🔥</span>Trending</div>
+          <div class="genre-tile" style="--gc:#f97316;" onclick="loadGenre('sad emotional songs')"><span>🌧️</span>Sad</div>
+        </div>
+      </section>
+
       <section id="fun-fact" class="home-section">
         <h3>✨ Did You Know?</h3>
         <p id="fact-text">Loading fun fact…</p>
@@ -153,10 +169,26 @@
       💬
       <span id="chat-badge" class="hidden">0</span>
     </button>
+    <!-- Suggestions button — only shown for host when in session -->
+    <button id="suggestions-btn" class="queue-open-btn suggestions-open-btn hidden" onclick="toggleSuggestionsPanel()" title="Song Suggestions">
+      <i class="fa-solid fa-hand" style="font-size:0.9rem;"></i>
+      <span id="suggestions-badge" class="queue-count-badge hidden">0</span>
+    </button>
     <button id="queue-open-btn" class="queue-open-btn" onclick="toggleQueue()" title="Queue">
       <i class="fa-solid fa-list" style="font-size:0.9rem;"></i>
       <span id="queue-count-badge" class="queue-count-badge hidden">0</span>
     </button>
+  </div>
+
+  <!-- SUGGESTIONS PANEL (host only) -->
+  <div class="suggestions-panel" id="suggestions-panel">
+    <div class="queue-header-holder">
+      <h3 class="queue-title">✋ Song Suggestions</h3>
+      <button class="toggle-btn" onclick="toggleSuggestionsPanel()"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="suggestions-list" class="suggestions-list">
+      <span style="color:var(--muted);font-size:0.88rem;">No suggestions yet.</span>
+    </div>
   </div>
 
   <!-- QUEUE PANEL -->
@@ -291,7 +323,9 @@
   <!-- NOW PLAYING MODAL -->
   <div id="now-playing-modal">
     <div class="npm-backdrop" onclick="closeNowPlayingModal()"></div>
-    <div class="npm-inner">
+    <div class="npm-inner" id="npm-inner">
+      <!-- Swipe handle -->
+      <div class="npm-swipe-handle"></div>
       <button class="npm-close" onclick="closeNowPlayingModal()"><i class="fa-solid fa-chevron-down"></i></button>
       <div class="npm-art-wrap">
         <img id="npm-album-art" src="default.png" alt="Album Art" />
@@ -322,6 +356,12 @@
         <button id="npm-fav-btn" onclick="addToFavoritesFromPlayer()" title="Favorite"><i class="fa-regular fa-heart"></i></button>
         <button onclick="downloadCurrentSong()" title="Download"><i class="fa-solid fa-download"></i></button>
         <button id="npm-shuffle-btn" onclick="toggleShuffle()" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
+      </div>
+      <!-- Volume row (always visible, especially useful on mobile) -->
+      <div class="npm-volume-row">
+        <i class="fa-solid fa-volume-low" style="color:var(--muted);font-size:0.85rem;"></i>
+        <input type="range" id="npm-volume-slider" min="0" max="100" step="1" value="100" />
+        <i class="fa-solid fa-volume-high" style="color:var(--muted);font-size:0.85rem;"></i>
       </div>
     </div>
   </div>
@@ -553,6 +593,81 @@
       const pct = (e.clientX - rect.left) / rect.width;
       const audio = document.getElementById('audio-player');
       audio.currentTime = pct * audio.duration;
+    });
+
+    /* ── MODAL VOLUME SLIDER ── */
+    const npmVol = document.getElementById('npm-volume-slider');
+    const mainVol = document.getElementById('volume-slider');
+    const audioEl = document.getElementById('audio-player');
+
+    // Sync npm slider → audio + main slider
+    npmVol.addEventListener('input', () => {
+      const pct = npmVol.value;
+      audioEl.volume = pct / 100;
+      if (mainVol) {
+        mainVol.value = pct;
+        mainVol.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--panel-2) ${pct}%, var(--panel-2) 100%)`;
+      }
+      npmVol.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.1) ${pct}%, rgba(255,255,255,0.1) 100%)`;
+    });
+    // Sync main slider → npm slider
+    if (mainVol) {
+      mainVol.addEventListener('input', () => {
+        npmVol.value = mainVol.value;
+        const pct = mainVol.value;
+        npmVol.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.1) ${pct}%, rgba(255,255,255,0.1) 100%)`;
+      });
+    }
+    // Sync value when modal opens
+    const _origOpenModalVol = window.openNowPlayingModal;
+    window.openNowPlayingModal = function() {
+      _origOpenModalVol && _origOpenModalVol();
+      const pct = mainVol ? mainVol.value : 100;
+      npmVol.value = pct;
+      npmVol.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, rgba(255,255,255,0.1) ${pct}%, rgba(255,255,255,0.1) 100%)`;
+    };
+
+    /* ── SWIPE DOWN TO CLOSE NOW PLAYING ── */
+    const npmInner = document.getElementById('npm-inner');
+    let _swipeStartY = 0;
+    let _swipeDelta = 0;
+    let _isSwiping = false;
+
+    npmInner.addEventListener('touchstart', e => {
+      _swipeStartY = e.touches[0].clientY;
+      _swipeDelta = 0;
+      _isSwiping = true;
+      npmInner.style.transition = 'none';
+    }, { passive: true });
+
+    npmInner.addEventListener('touchmove', e => {
+      if (!_isSwiping) return;
+      _swipeDelta = e.touches[0].clientY - _swipeStartY;
+      if (_swipeDelta < 0) { _swipeDelta = 0; return; } // no swipe up
+      npmInner.style.transform = `translateY(${_swipeDelta}px)`;
+      // Fade backdrop as user swipes
+      const modal = document.getElementById('now-playing-modal');
+      const opacity = Math.max(0, 1 - _swipeDelta / 280);
+      modal.querySelector('.npm-backdrop').style.opacity = opacity;
+    }, { passive: true });
+
+    npmInner.addEventListener('touchend', () => {
+      _isSwiping = false;
+      npmInner.style.transition = 'transform 0.3s cubic-bezier(.4,0,.2,1)';
+      if (_swipeDelta > 120) {
+        // Enough — close
+        npmInner.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+          closeNowPlayingModal();
+          npmInner.style.transform = '';
+          npmInner.style.transition = '';
+          document.getElementById('now-playing-modal').querySelector('.npm-backdrop').style.opacity = '';
+        }, 280);
+      } else {
+        // Snap back
+        npmInner.style.transform = '';
+        document.getElementById('now-playing-modal').querySelector('.npm-backdrop').style.opacity = '';
+      }
     });
 
     function formatTime(s) {

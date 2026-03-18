@@ -719,6 +719,13 @@ function createSongCard(song, fromArtist = false, fromAlbum = false) {
 
   const card = document.createElement('div');
   card.className = 'card';
+
+  // Non-hosts in a session get a "Suggest" button instead of Play
+  const isNonHost = !isHost && currentSessionCode;
+  const actionBtn = isNonHost
+    ? `<div class="suggest-btn" title="Suggest to host" onclick="event.stopPropagation(); suggestSong({id: '${safeId}', title: '${safeTitle}', artist: '${safeArtist}', image: '${song.image}', audioUrl: '${song.audioUrl}'})"><i class="fa-solid fa-hand"></i></div>`
+    : `<div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${safeId}', title: '${safeTitle}', artist: '${safeArtist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>`;
+
   card.innerHTML = `
     <img src="${song.image || 'default.png'}" alt="${safeTitle}" />
     <div class="card-body">
@@ -726,14 +733,16 @@ function createSongCard(song, fromArtist = false, fromAlbum = false) {
       <div class="artist-name">${safeArtist}</div>
     </div>
     <div class="play-down">
-      <div class="play-btn" title="Play" onclick="event.stopPropagation(); playSong({id: '${safeId}', title: '${safeTitle}', artist: '${safeArtist}', image: '${song.image}', audioUrl: '${song.audioUrl}'}, false, ${fromArtist}, ${fromAlbum})"><i class="fa-solid fa-play"></i></div>
+      ${actionBtn}
       <div class="playlist-btn" title="Add to Playlist" onclick="event.stopPropagation(); showAddToPlaylistModal('${safeId}')"><i class="fa-solid fa-plus"></i></div>
       <div class="add-fav${isFavorited ? ' favorited' : ''}" title="${isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}" onclick="event.stopPropagation(); toggleFavorites('${safeId}')"><i class="fa${isFavorited ? '-solid' : '-regular'} fa-heart"></i></div>
       <div class="queue-btn" title="Add to Queue" onclick="event.stopPropagation(); addToQueue('${safeId}')"><i class="fa-solid fa-list"></i></div>
       <div class="download-btn" title="Download" onclick="event.stopPropagation(); downloadSong('${safeId}')"><i class="fa-solid fa-download"></i></div>
     </div>
   `;
-  card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
+  if (!isNonHost) {
+    card.addEventListener('click', () => playSong(song, false, fromArtist, fromAlbum));
+  }
   return card;
 }
 
@@ -803,6 +812,112 @@ function downloadPlaylist(songs, playlistName) {
 }
 
 /* =================== */
+/* Genre Tiles */
+async function loadGenre(query) {
+  // Show skeleton in song list
+  document.getElementById('home-content').style.display = 'none';
+  const resultsList = document.getElementById('song-list');
+  resultsList.classList.remove('hidden');
+  resultsList.style.display = 'block';
+  resultsList.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
+      <button class="back-inline" onclick="loadHomeContent()">← Home</button>
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
+    </div>
+    <div class="skeleton-list">${Array(6).fill(0).map(() => `
+      <div class="skeleton-card">
+        <div class="skeleton-img"></div>
+        <div class="skeleton-body">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-sub"></div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+
+  try {
+    const res = await fetch(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(query)}&page=1&limit=20`);
+    const json = await res.json();
+    const songs = (json?.data?.results || json?.results || []).map(normalizeSong).filter(s => s.audioUrl);
+
+    if (!songs.length) {
+      resultsList.innerHTML = `<button class="back-inline" onclick="loadHomeContent()">← Home</button><p style="color:var(--muted);margin-top:1rem;">No songs found for "${query}"</p>`;
+      return;
+    }
+
+    // Add all to history and queue
+    songs.forEach(s => { if (!songHistory.some(h => h.id === s.id)) songHistory.push(s); });
+    queue = [...songs.slice(1)];
+    renderQueue();
+
+    // Play first song
+    playSong(songs[0], false);
+
+    // Render cards
+    resultsList.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
+        <button class="back-inline" onclick="loadHomeContent()">← Home</button>
+        <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
+      </div>
+      <div class="cards">${songs.map(song => {
+        const t = (song.title.length > 30 ? song.title.slice(0,30)+'...' : song.title).replace(/'/g,"\\'");
+        const a = (song.artist.length > 20 ? song.artist.slice(0,20)+'...' : song.artist).replace(/'/g,"\\'");
+        const sid = encodeURIComponent(song.id);
+        return `<div class="card" onclick="playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)">
+          <img src="${song.image||'default.png'}" />
+          <div class="card-body"><div class="song-name">${t}</div><div class="artist-name">${a}</div></div>
+          <div class="play-down">
+            <div class="play-btn" onclick="event.stopPropagation();playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)"><i class="fa-solid fa-play"></i></div>
+            <div class="add-fav" onclick="event.stopPropagation();toggleFavorites('${sid}')"><i class="fa-regular fa-heart"></i></div>
+            <div class="queue-btn" onclick="event.stopPropagation();addToQueue('${sid}')"><i class="fa-solid fa-list"></i></div>
+          </div>
+        </div>`;
+      }).join('')}</div>`;
+
+    markStateChanged(); saveState();
+  } catch(e) {
+    resultsList.innerHTML = `<button class="back-inline" onclick="loadHomeContent()">← Home</button><p style="color:var(--muted);margin-top:1rem;">Failed to load songs. Please try again.</p>`;
+  }
+}
+
+/* =================== */
+/* Crossfade */
+let _crossfadeTimer = null;
+const CROSSFADE_DURATION = 1500; // ms
+
+function _fadeOut(audio, duration, cb) {
+  const steps = 30;
+  const stepTime = duration / steps;
+  const startVol = audio.volume;
+  let step = 0;
+  clearInterval(_crossfadeTimer);
+  _crossfadeTimer = setInterval(() => {
+    step++;
+    audio.volume = Math.max(0, startVol * (1 - step / steps));
+    if (step >= steps) {
+      clearInterval(_crossfadeTimer);
+      audio.volume = 0;
+      if (cb) cb();
+    }
+  }, stepTime);
+}
+
+function _fadeIn(audio, targetVol, duration) {
+  const steps = 30;
+  const stepTime = duration / steps;
+  audio.volume = 0;
+  let step = 0;
+  clearInterval(_crossfadeTimer);
+  _crossfadeTimer = setInterval(() => {
+    step++;
+    audio.volume = Math.min(targetVol, targetVol * (step / steps));
+    if (step >= steps) {
+      clearInterval(_crossfadeTimer);
+      audio.volume = targetVol;
+    }
+  }, stepTime);
+}
+
+/* =================== */
 /* Playback */
 function loadSongWithoutPlaying(song) {
   currentSongIndex = songHistory.findIndex(s => s.id === song.id);
@@ -840,9 +955,23 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
     };
   }
 
-  // --- Start playback ---
-  audioPlayer.src = song.audioUrl;
-  audioPlayer.play().catch(err => console.error('Playback error:', err));
+  // --- Start playback with crossfade ---
+  const targetVol = parseFloat(document.getElementById('volume-slider')?.value || 100) / 100;
+
+  const doPlay = () => {
+    audioPlayer.src = song.audioUrl;
+    audioPlayer._fadingOut = false; // reset crossfade flag
+    audioPlayer.volume = 0;
+    audioPlayer.play().catch(err => console.error('Playback error:', err));
+    _fadeIn(audioPlayer, targetVol, CROSSFADE_DURATION);
+  };
+
+  // If something is already playing, fade it out first
+  if (!audioPlayer.paused && audioPlayer.currentTime > 0) {
+    _fadeOut(audioPlayer, CROSSFADE_DURATION, doPlay);
+  } else {
+    doPlay();
+  }
 
   albumArt.src = song.image || 'default.png';
   nowPlaying.textContent = song.title;
@@ -2006,6 +2135,14 @@ function leaveSession() {
   setSessionControlsDisabled(false);
   document.body.classList.remove('nonhost-session');
 
+  // Hide suggestions button and clear list
+  const sugBtn = document.getElementById('suggestions-btn');
+  if (sugBtn) sugBtn.classList.add('hidden');
+  const sugBadge = document.getElementById('suggestions-badge');
+  if (sugBadge) { sugBadge.textContent = '0'; sugBadge.classList.add('hidden'); }
+  _suggestions = [];
+  document.getElementById('suggestions-panel')?.classList.remove('open');
+
   hideChatButton();
 
   const listenBtn = document.getElementById('listen-together-btn');
@@ -2212,8 +2349,111 @@ function sendReaction(emoji) {
     isReaction: true,
     time: new Date().toISOString()
   });
-  // Show locally immediately
   _appendChatMessage(userName || 'You', emoji, true);
+}
+
+/* ── SONG SUGGESTIONS (non-host → host) ── */
+let _suggestions = []; // host-side list of suggested songs
+
+function suggestSong(song) {
+  if (!currentSessionCode) { showNotification('Join a session to suggest songs!'); return; }
+  socket.emit('suggest-song', {
+    code: currentSessionCode,
+    song,
+    from: userName || 'A listener'
+  });
+  showNotification(`✋ "${song.title}" suggested to host!`);
+}
+
+// Host receives a suggestion
+socket.on('song-suggested', ({ song, from }) => {
+  if (!isHost) return;
+  _suggestions.push({ song, from, id: Date.now() });
+  _renderSuggestions();
+
+  // Badge the suggestions btn
+  const badge = document.getElementById('suggestions-badge');
+  if (badge) {
+    badge.textContent = _suggestions.length;
+    badge.classList.remove('hidden');
+  }
+  showNotification(`✋ ${from} suggested "${song.title}"`);
+});
+
+function _renderSuggestions() {
+  const list = document.getElementById('suggestions-list');
+  if (!list) return;
+  if (_suggestions.length === 0) {
+    list.innerHTML = '<span style="color:var(--muted);font-size:0.88rem;">No suggestions yet — listeners can suggest songs from search results.</span>';
+    return;
+  }
+  list.innerHTML = _suggestions.map((item, idx) => {
+    const t = (item.song.title || '').replace(/'/g, "\\'").slice(0, 35);
+    const a = (item.song.artist || '').replace(/'/g, "\\'").slice(0, 25);
+    return `
+    <div class="suggestion-item">
+      <img src="${item.song.image || 'default.png'}" class="suggestion-img" />
+      <div class="suggestion-info">
+        <div class="suggestion-title">${t}</div>
+        <div class="suggestion-from">suggested by <strong>${item.from}</strong></div>
+      </div>
+      <div class="suggestion-actions">
+        <button class="suggestion-play-btn" title="Play now"
+          onclick="_playSuggestion(${idx})">
+          <i class="fa-solid fa-play"></i>
+        </button>
+        <button class="suggestion-queue-btn" title="Add to queue"
+          onclick="_queueSuggestion(${idx})">
+          <i class="fa-solid fa-list"></i>
+        </button>
+        <button class="suggestion-dismiss-btn" title="Dismiss"
+          onclick="_dismissSuggestion(${idx})">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _playSuggestion(idx) {
+  const item = _suggestions[idx];
+  if (!item) return;
+  playSong(item.song, false);
+  _dismissSuggestion(idx);
+  toggleSuggestionsPanel();
+}
+
+function _queueSuggestion(idx) {
+  const item = _suggestions[idx];
+  if (!item) return;
+  if (!songHistory.some(s => s.id === item.song.id)) songHistory.push(item.song);
+  addToQueue(item.song.id);
+  _dismissSuggestion(idx);
+  showNotification(`Added "${item.song.title}" to queue`);
+}
+
+function _dismissSuggestion(idx) {
+  _suggestions.splice(idx, 1);
+  _renderSuggestions();
+  const badge = document.getElementById('suggestions-badge');
+  if (badge) {
+    if (_suggestions.length > 0) {
+      badge.textContent = _suggestions.length;
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+function toggleSuggestionsPanel() {
+  const panel = document.getElementById('suggestions-panel');
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  if (!isOpen) _renderSuggestions();
+  // Close queue/chat if open
+  document.getElementById('queue-container')?.classList.remove('open');
+  document.getElementById('chat-container')?.classList.add('hidden');
 }
 
 function disableControls() {
@@ -2901,6 +3141,10 @@ socket.on('session-created', ({ code }) => {
   showNotification('Session hosted! Share the code: ' + code);
   updateChatButtonVisibility();
   showChatButton();
+
+  // Show suggestions button for host
+  const sugBtn = document.getElementById('suggestions-btn');
+  if (sugBtn) sugBtn.classList.remove('hidden');
 });
 socket.on('connect', () => {
   mySocketId = socket.id;
@@ -3179,6 +3423,13 @@ window.addEventListener('load', () => {
     document.getElementById('progress-circle').style.left = `calc(${percentage}% - 6px)`;
     document.getElementById('current-time').textContent = formatTime(audioPlayer.currentTime);
     document.getElementById('duration').textContent = formatTime(audioPlayer.duration);
+
+    // Trigger crossfade out near end of song
+    const remaining = audioPlayer.duration - audioPlayer.currentTime;
+    if (remaining > 0 && remaining <= CROSSFADE_DURATION / 1000 + 0.1 && !audioPlayer._fadingOut) {
+      audioPlayer._fadingOut = true;
+      _fadeOut(audioPlayer, CROSSFADE_DURATION, null);
+    }
   });
 
   document.querySelector('.player-progress').addEventListener('click', seek);
