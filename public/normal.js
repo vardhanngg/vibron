@@ -970,6 +970,27 @@ function loadSongWithoutPlaying(song) {
   isPlaying = false;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   updateFavoriteButton();
+
+  // If Now Playing modal is open, update it live
+  const modal = document.getElementById('now-playing-modal');
+  if (modal && modal.classList.contains('open')) {
+    const npmArt = document.getElementById('npm-album-art');
+    const npmTitle = document.getElementById('npm-title');
+    const npmArtist = document.getElementById('npm-artist');
+    const npmPlay = document.getElementById('npm-play-btn');
+    if (npmArt) npmArt.src = song.image || 'default.png';
+    if (npmTitle) npmTitle.textContent = song.title;
+    if (npmArtist) npmArtist.textContent = song.artist;
+    if (npmPlay) npmPlay.innerHTML = '<i class="fa-solid fa-play"></i>';
+    // Reset progress bar for new song
+    const fill = document.getElementById('npm-progress-fill');
+    const cur = document.getElementById('npm-current-time');
+    const dur = document.getElementById('npm-duration');
+    if (fill) fill.style.width = '0%';
+    if (cur) cur.textContent = '0:00';
+    if (dur) dur.textContent = '0:00';
+  }
+
   markStateChanged();
   saveState();
 }
