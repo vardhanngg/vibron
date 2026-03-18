@@ -31,9 +31,12 @@ let isHost = false;
 let participants = {};
 let stateChanged = false; // For optimized state saving
 
+let _searchDebounceTimer = null;
+
 const searchInput = document.getElementById('searchInput');
 searchInput.addEventListener('keydown', function(event) {
   if (event.key === 'Enter') {
+    clearTimeout(_searchDebounceTimer);
     searchSongs();
   }
 });
@@ -151,7 +154,7 @@ async function loadHomeContent() {
   if (moreBtn) moreBtn.style.display = 'none';
   hideBackButton();
 
-  await Promise.all([loadListenAgain()]);
+  await Promise.all([loadFunFact()]);
   ////////////////console.log('loadHomeContent completed');
 }
 
@@ -230,36 +233,14 @@ function saveUserName() {
 
 
 
-async function loadListenAgain() {
-  const sectionList = document.querySelector('#listen-again .section-list');
-  sectionList.innerHTML = '';
-
-  const recentSongs = [...new Set(songHistory.filter(s => s.lastPlayed).map(s => s.id))]
-    .slice(-4)
-    .map(id => songHistory.find(s => s.id === id))
-    .sort((a, b) => new Date(b.lastPlayed) - new Date(a.lastPlayed));
-
-  if (recentSongs.length) {
-    const container = document.createElement('div');
-    container.className = 'song-container';
-    const cards = document.createElement('div');
-    cards.className = 'cards';
-    recentSongs.forEach(song => {
-      const card = createSongCard(song);
-      cards.appendChild(card);
-    });
-    container.appendChild(cards);
-    sectionList.appendChild(container);
-  } else {
-    sectionList.innerHTML = '<span>No recently played songs.</span>';
-  }
-}
-
 /* =================== */
 /* Search & Fetch */
 async function searchSongs() {
   const query = searchInput.value.trim();
   if (!query) return;
+
+  // Record to search history
+  if (window._addToSearchHistory) window._addToSearchHistory(query);
 
   previousView = { type: 'home' };
   currentQuery = query;
@@ -280,6 +261,22 @@ resultsList.style.display = 'block'; // ✅ ensure results are visible
 
 async function fetchResults() {
   try {
+    // Show skeleton loader
+    if (currentPage === 1) {
+      resultsList.innerHTML = `
+        <div class="skeleton-list">
+          ${Array(5).fill(0).map(() => `
+            <div class="skeleton-card">
+              <div class="skeleton-img"></div>
+              <div class="skeleton-body">
+                <div class="skeleton-line skeleton-title"></div>
+                <div class="skeleton-line skeleton-sub"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
     // --- 1. Songs ---
     const songsRes = await fetch(
       `https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(currentQuery)}&page=${currentPage}&limit=10`
@@ -1106,17 +1103,23 @@ function toggleMute() {
 }
 
 socket.on("host-play", () => {
-  const playPauseBtn = document.getElementById("play-pause-btn");
+  if (isHost) return;
+  audioPlayer.play().catch(() => {});
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
   playerBar.classList.add('playing');
   isPlaying = true;
+  const npmPlay = document.getElementById('npm-play-btn');
+  if (npmPlay) npmPlay.innerHTML = '<i class="fa-solid fa-pause"></i>';
 });
 
 socket.on("host-pause", () => {
-  const playPauseBtn = document.getElementById("play-pause-btn");
+  if (isHost) return;
+  audioPlayer.pause();
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playerBar.classList.remove('playing');
   isPlaying = false;
+  const npmPlay = document.getElementById('npm-play-btn');
+  if (npmPlay) npmPlay.innerHTML = '<i class="fa-solid fa-play"></i>';
 });
 
 
@@ -1267,6 +1270,7 @@ async function autoAddSimilar(currentSong) {
 function renderQueue() {
   if (queue.length === 0) {
     queueList.innerHTML = '<span>No songs in queue</span>';
+    updateQueueBadge();
     return;
   }
 
@@ -1296,6 +1300,19 @@ function renderQueue() {
   `
     )
     .join('');
+  updateQueueBadge();
+}
+
+function updateQueueBadge() {
+  const badge = document.getElementById('queue-count-badge');
+  if (!badge) return;
+  const count = queue.length;
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
 }
 
 
@@ -1430,12 +1447,15 @@ function closePlaylistModal() {
 }
 
 
-function showNotification(message) {
+function showNotification(message, type = '') {
+  // Limit to 3 stacked notifications
+  const existing = document.querySelectorAll('.notification');
+  if (existing.length >= 3) existing[0].remove();
   const notification = document.createElement('div');
-  notification.className = 'notification';
+  notification.className = `notification${type ? ' ' + type : ''}`;
   notification.textContent = message;
   document.body.appendChild(notification);
-  setTimeout(() => notification.remove(), 3000);
+  setTimeout(() => notification.remove(), 4000);
 }
 
 function addToFavorites(songId) {
@@ -2082,19 +2102,18 @@ function hideSessionControls() {
   const controlsBar = document.getElementById('player-controls');
   if (controlsBar) controlsBar.classList.add('hidden');
 
-  //const transferBtn = document.getElementById('transfer-host-btn');
+  const transferBtn = document.getElementById('transfer-host-btn');
   if (transferBtn) {
     transferBtn.classList.add('hidden');
     transferBtn.disabled = true;
-    transferBtn.onclick = null; // remove binding
+    transferBtn.onclick = null;
   }
 
-  // Disable playback buttons
   document.querySelectorAll('#play-pause-btn, #next-btn, #prev-btn, #loop-btn, #fav-btn')
     .forEach(btn => {
       if (btn) {
         btn.disabled = true;
-        btn.onclick = null; // clear host-only handlers
+        btn.onclick = null;
       }
     });
 }
@@ -2458,17 +2477,6 @@ function displayMediaMessage(user, fileUrl, fileType, isSender) {
 
 
 // Helper function to show notifications
-function showNotification(message) {
-  const notification = document.createElement('div');
-  notification.className = 'notification';
-  notification.innerText = message;
-  document.body.appendChild(notification);
-  setTimeout(() => {
-    notification.remove();
-  }, 3000);
-}
-
-
 // single receiver — keep only one listener
 //socket.off('chat-message'); // remove any accidental duplicates if using hot reload
 /*
@@ -3063,23 +3071,40 @@ function clearSessionMemory() {
 
 
 function handlePlaybackControl(data) {
+  // Called for non-hosts receiving host commands — bypass playPause() guard
   switch (data.action) {
     case 'play-song':
-      if (data.song) playSong(data.song, false);
+      if (data.song) {
+        // Load song directly without the host-check in playSong
+        loadSongWithoutPlaying(data.song);
+        audioPlayer.play().catch(() => {});
+        isPlaying = true;
+        playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        playerBar.classList.add('playing');
+      }
       break;
     case 'pause':
-      if (isPlaying) playPause();
+      audioPlayer.pause();
+      isPlaying = false;
+      playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+      playerBar.classList.remove('playing');
       break;
     case 'play':
-      if (!isPlaying) playPause();
+      audioPlayer.play().catch(() => {});
+      isPlaying = true;
+      playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+      playerBar.classList.add('playing');
       break;
     case 'next':
-      playNext();
-      break;
     case 'previous':
-      playPrevious();
+      // Host will send sync-state which handles song change for non-hosts
       break;
   }
+  // Keep modal in sync
+  const npmPlay = document.getElementById('npm-play-btn');
+  if (npmPlay) npmPlay.innerHTML = isPlaying
+    ? '<i class="fa-solid fa-pause"></i>'
+    : '<i class="fa-solid fa-play"></i>';
 }
 
 /* =================== */
@@ -3114,9 +3139,13 @@ window.addEventListener('load', () => {
 
   const volumeSlider = document.getElementById('volume-slider');
   if (volumeSlider) {
-    volumeSlider.addEventListener('input', () => {
-      audioPlayer.volume = parseFloat(volumeSlider.value) / 100;
-    });
+    const updateVolumeFill = () => {
+      const pct = volumeSlider.value;
+      audioPlayer.volume = parseFloat(pct) / 100;
+      volumeSlider.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--panel-2) ${pct}%, var(--panel-2) 100%)`;
+    };
+    volumeSlider.addEventListener('input', updateVolumeFill);
+    updateVolumeFill(); // set initial fill
   }
 
   document.getElementById('sidebar-toggle').addEventListener('click', () => {
@@ -3173,7 +3202,8 @@ document.getElementById('host-session-btn').addEventListener('click', hostSessio
     document.getElementById('join-input').style.display = 'block';
   });
 
-  document.getElementById('close-modal').addEventListener('click', closeListenModal);
+  const closeModalBtn = document.getElementById('close-modal');
+  if (closeModalBtn) closeModalBtn.addEventListener('click', closeListenModal);
   document.getElementById('send-chat-btn').addEventListener('click', sendChatMessage);
 
   audioPlayer.addEventListener('play', () => {
@@ -3204,7 +3234,8 @@ document.getElementById('host-session-btn').addEventListener('click', hostSessio
   document.getElementById('fav-btn').addEventListener('click', addToFavoritesFromPlayer);
   document.getElementById('loop-btn').addEventListener('click', toggleLoop);
   //document.getElementById('queue-open-btn').addEventListener('click', dropQueue);
-  document.getElementById('empty-queue').addEventListener('click', emptyQueue);
+  const emptyQueueEl = document.getElementById('empty-queue');
+  if (emptyQueueEl) emptyQueueEl.addEventListener('click', emptyQueue);
 
 if (moreBtn) {
   moreBtn.addEventListener('click', () => {
@@ -3451,6 +3482,4 @@ async function loadFunFact() {
 }
 
 document.getElementById('change-fact-btn').addEventListener('click', loadFunFact);
-
-// Load fact on page load
-window.addEventListener('DOMContentLoaded', loadFunFact);
+// loadFunFact is already called by loadHomeContent() on page load - no need to call again here

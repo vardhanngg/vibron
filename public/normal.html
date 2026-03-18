@@ -52,7 +52,7 @@
 
     <!-- Search -->
     <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Search songs, artists, albums…" autocomplete="off" />
+      <input type="text" id="searchInput" placeholder="Search songs, artists, albums…" autocomplete="off" list="search-history-list" />
       <button class="search-btn" onclick="searchSongs()"><i class="fa-solid fa-magnifying-glass"></i></button>
     </div>
 
@@ -116,11 +116,6 @@
 
     <!-- Home Content -->
     <div id="home-content" class="home-content">
-      <section id="listen-again" class="home-section">
-        <h3>Listen Again</h3>
-        <div class="section-list"></div>
-      </section>
-
       <section id="fun-fact" class="home-section">
         <h3>✨ Did You Know?</h3>
         <p id="fact-text">Loading fun fact…</p>
@@ -144,6 +139,7 @@
     </button>
     <button id="queue-open-btn" class="queue-open-btn" onclick="toggleQueue()" title="Queue">
       <i class="fa-solid fa-list-music" style="font-size:0.9rem;"></i>
+      <span id="queue-count-badge" class="queue-count-badge hidden">0</span>
     </button>
   </div>
 
@@ -228,6 +224,39 @@
       <button class="modal-btn cancel-btn" onclick="cancelSleepTimer()">Cancel Timer</button>
     </div>
     <p id="sleep-timer-display" style="text-align:center;margin-top:12px;color:var(--accent-4);font-weight:600;font-size:0.9rem;"></p>
+  </div>
+
+  <!-- SEARCH HISTORY -->
+  <datalist id="search-history-list"></datalist>
+
+  <!-- KEYBOARD SHORTCUTS MODAL -->
+  <div id="kb-modal" style="display:none;position:fixed;inset:0;z-index:4000;display:none;align-items:center;justify-content:center;">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);" onclick="document.getElementById('kb-modal').style.display='none'"></div>
+    <div style="position:relative;z-index:1;background:var(--panel);border:1px solid var(--glass-border);border-radius:var(--radius);padding:2rem;width:min(420px,92vw);box-shadow:var(--shadow);">
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:1.2rem;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">⌨️ Keyboard Shortcuts</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.88rem;">
+        <div class="kb-row"><kbd>Space</kbd><span>Play / Pause</span></div>
+        <div class="kb-row"><kbd>N</kbd><span>Next song</span></div>
+        <div class="kb-row"><kbd>P</kbd><span>Previous song</span></div>
+        <div class="kb-row"><kbd>L</kbd><span>Toggle loop</span></div>
+        <div class="kb-row"><kbd>S</kbd><span>Toggle shuffle</span></div>
+        <div class="kb-row"><kbd>F</kbd><span>Favourite</span></div>
+        <div class="kb-row"><kbd>→</kbd><span>Seek +10s</span></div>
+        <div class="kb-row"><kbd>←</kbd><span>Seek -10s</span></div>
+        <div class="kb-row"><kbd>↑</kbd><span>Volume up</span></div>
+        <div class="kb-row"><kbd>↓</kbd><span>Volume down</span></div>
+        <div class="kb-row"><kbd>?</kbd><span>This overlay</span></div>
+      </div>
+      <p style="margin-top:1rem;font-size:0.78rem;color:var(--muted);text-align:center;">Click outside or press Escape to close</p>
+    </div>
+  </div>
+
+  <!-- PWA INSTALL BANNER -->
+  <div id="pwa-banner" style="display:none;position:fixed;bottom:calc(var(--player-h) + 12px);left:50%;transform:translateX(-50%);z-index:1200;background:var(--panel);border:1px solid rgba(168,85,247,0.3);border-radius:var(--radius);padding:12px 20px;display:none;align-items:center;gap:12px;box-shadow:var(--shadow);font-size:0.88rem;white-space:nowrap;">
+    <i class="fa-solid fa-download" style="color:var(--accent);"></i>
+    <span>Install Vibron as an app</span>
+    <button id="pwa-install-btn" style="background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none;color:#fff;border-radius:20px;padding:6px 16px;font-family:'Outfit',sans-serif;font-weight:600;font-size:0.82rem;cursor:pointer;">Install</button>
+    <button onclick="document.getElementById('pwa-banner').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;">✕</button>
   </div>
 
   <!-- NOW PLAYING MODAL -->
@@ -377,6 +406,12 @@
         toggleShuffle();
       } else if (e.code === 'KeyF') {
         addToFavoritesFromPlayer();
+      } else if (e.key === '?') {
+        const m = document.getElementById('kb-modal');
+        m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+      } else if (e.code === 'Escape') {
+        document.getElementById('kb-modal').style.display = 'none';
+        closeNowPlayingModal();
       }
     });
 
@@ -633,6 +668,69 @@
       if (document.getElementById('now-playing').textContent !== 'Not Playing') {
         openNowPlayingModal();
       }
+    });
+
+    /* ── SEARCH HISTORY ── */
+    const SEARCH_HISTORY_KEY = 'vibron_search_history';
+    function getSearchHistory() {
+      return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]');
+    }
+    function addToSearchHistory(query) {
+      if (!query || query.length < 2) return;
+      let history = getSearchHistory();
+      history = [query, ...history.filter(q => q.toLowerCase() !== query.toLowerCase())].slice(0, 8);
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+      renderSearchHistory();
+    }
+    function renderSearchHistory() {
+      const dl = document.getElementById('search-history-list');
+      if (!dl) return;
+      const history = getSearchHistory();
+      dl.innerHTML = history.map(q => `<option value="${q.replace(/"/g, '&quot;')}"></option>`).join('');
+    }
+    // Expose for normal.js to call after each search
+    window._addToSearchHistory = addToSearchHistory;
+    window._renderSearchHistory = renderSearchHistory;
+    renderSearchHistory();
+
+    /* ── QUEUE BADGE ── */
+    function updateQueueBadge() {
+      const badge = document.getElementById('queue-count-badge');
+      if (!badge) return;
+      const count = (window.queue || []).length;
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+    // Poll queue length every second (lightweight)
+    setInterval(updateQueueBadge, 1000);
+
+    /* ── PWA INSTALL PROMPT ── */
+    let _pwaPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      _pwaPrompt = e;
+      const banner = document.getElementById('pwa-banner');
+      if (banner) banner.style.display = 'flex';
+    });
+    const pwaBtn = document.getElementById('pwa-install-btn');
+    if (pwaBtn) {
+      pwaBtn.addEventListener('click', async () => {
+        if (!_pwaPrompt) return;
+        _pwaPrompt.prompt();
+        const { outcome } = await _pwaPrompt.userChoice;
+        if (outcome === 'accepted') {
+          document.getElementById('pwa-banner').style.display = 'none';
+        }
+        _pwaPrompt = null;
+      });
+    }
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('pwa-banner').style.display = 'none';
+      showNotification('✅ Vibron installed successfully!');
     });
   </script>
 </body>
