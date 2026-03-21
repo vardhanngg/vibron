@@ -1647,3 +1647,76 @@ body.nonhost-session #shuffle-btn {
   cursor: pointer !important;
   pointer-events: auto !important;
 }
+
+
+/* ── SYSTEM POPUP ── */
+.system-popup {
+  position: fixed;
+  bottom: calc(var(--player-h) + 20px); /* Sits above the player */
+  right: 20px;
+  max-width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--glow-purple);
+  z-index: 3000;
+  animation: slideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.system-popup.hidden { display: none; }
+
+.system-popup.fade-out {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: all 0.5s ease;
+}
+
+.popup-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  position: relative;
+}
+
+.popup-content i {
+  color: var(--accent-3);
+  font-size: 1.2rem;
+  margin-top: 2px;
+}
+
+.popup-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popup-text strong {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.popup-text span {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.popup-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.2s;
+}
+
+.popup-close:hover { color: var(--accent-hot); }
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}

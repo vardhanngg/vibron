@@ -942,6 +942,37 @@
 
     /* ── PWA install button wired via pwa.js triggerPWAInstall() ── */
   </script>
+<div id="system-popup" class="system-popup hidden">
+  <div class="popup-content">
+    <i class="fa-solid fa-circle-info"></i>
+    <div class="popup-text">
+      <strong>Vibron is getting better!</strong>
+      <span>We're making some live changes. You might spot a few bugs, but we're on it!</span>
+    </div>
+    <button class="popup-close" onclick="closeSystemPopup()">×</button>
+  </div>
+</div>
+
+<script>
+  function closeSystemPopup() {
+    const popup = document.getElementById('system-popup');
+    if (popup) {
+      popup.classList.add('fade-out');
+      setTimeout(() => popup.classList.add('hidden'), 500);
+    }
+  }
+
+  window.addEventListener('load', () => {
+    const popup = document.getElementById('system-popup');
+    // Show popup
+    popup.classList.remove('hidden');
+    
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+      closeSystemPopup();
+    }, 10000);
+  });
+</script>
   <script src="/pwa.js"></script>
 </body>
 </html>
