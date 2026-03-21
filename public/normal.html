@@ -170,6 +170,17 @@
       </div>
     </div>
 
+    <!-- Transfer Host Modal -->
+    <div id="transfer-modal" class="modal-content hidden">
+      <span class="close" onclick="closeTransferModal()">×</span>
+      <h2><i class="fas fa-crown" style="margin-right:8px;color:#ff9500;"></i>Transfer Host</h2>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0.5rem 0 1rem;">Choose a listener to become the new host. They will gain full playback control.</p>
+      <ul id="transfer-list" class="transfer-list"></ul>
+      <div class="modal-buttons" style="margin-top:1rem;">
+        <button class="modal-btn cancel-btn" onclick="closeTransferModal()">Cancel</button>
+      </div>
+    </div>
+
     <!-- Home Content -->
     <div id="home-content" class="home-content">
 

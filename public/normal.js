@@ -2231,43 +2231,42 @@ function leaveSession() {
 
 
 function showTransferModal() {
+  if (!isHost || !currentSessionCode) {
+    showNotification('You must be the host to transfer.');
+    return;
+  }
   const modal = document.getElementById('transfer-modal');
   const list  = document.getElementById('transfer-list');
+  if (!modal || !list) return;
   list.innerHTML = '';
 
-  const entries = Object.entries(participants || {});
+  const entries = Object.entries(participants || {}).filter(([id]) => id !== mySocketId);
+
   if (entries.length === 0) {
-    const li = document.createElement('li');
-    li.textContent = 'No participants to transfer to';
-    list.appendChild(li);
+    list.innerHTML = '<li class="transfer-list-empty">No other participants in the session yet.</li>';
   } else {
     entries.forEach(([socketId, p]) => {
-      if (socketId !== mySocketId) {
-        const li = document.createElement('li');
-        const role = p.isHost ? ' (Host)' : '';
-        const displayName = p.name || socketId;  // ✅ prefer name, fallback to id
-        li.textContent = `${displayName}${role}`;
-        li.onclick = () => transferHostTo(socketId);
-        list.appendChild(li);
-      }
+      const li = document.createElement('li');
+      li.className = 'transfer-list-item';
+      li.innerHTML = `
+        <div class="transfer-user-info">
+          <div class="transfer-avatar">${(p.name || 'G')[0].toUpperCase()}</div>
+          <span class="transfer-name">${p.name || 'Guest'}</span>
+        </div>
+        <button class="modal-btn transfer-pick-btn" onclick="transferHostTo('${socketId}')">
+          <i class="fas fa-crown"></i> Make Host
+        </button>`;
+      list.appendChild(li);
     });
   }
-
   modal.classList.remove('hidden');
 }
 
 
 
-/*
 function closeTransferModal() {
   const modal = document.getElementById('transfer-modal');
   if (modal) modal.classList.add('hidden');
-}*/
-
-
-function closeTransferModal() {
-  document.getElementById('transfer-modal').classList.add('hidden');
-
 }
 
 // Show session controls for the host
@@ -2314,39 +2313,44 @@ function transferHostTo(targetId) {
     showNotification("You are not the host or no session is active.");
     return;
   }
-
-  // Send to backend using the new event + payload
   socket.emit("transfer-host", { code: currentSessionCode, newHostId: targetId });
-
-  //closeTransferModal();
-  showNotification("Transferring host...");
+  closeTransferModal();
+  showNotification("👑 Transferring host...");
 }
 
 socket.on("host-transferred", ({ newHostId }) => {
-  Object.keys(participants).forEach(pid => {
-    participants[pid].isHost = false;
-  });
-  if (participants[newHostId]) {
-    participants[newHostId].isHost = true;
-  }
+  // Update participants isHost flags
+  Object.keys(participants).forEach(pid => { participants[pid].isHost = false; });
+  if (participants[newHostId]) participants[newHostId].isHost = true;
+
+  const transferBtn = document.getElementById('transfer-host-btn');
+  const sugBtn = document.getElementById('suggestions-btn');
 
   if (socket.id === newHostId) {
+    // I am the new host
     isHost = true;
-    participants[socket.id] = participants[socket.id] || {};
-    participants[socket.id].isHost = true;
+    if (participants[socket.id]) participants[socket.id].isHost = true;
+    document.body.classList.remove('nonhost-session');
 
-    showNotification("🎉 You are now the host");
+    showNotification("🎉 You are now the host!");
     showSessionControls(currentSessionCode);
     setSessionControlsDisabled(false);
 
-  } else {
-    isHost = false;
-    participants[socket.id] = participants[socket.id] || {};
-    participants[socket.id].isHost = false;
+    if (sugBtn) sugBtn.classList.remove('hidden');
+    if (transferBtn) { transferBtn.classList.remove('hidden'); transferBtn.disabled = false; }
 
-    showNotification("Host transferred to another user");
+  } else {
+    // Someone else became host
+    isHost = false;
+    if (participants[socket.id]) participants[socket.id].isHost = false;
+    document.body.classList.add('nonhost-session');
+
+    showNotification("👑 Host transferred to another user");
     hideSessionControls();
     setSessionControlsDisabled(true);
+
+    if (sugBtn) sugBtn.classList.add('hidden');
+    if (transferBtn) { transferBtn.classList.add('hidden'); transferBtn.disabled = true; }
   }
 
   renderParticipants();
@@ -3181,9 +3185,11 @@ socket.on('session-created', ({ code }) => {
   updateChatButtonVisibility();
   showChatButton();
 
-  // Show suggestions button for host
+  // Show host-only buttons
   const sugBtn = document.getElementById('suggestions-btn');
   if (sugBtn) sugBtn.classList.remove('hidden');
+  const transferBtn = document.getElementById('transfer-host-btn');
+  if (transferBtn) { transferBtn.classList.remove('hidden'); transferBtn.disabled = false; }
 });
 socket.on('connect', () => {
   mySocketId = socket.id;
