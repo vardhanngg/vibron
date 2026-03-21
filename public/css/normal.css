@@ -250,6 +250,8 @@ main {
 .session-action-link:hover { background: rgba(34,211,238,0.1); border-color: var(--accent-3); }
 .session-action-leave { color: #ff6b6b; border-color: rgba(255,107,107,0.2); }
 .session-action-leave:hover { background: rgba(255,107,107,0.1); border-color: #ff6b6b; }
+.session-action-transfer { color: #ff9500; border-color: rgba(255,149,0,0.2); }
+.session-action-transfer:hover { background: rgba(255,149,0,0.1); border-color: #ff9500; }
 
 /* ── CHAT PINNED NOW-PLAYING ── */
 .chat-pinned {

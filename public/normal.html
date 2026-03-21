@@ -101,9 +101,6 @@
       <button id="listen-together-btn" class="listen-btn" onclick="openListenModal()">
         <i class="fas fa-users"></i> Listen Together
       </button>
-      <button id="transfer-host-btn" class="listen-btn hidden" onclick="showTransferModal()" style="background: linear-gradient(135deg,#ff9500,#ff4500);">
-        <i class="fas fa-crown"></i> Transfer Host
-      </button>
       <div id="session-code-display" class="session-code hidden">
         <div class="session-code-inner">
           <div class="session-code-top">
@@ -117,6 +114,9 @@
             </button>
             <button class="session-action-btn session-action-link" id="copy-link-btn" title="Copy invite link">
               <i class="fas fa-link"></i> Copy Link
+            </button>
+            <button id="transfer-host-btn" class="session-action-btn session-action-transfer hidden" onclick="showTransferModal()" title="Transfer Host">
+              <i class="fas fa-crown"></i> Transfer Host
             </button>
             <button class="session-action-btn session-action-leave" onclick="leaveSession()">
               <i class="fas fa-sign-out-alt"></i> Leave
