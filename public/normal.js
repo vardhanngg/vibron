@@ -3203,9 +3203,6 @@ socket.on('session-created', ({ code }) => {
   updateChatButtonVisibility();
   showChatButton();
 
-  // Register host's real name with server (create-session doesn't send name)
-  socket.emit('join-session', { code, name: userName || 'Host' }, () => {});
-
   // Show host-only buttons
   const sugBtn = document.getElementById('suggestions-btn');
   if (sugBtn) sugBtn.classList.remove('hidden');
