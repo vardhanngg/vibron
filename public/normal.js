@@ -2231,29 +2231,37 @@ function leaveSession() {
 
 
 function showTransferModal() {
+  if (!isHost || !currentSessionCode) {
+    showNotification('You must be the host to transfer.');
+    return;
+  }
   const modal = document.getElementById('transfer-modal');
   const list  = document.getElementById('transfer-list');
+  if (!modal || !list) return;
   list.innerHTML = '';
 
-  const entries = Object.entries(participants || {});
+  const entries = Object.entries(participants || {}).filter(([id]) => id !== mySocketId);
+
   if (entries.length === 0) {
-    const li = document.createElement('li');
-    li.textContent = 'No participants to transfer to';
-    list.appendChild(li);
+    list.innerHTML = '<li class="transfer-list-empty">No other participants in the session yet.</li>';
   } else {
     entries.forEach(([socketId, p]) => {
-      if (socketId !== mySocketId) {
-        const li = document.createElement('li');
-        const role = p.isHost ? ' (Host)' : '';
-        const displayName = p.name || socketId;  // ✅ prefer name, fallback to id
-        li.textContent = `${displayName}${role}`;
-        li.onclick = () => transferHostTo(socketId);
-        list.appendChild(li);
-      }
+      const li = document.createElement('li');
+      li.className = 'transfer-list-item';
+      li.innerHTML = `
+        <div class="transfer-user-info">
+          <div class="transfer-avatar">${(p.name || 'G')[0].toUpperCase()}</div>
+          <span class="transfer-name">${p.name || 'Guest'}</span>
+        </div>
+        <button class="transfer-pick-btn" onclick="event.stopPropagation(); transferHostTo('${socketId}')">
+          <i class="fas fa-crown"></i> Make Host
+        </button>`;
+      list.appendChild(li);
     });
   }
-
   modal.classList.remove('hidden');
+  const bd = document.getElementById('transfer-modal-backdrop');
+  if (bd) bd.classList.remove('hidden');
 }
 
 
@@ -2262,12 +2270,16 @@ function showTransferModal() {
 function closeTransferModal() {
   const modal = document.getElementById('transfer-modal');
   if (modal) modal.classList.add('hidden');
+  const bd = document.getElementById('transfer-modal-backdrop');
+  if (bd) bd.classList.add('hidden');
 }*/
 
 
 function closeTransferModal() {
-  document.getElementById('transfer-modal').classList.add('hidden');
-
+  const modal = document.getElementById('transfer-modal');
+  if (modal) modal.classList.add('hidden');
+  const bd = document.getElementById('transfer-modal-backdrop');
+  if (bd) bd.classList.add('hidden');
 }
 
 // Show session controls for the host
@@ -2313,11 +2325,9 @@ function transferHostTo(targetId) {
     return;
   }
 
-  // Send to backend using the new event + payload
   socket.emit("transfer-host", { code: currentSessionCode, newHostId: targetId });
-
-  //closeTransferModal();
-  showNotification("Transferring host...");
+  closeTransferModal();
+  showNotification("👑 Transferring host...");
 }
 
 socket.on("host-transferred", ({ newHostId }) => {
@@ -2419,7 +2429,9 @@ function renderParticipants() {
     ul.innerHTML = '';
     Object.entries(participants).forEach(([userId, p]) => {
       const li = document.createElement('li');
-      const name = (p.name && p.name.trim()) ? p.name : `User ${userId.slice(0,4)}`;
+      // Show real name; if name is literally "Host" and user has a real name use it
+      const rawName = (p.name && p.name.trim() && p.name !== 'Host') ? p.name : (p.name === 'Host' ? '👑' : `User ${userId.slice(0,4)}`);
+      const name = rawName;
       li.textContent = `${name}${p.isHost ? ' 👑' : ''}`;
       ul.appendChild(li);
     });
@@ -3215,6 +3227,10 @@ socket.on('session-created', ({ code }) => {
   showNotification('Session hosted! Share the code: ' + code);
   updateChatButtonVisibility();
   showChatButton();
+
+  // Register host name with server so participants list shows real name not "Host"
+  // join-session as host so server sets displayName properly
+  socket.emit('join-session', { code, name: userName || 'Host' }, () => {});
 
   // Show host-only buttons
   const sugBtn = document.getElementById('suggestions-btn');

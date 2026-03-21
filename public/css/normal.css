@@ -1627,3 +1627,32 @@ body.nonhost-session .player-progress:hover { height: 4px; }
   font-family: 'Outfit', sans-serif; font-weight: 600; transition: all 0.2s;
 }
 .transfer-pick-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+/* ── TRANSFER MODAL EXTRAS ── */
+.transfer-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  z-index: 1999;
+}
+.transfer-modal-backdrop.hidden { display: none !important; }
+#transfer-modal { z-index: 2000; }
+.transfer-list-item { cursor: default; }
+.transfer-pick-btn { cursor: pointer; }
+
+/* Non-host: only dim playback controls, NOT fav/loop/download */
+body.nonhost-session #play-pause-btn,
+body.nonhost-session #next-btn,
+body.nonhost-session #prev-btn {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+}
+/* Fav, loop, download, sleep remain fully usable for non-hosts */
+body.nonhost-session #fav-btn,
+body.nonhost-session #loop-btn,
+body.nonhost-session #download-btn,
+body.nonhost-session #sleep-timer-btn,
+body.nonhost-session #shuffle-btn {
+  opacity: 1 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
