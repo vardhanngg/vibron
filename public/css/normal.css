@@ -1584,10 +1584,11 @@ body.nonhost-session .player-progress:hover { height: 4px; }
   .player-controls button { padding: 6px; font-size: 0.95rem; }
   #sleep-timer-btn, #shuffle-btn { display: none; }
 }
-/* ── TRANSFER HOST ── */
+/* ── SESSION ACTION TRANSFER BUTTON ── */
 .session-action-transfer { color: #ff9500; border-color: rgba(255,149,0,0.2); }
 .session-action-transfer:hover { background: rgba(255,149,0,0.1); border-color: #ff9500; }
 
+/* ── TRANSFER HOST MODAL ── */
 .transfer-list {
   list-style: none; padding: 0; margin: 0;
   display: flex; flex-direction: column; gap: 10px;
@@ -1604,6 +1605,7 @@ body.nonhost-session .player-progress:hover { height: 4px; }
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   padding: 12px 14px; gap: 12px;
+  cursor: default;
   transition: border-color 0.2s;
 }
 .transfer-list-item:hover { border-color: var(--accent); }
@@ -1623,30 +1625,19 @@ body.nonhost-session .player-progress:hover { height: 4px; }
   background: linear-gradient(135deg, #ff9500, #ff4500) !important;
   color: #fff !important; padding: 8px 14px !important;
   font-size: 0.82rem !important; white-space: nowrap; flex-shrink: 0;
-  border: none; border-radius: var(--radius-sm); cursor: pointer;
-  font-family: 'Outfit', sans-serif; font-weight: 600; transition: all 0.2s;
+  border: none; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  font-weight: 600; transition: all 0.2s;
 }
 .transfer-pick-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
-/* ── TRANSFER MODAL EXTRAS ── */
-.transfer-modal-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(6px);
-  z-index: 1999;
-}
-.transfer-modal-backdrop.hidden { display: none !important; }
-#transfer-modal { z-index: 2000; }
-.transfer-list-item { cursor: default; }
-.transfer-pick-btn { cursor: pointer; }
 
-/* Non-host: only dim playback controls, NOT fav/loop/download */
+/* ── NON-HOST: only dim playback, keep local controls active ── */
 body.nonhost-session #play-pause-btn,
 body.nonhost-session #next-btn,
 body.nonhost-session #prev-btn {
   opacity: 0.35 !important;
   cursor: not-allowed !important;
 }
-/* Fav, loop, download, sleep remain fully usable for non-hosts */
 body.nonhost-session #fav-btn,
 body.nonhost-session #loop-btn,
 body.nonhost-session #download-btn,

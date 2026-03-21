@@ -2261,7 +2261,7 @@ function showTransferModal() {
   }
   modal.classList.remove('hidden');
   const bd = document.getElementById('transfer-modal-backdrop');
-  if (bd) bd.classList.remove('hidden');
+  if (bd) bd.style.display = 'block';
 }
 
 
@@ -2270,8 +2270,6 @@ function showTransferModal() {
 function closeTransferModal() {
   const modal = document.getElementById('transfer-modal');
   if (modal) modal.classList.add('hidden');
-  const bd = document.getElementById('transfer-modal-backdrop');
-  if (bd) bd.classList.add('hidden');
 }*/
 
 
@@ -2279,10 +2277,9 @@ function closeTransferModal() {
   const modal = document.getElementById('transfer-modal');
   if (modal) modal.classList.add('hidden');
   const bd = document.getElementById('transfer-modal-backdrop');
-  if (bd) bd.classList.add('hidden');
+  if (bd) bd.style.display = 'none';
 }
 
-// Show session controls for the host
 // Show session controls for the host
 function showSessionControls(sessionCode) {
   const controlsBar = document.getElementById('player-controls');
@@ -2291,11 +2288,10 @@ function showSessionControls(sessionCode) {
   const codeDisplay = document.getElementById('session-code-display');
   if (codeDisplay) codeDisplay.classList.remove('hidden');
 
+  document.body.classList.remove('nonhost-session');
+
   document.querySelectorAll('#play-pause-btn, #next-btn, #prev-btn, #loop-btn, #fav-btn')
     .forEach(btn => { if (btn) btn.disabled = false; });
-
-  // Remove non-host dimming
-  document.body.classList.remove('nonhost-session');
 }
 
 // Hide session controls for non-hosts
@@ -2306,14 +2302,13 @@ function hideSessionControls() {
   const transferBtn = document.getElementById('transfer-host-btn');
   if (transferBtn) { transferBtn.classList.add('hidden'); transferBtn.disabled = true; }
 
-  // Hide suggestions button too
   const sugBtn = document.getElementById('suggestions-btn');
   if (sugBtn) sugBtn.classList.add('hidden');
 
-  // Add nonhost-session class to dim player bar
   document.body.classList.add('nonhost-session');
 
-  document.querySelectorAll('#play-pause-btn, #next-btn, #prev-btn, #loop-btn, #fav-btn')
+  // Only disable playback controls — NOT fav/loop/download (those are local)
+  document.querySelectorAll('#play-pause-btn, #next-btn, #prev-btn')
     .forEach(btn => { if (btn) { btn.disabled = true; btn.onclick = null; } });
 }
 
@@ -2324,48 +2319,38 @@ function transferHostTo(targetId) {
     showNotification("You are not the host or no session is active.");
     return;
   }
-
   socket.emit("transfer-host", { code: currentSessionCode, newHostId: targetId });
   closeTransferModal();
   showNotification("👑 Transferring host...");
 }
 
 socket.on("host-transferred", ({ newHostId }) => {
-  // Update all participants isHost flags
   Object.keys(participants).forEach(pid => { participants[pid].isHost = false; });
   if (participants[newHostId]) participants[newHostId].isHost = true;
 
-  const transferBtn  = document.getElementById('transfer-host-btn');
-  const sugBtn       = document.getElementById('suggestions-btn');
-  const sugBadge     = document.getElementById('suggestions-badge');
+  const transferBtn = document.getElementById('transfer-host-btn');
+  const sugBtn      = document.getElementById('suggestions-btn');
+  const sugBadge    = document.getElementById('suggestions-badge');
 
   if (socket.id === newHostId) {
     // ── I am the NEW HOST ──
     isHost = true;
     if (participants[socket.id]) participants[socket.id].isHost = true;
 
-    // Body class
-    document.body.classList.remove('nonhost-session');
-
-    // Unlock player bar
-    showSessionControls(currentSessionCode);
+    showSessionControls(currentSessionCode); // removes nonhost-session, re-enables btns
     setSessionControlsDisabled(false);
+
+    // Re-wire play/next/prev onclick (nulled out when we were non-host)
+    const pbBtn  = document.getElementById('play-pause-btn');
+    const nxtBtn = document.getElementById('next-btn');
+    const prvBtn = document.getElementById('prev-btn');
+    if (pbBtn)  { pbBtn.disabled  = false; pbBtn.onclick  = playPause; }
+    if (nxtBtn) { nxtBtn.disabled = false; nxtBtn.onclick = () => playNext(); }
+    if (prvBtn) { prvBtn.disabled = false; prvBtn.onclick = playPrevious; }
 
     // Show host-only buttons
     if (transferBtn) { transferBtn.classList.remove('hidden'); transferBtn.disabled = false; }
-    if (sugBtn)      sugBtn.classList.remove('hidden');
-
-    // Re-wire playback buttons (setSessionControlsDisabled may have set onclick=null)
-    const playPauseBtn = document.getElementById('play-pause-btn');
-    const nextBtn      = document.getElementById('next-btn');
-    const prevBtn      = document.getElementById('prev-btn');
-    const loopBtn      = document.getElementById('loop-btn');
-    const favBtn       = document.getElementById('fav-btn');
-    if (playPauseBtn) { playPauseBtn.disabled = false; playPauseBtn.onclick = playPause; }
-    if (nextBtn)      { nextBtn.disabled = false;      nextBtn.onclick = () => playNext(); }
-    if (prevBtn)      { prevBtn.disabled = false;      prevBtn.onclick = playPrevious; }
-    if (loopBtn)      { loopBtn.disabled = false;      loopBtn.onclick = toggleLoop; }
-    if (favBtn)       { favBtn.disabled = false;       favBtn.onclick = addToFavoritesFromPlayer; }
+    if (sugBtn) sugBtn.classList.remove('hidden');
 
     showNotification("🎉 You are now the host!");
 
@@ -2374,16 +2359,8 @@ socket.on("host-transferred", ({ newHostId }) => {
     isHost = false;
     if (participants[socket.id]) participants[socket.id].isHost = false;
 
-    // Body class — dims player controls
-    document.body.classList.add('nonhost-session');
-
-    // Lock player bar
-    hideSessionControls();
+    hideSessionControls(); // adds nonhost-session, disables play/next/prev, hides btns
     setSessionControlsDisabled(true);
-
-    // Hide host-only buttons
-    if (transferBtn) { transferBtn.classList.add('hidden'); transferBtn.disabled = true; }
-    if (sugBtn)      sugBtn.classList.add('hidden');
 
     // Clear suggestions
     if (sugBadge) { sugBadge.textContent = '0'; sugBadge.classList.add('hidden'); }
@@ -2429,9 +2406,7 @@ function renderParticipants() {
     ul.innerHTML = '';
     Object.entries(participants).forEach(([userId, p]) => {
       const li = document.createElement('li');
-      // Show real name; if name is literally "Host" and user has a real name use it
-      const rawName = (p.name && p.name.trim() && p.name !== 'Host') ? p.name : (p.name === 'Host' ? '👑' : `User ${userId.slice(0,4)}`);
-      const name = rawName;
+      const name = (p.name && p.name.trim() && p.name !== 'Host') ? p.name : (p.isHost ? '' : `User ${userId.slice(0,4)}`);
       li.textContent = `${name}${p.isHost ? ' 👑' : ''}`;
       ul.appendChild(li);
     });
@@ -3228,8 +3203,7 @@ socket.on('session-created', ({ code }) => {
   updateChatButtonVisibility();
   showChatButton();
 
-  // Register host name with server so participants list shows real name not "Host"
-  // join-session as host so server sets displayName properly
+  // Register host's real name with server (create-session doesn't send name)
   socket.emit('join-session', { code, name: userName || 'Host' }, () => {});
 
   // Show host-only buttons

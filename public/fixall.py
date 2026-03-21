@@ -477,7 +477,7 @@ if "showTransferModal" in js and "transfer-modal-backdrop" not in js:
     js = js.replace(
         "  modal.classList.remove('hidden');\n}",
         "  modal.classList.remove('hidden');\n  const bd = document.getElementById('transfer-modal-backdrop');\n  if (bd) bd.classList.remove('hidden');\n}",
-        1  # only first occurrence (showTransferModal)
+        1  # only first occurrence (showTransferModal)sdfsdfdfs
     )
     print("✅ JS: showTransferModal now shows backdrop")
 
