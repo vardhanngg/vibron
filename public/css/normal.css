@@ -250,8 +250,6 @@ main {
 .session-action-link:hover { background: rgba(34,211,238,0.1); border-color: var(--accent-3); }
 .session-action-leave { color: #ff6b6b; border-color: rgba(255,107,107,0.2); }
 .session-action-leave:hover { background: rgba(255,107,107,0.1); border-color: #ff6b6b; }
-.session-action-transfer { color: #ff9500; border-color: rgba(255,149,0,0.2); }
-.session-action-transfer:hover { background: rgba(255,149,0,0.1); border-color: #ff9500; }
 
 /* ── CHAT PINNED NOW-PLAYING ── */
 .chat-pinned {
@@ -1586,7 +1584,10 @@ body.nonhost-session .player-progress:hover { height: 4px; }
   .player-controls button { padding: 6px; font-size: 0.95rem; }
   #sleep-timer-btn, #shuffle-btn { display: none; }
 }
-/* ── TRANSFER HOST MODAL ── */
+/* ── TRANSFER HOST ── */
+.session-action-transfer { color: #ff9500; border-color: rgba(255,149,0,0.2); }
+.session-action-transfer:hover { background: rgba(255,149,0,0.1); border-color: #ff9500; }
+
 .transfer-list {
   list-style: none; padding: 0; margin: 0;
   display: flex; flex-direction: column; gap: 10px;
@@ -1602,33 +1603,27 @@ body.nonhost-session .player-progress:hover { height: 4px; }
   background: var(--panel-2);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  padding: 12px 14px;
-  gap: 12px;
+  padding: 12px 14px; gap: 12px;
   transition: border-color 0.2s;
 }
 .transfer-list-item:hover { border-color: var(--accent); }
-.transfer-user-info {
-  display: flex; align-items: center; gap: 10px;
-}
+.transfer-user-info { display: flex; align-items: center; gap: 10px; }
 .transfer-avatar {
   width: 36px; height: 36px; border-radius: 50%;
   background: linear-gradient(135deg, var(--accent-2), var(--accent));
   display: flex; align-items: center; justify-content: center;
   font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700; font-size: 0.95rem; color: #fff;
-  flex-shrink: 0;
+  font-weight: 700; font-size: 0.95rem; color: #fff; flex-shrink: 0;
 }
 .transfer-name {
   font-family: 'Outfit', sans-serif;
-  font-size: 0.95rem; font-weight: 600;
-  color: var(--text);
+  font-size: 0.95rem; font-weight: 600; color: var(--text);
 }
 .transfer-pick-btn {
   background: linear-gradient(135deg, #ff9500, #ff4500) !important;
-  color: #fff !important;
-  padding: 8px 14px !important;
-  font-size: 0.82rem !important;
-  white-space: nowrap;
-  flex-shrink: 0;
+  color: #fff !important; padding: 8px 14px !important;
+  font-size: 0.82rem !important; white-space: nowrap; flex-shrink: 0;
+  border: none; border-radius: var(--radius-sm); cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-weight: 600; transition: all 0.2s;
 }
 .transfer-pick-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
