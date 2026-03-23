@@ -850,8 +850,11 @@ function downloadPlaylist(songs, playlistName) {
 
 /* =================== */
 /* Genre Tiles */
-async function loadGenre(query) {
-  // Show skeleton in song list
+async function loadGenre(baseQuery) {
+  // Append selected language to query
+  const lang = window._selectedGenreLang || '';
+  const query = lang ? `${baseQuery} ${lang}` : baseQuery;
+
   document.getElementById('home-content').style.display = 'none';
   const resultsList = document.getElementById('song-list');
   resultsList.classList.remove('hidden');
@@ -859,7 +862,7 @@ async function loadGenre(query) {
   resultsList.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
       <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang : ''}</h3>
     </div>
     <div class="skeleton-list">${Array(6).fill(0).map(() => `
       <div class="skeleton-card">
@@ -881,34 +884,29 @@ async function loadGenre(query) {
       return;
     }
 
-    // Add all to history and queue
     songs.forEach(s => { if (!songHistory.some(h => h.id === s.id)) songHistory.push(s); });
     queue = [...songs.slice(1)];
     renderQueue();
 
-    // Play first song
-    playSong(songs[0], false);
+    // Play first song (only if host or not in session)
+    if (!currentSessionCode || isHost) playSong(songs[0], false);
 
-    // Render cards
-    resultsList.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
-        <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-        <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
-      </div>
-      <div class="cards">${songs.map(song => {
-        const t = (song.title.length > 30 ? song.title.slice(0,30)+'...' : song.title).replace(/'/g,"\\'");
-        const a = (song.artist.length > 20 ? song.artist.slice(0,20)+'...' : song.artist).replace(/'/g,"\\'");
-        const sid = encodeURIComponent(song.id);
-        return `<div class="card" onclick="playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)">
-          <img src="${song.image||'default.png'}" />
-          <div class="card-body"><div class="song-name">${t}</div><div class="artist-name">${a}</div></div>
-          <div class="play-down">
-            <div class="play-btn" onclick="event.stopPropagation();playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)"><i class="fa-solid fa-play"></i></div>
-            <div class="add-fav" onclick="event.stopPropagation();toggleFavorites('${sid}')"><i class="fa-regular fa-heart"></i></div>
-            <div class="queue-btn" onclick="event.stopPropagation();addToQueue('${sid}')"><i class="fa-solid fa-list"></i></div>
-          </div>
-        </div>`;
-      }).join('')}</div>`;
+    // Render using createSongCard so suggest btn works for non-hosts
+    resultsList.innerHTML = '';
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:1rem;';
+    header.innerHTML = `
+      <button class="back-inline" onclick="loadHomeContent()">← Home</button>
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang : ''}</h3>`;
+    resultsList.appendChild(header);
+
+    const cardsDiv = document.createElement('div');
+    cardsDiv.className = 'cards';
+    songs.forEach(song => {
+      const card = createSongCard(song, false, false);
+      cardsDiv.appendChild(card);
+    });
+    resultsList.appendChild(cardsDiv);
 
     markStateChanged(); saveState();
   } catch(e) {
@@ -3202,6 +3200,9 @@ socket.on('session-created', ({ code }) => {
   showNotification('Session hosted! Share the code: ' + code);
   updateChatButtonVisibility();
   showChatButton();
+
+  // Register host's real name with server (create-session doesn't send name)
+  socket.emit('join-session', { code, name: userName || 'Host' }, () => {});
 
   // Show host-only buttons
   const sugBtn = document.getElementById('suggestions-btn');
