@@ -1647,50 +1647,110 @@ body.nonhost-session #shuffle-btn {
   cursor: pointer !important;
   pointer-events: auto !important;
 }
-/* ── PARTICIPANT ITEMS WITH KICK ── */
+/* ── LANGUAGE PICKER ── */
+.lang-picker-wrap { position: relative; }
+.lang-picker-btn {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px; padding: 7px 14px;
+  color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.lang-picker-btn:hover { border-color: var(--accent); color: var(--accent); }
+.lang-picker-btn i:first-child { color: var(--accent-3); font-size: 1rem; }
+.lang-picker-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: rgba(8,8,18,0.98);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius); padding: 6px;
+  min-width: 180px; z-index: 1200;
+  box-shadow: var(--shadow);
+  animation: fadeUp 0.2s ease;
+  max-height: 320px; overflow-y: auto;
+}
+.lang-picker-dropdown.hidden { display: none; }
+.lang-option {
+  padding: 9px 14px; border-radius: var(--radius-sm);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.88rem; font-weight: 500;
+  color: var(--muted); cursor: pointer; transition: all 0.15s;
+}
+.lang-option:hover { background: rgba(168,85,247,0.12); color: var(--text); }
+.lang-option.active { background: rgba(168,85,247,0.15); color: var(--accent); font-weight: 700; }
+
+/* ── SESSION ACTION TRANSFER ── */
+.session-action-transfer { color: #ff9500; border-color: rgba(255,149,0,0.2); }
+.session-action-transfer:hover { background: rgba(255,149,0,0.1); border-color: #ff9500; }
+
+/* ── TRANSFER HOST MODAL ── */
+.transfer-list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 300px; overflow-y: auto;
+}
+.transfer-list-empty { color: var(--muted); font-size: 0.88rem; text-align: center; padding: 1.5rem 0; }
+.transfer-list-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--panel-2); border: 1px solid var(--glass-border);
+  border-radius: var(--radius); padding: 12px 14px; gap: 12px;
+  transition: border-color 0.2s; cursor: default;
+}
+.transfer-list-item:hover { border-color: var(--accent); }
+.transfer-user-info { display: flex; align-items: center; gap: 10px; }
+.transfer-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700; font-size: 0.95rem; color: #fff; flex-shrink: 0;
+}
+.transfer-name { font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 600; color: var(--text); }
+.transfer-pick-btn {
+  background: linear-gradient(135deg, #ff9500, #ff4500) !important;
+  color: #fff !important; padding: 8px 14px !important;
+  font-size: 0.82rem !important; white-space: nowrap; flex-shrink: 0;
+  border: none; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: 'Outfit', sans-serif;
+  font-weight: 600; transition: all 0.2s;
+}
+.transfer-pick-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* ── PARTICIPANT KICK BUTTON ── */
 .participant-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; width: 100%;
 }
 .participant-name {
-  flex: 1;
-  font-size: 0.88rem;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1; font-size: 0.88rem; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.participant-kickable {
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
-}
-.participant-kickable:hover {
-  background: rgba(255, 107, 107, 0.06);
-}
+.participant-kickable { border-radius: var(--radius-sm); transition: background 0.15s; }
+.participant-kickable:hover { background: rgba(255,107,107,0.06); }
 .kick-btn {
-  flex-shrink: 0;
-  background: none;
-  border: 1px solid transparent;
-  color: var(--muted);
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  font-size: 0.78rem;
-  opacity: 0;
-  transition: all 0.15s;
+  flex-shrink: 0; background: none; border: 1px solid transparent;
+  color: var(--muted); width: 28px; height: 28px;
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; cursor: pointer;
+  font-size: 0.78rem; opacity: 0; transition: all 0.15s;
 }
 .participant-kickable:hover .kick-btn {
-  opacity: 1;
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.35);
-  background: rgba(255, 107, 107, 0.1);
+  opacity: 1; color: #ff6b6b;
+  border-color: rgba(255,107,107,0.35);
+  background: rgba(255,107,107,0.1);
 }
 .kick-btn:hover {
-  background: rgba(255, 107, 107, 0.25) !important;
-  border-color: #ff6b6b !important;
-  transform: scale(1.1);
+  background: rgba(255,107,107,0.25) !important;
+  border-color: #ff6b6b !important; transform: scale(1.1);
 }
+
+/* ── NON-HOST: only dim playback, keep local controls active ── */
+body.nonhost-session #play-pause-btn,
+body.nonhost-session #next-btn,
+body.nonhost-session #prev-btn { opacity: 0.35 !important; cursor: not-allowed !important; }
+body.nonhost-session #fav-btn,
+body.nonhost-session #loop-btn,
+body.nonhost-session #download-btn,
+body.nonhost-session #sleep-timer-btn,
+body.nonhost-session #shuffle-btn { opacity: 1 !important; cursor: pointer !important; pointer-events: auto !important; }

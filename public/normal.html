@@ -191,24 +191,24 @@
       <section class="home-section" id="genre-section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
           <h3 style="margin:0;">🎵 What are you feeling?</h3>
-          <div class="lang-picker-wrap">
+          <div class="lang-picker-wrap" id="lang-picker-wrap">
             <button class="lang-picker-btn" onclick="toggleLangPicker()" id="lang-picker-btn">
               <i class="fa-solid fa-language"></i>
               <span id="lang-picker-label">All Languages</span>
               <i class="fa-solid fa-chevron-down" style="font-size:0.65rem;opacity:0.6;"></i>
             </button>
             <div class="lang-picker-dropdown hidden" id="lang-picker-dropdown">
-              <div class="lang-option active" data-lang="" onclick="selectLang(this, '')">🌐 All Languages</div>
-              <div class="lang-option" data-lang="Hindi" onclick="selectLang(this, 'Hindi')">🇮🇳 Hindi</div>
-              <div class="lang-option" data-lang="English" onclick="selectLang(this, 'English')">🇬🇧 English</div>
-              <div class="lang-option" data-lang="Tamil" onclick="selectLang(this, 'Tamil')">Tamil</div>
-              <div class="lang-option" data-lang="Telugu" onclick="selectLang(this, 'Telugu')">Telugu</div>
-              <div class="lang-option" data-lang="Kannada" onclick="selectLang(this, 'Kannada')">Kannada</div>
-              <div class="lang-option" data-lang="Malayalam" onclick="selectLang(this, 'Malayalam')">Malayalam</div>
-              <div class="lang-option" data-lang="Punjabi" onclick="selectLang(this, 'Punjabi')">Punjabi</div>
-              <div class="lang-option" data-lang="Marathi" onclick="selectLang(this, 'Marathi')">Marathi</div>
-              <div class="lang-option" data-lang="Bengali" onclick="selectLang(this, 'Bengali')">Bengali</div>
-              <div class="lang-option" data-lang="Gujarati" onclick="selectLang(this, 'Gujarati')">Gujarati</div>
+              <div class="lang-option active" data-lang="" onclick="selectLang(this,'')">🌐 All Languages</div>
+              <div class="lang-option" data-lang="hindi" onclick="selectLang(this,'hindi')">🇮🇳 Hindi</div>
+              <div class="lang-option" data-lang="english" onclick="selectLang(this,'english')">🇬🇧 English</div>
+              <div class="lang-option" data-lang="tamil" onclick="selectLang(this,'tamil')">Tamil</div>
+              <div class="lang-option" data-lang="telugu" onclick="selectLang(this,'telugu')">Telugu</div>
+              <div class="lang-option" data-lang="kannada" onclick="selectLang(this,'kannada')">Kannada</div>
+              <div class="lang-option" data-lang="malayalam" onclick="selectLang(this,'malayalam')">Malayalam</div>
+              <div class="lang-option" data-lang="punjabi" onclick="selectLang(this,'punjabi')">Punjabi</div>
+              <div class="lang-option" data-lang="marathi" onclick="selectLang(this,'marathi')">Marathi</div>
+              <div class="lang-option" data-lang="bengali" onclick="selectLang(this,'bengali')">Bengali</div>
+              <div class="lang-option" data-lang="gujarati" onclick="selectLang(this,'gujarati')">Gujarati</div>
             </div>
           </div>
         </div>
@@ -538,50 +538,45 @@
       }
     })();
 
-    /* ── FOCUS SEARCH ── */
-    function focusSearch() {
-      document.getElementById('searchInput').focus();
-    }
-
-    /* ── LANGUAGE PICKER FOR GENRE TILES ── */
+    /* ── LANGUAGE PICKER ── */
     window._selectedGenreLang = localStorage.getItem('vibron-genre-lang') || '';
 
     function toggleLangPicker() {
-      const dd = document.getElementById('lang-picker-dropdown');
-      dd.classList.toggle('hidden');
+      document.getElementById('lang-picker-dropdown').classList.toggle('hidden');
     }
-
     function selectLang(el, lang) {
       window._selectedGenreLang = lang;
       localStorage.setItem('vibron-genre-lang', lang);
-      // Update label
-      document.getElementById('lang-picker-label').textContent = lang || 'All Languages';
-      // Update active state
+      document.getElementById('lang-picker-label').textContent = lang
+        ? lang.charAt(0).toUpperCase() + lang.slice(1)
+        : 'All Languages';
       document.querySelectorAll('.lang-option').forEach(o => o.classList.remove('active'));
       el.classList.add('active');
-      // Close dropdown
       document.getElementById('lang-picker-dropdown').classList.add('hidden');
     }
-
     // Restore saved language on load
     (function() {
       const saved = window._selectedGenreLang;
       if (saved) {
-        document.getElementById('lang-picker-label').textContent = saved;
+        document.getElementById('lang-picker-label').textContent =
+          saved.charAt(0).toUpperCase() + saved.slice(1);
         document.querySelectorAll('.lang-option').forEach(o => {
           o.classList.toggle('active', o.dataset.lang === saved);
         });
       }
     })();
-
-    // Close lang dropdown on outside click
+    // Close on outside click
     document.addEventListener('click', e => {
-      const wrap = document.getElementById('lang-picker-wrap') || e.target.closest('.lang-picker-wrap');
       const dd = document.getElementById('lang-picker-dropdown');
-      if (dd && !dd.classList.contains('hidden') && !e.target.closest('.lang-picker-wrap')) {
+      if (dd && !dd.classList.contains('hidden') && !e.target.closest('#lang-picker-wrap')) {
         dd.classList.add('hidden');
       }
     });
+
+    /* ── FOCUS SEARCH ── */
+    function focusSearch() {
+      document.getElementById('searchInput').focus();
+    }
 
     /* ── SHUFFLE ── */
     let shuffleOn = false;

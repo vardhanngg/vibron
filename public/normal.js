@@ -850,8 +850,12 @@ function downloadPlaylist(songs, playlistName) {
 
 /* =================== */
 /* Genre Tiles */
-async function loadGenre(query) {
-  // Show skeleton in song list
+async function loadGenre(baseQuery) {
+  const lang = window._selectedGenreLang || '';
+  const apiUrl = lang
+    ? `https://saavn.dev/api/search/songs?query=${encodeURIComponent(baseQuery)}&language=${encodeURIComponent(lang)}&limit=20`
+    : `https://saavn.dev/api/search/songs?query=${encodeURIComponent(baseQuery)}&limit=20`;
+
   document.getElementById('home-content').style.display = 'none';
   const resultsList = document.getElementById('song-list');
   resultsList.classList.remove('hidden');
@@ -859,7 +863,7 @@ async function loadGenre(query) {
   resultsList.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
       <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang.charAt(0).toUpperCase() + lang.slice(1) : ''}</h3>
     </div>
     <div class="skeleton-list">${Array(6).fill(0).map(() => `
       <div class="skeleton-card">
@@ -872,43 +876,33 @@ async function loadGenre(query) {
     </div>`;
 
   try {
-    const res = await fetch(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(query)}&page=1&limit=20`);
+    const res = await fetch(apiUrl);
     const json = await res.json();
     const songs = (json?.data?.results || json?.results || []).map(normalizeSong).filter(s => s.audioUrl);
 
     if (!songs.length) {
-      resultsList.innerHTML = `<button class="back-inline" onclick="loadHomeContent()">← Home</button><p style="color:var(--muted);margin-top:1rem;">No songs found for "${query}"</p>`;
+      resultsList.innerHTML = `<button class="back-inline" onclick="loadHomeContent()">← Home</button><p style="color:var(--muted);margin-top:1rem;">No songs found.</p>`;
       return;
     }
 
-    // Add all to history and queue
     songs.forEach(s => { if (!songHistory.some(h => h.id === s.id)) songHistory.push(s); });
     queue = [...songs.slice(1)];
     renderQueue();
 
-    // Play first song
-    playSong(songs[0], false);
+    if (!currentSessionCode || isHost) playSong(songs[0], false);
 
-    // Render cards
-    resultsList.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
-        <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-        <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
-      </div>
-      <div class="cards">${songs.map(song => {
-        const t = (song.title.length > 30 ? song.title.slice(0,30)+'...' : song.title).replace(/'/g,"\\'");
-        const a = (song.artist.length > 20 ? song.artist.slice(0,20)+'...' : song.artist).replace(/'/g,"\\'");
-        const sid = encodeURIComponent(song.id);
-        return `<div class="card" onclick="playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)">
-          <img src="${song.image||'default.png'}" />
-          <div class="card-body"><div class="song-name">${t}</div><div class="artist-name">${a}</div></div>
-          <div class="play-down">
-            <div class="play-btn" onclick="event.stopPropagation();playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)"><i class="fa-solid fa-play"></i></div>
-            <div class="add-fav" onclick="event.stopPropagation();toggleFavorites('${sid}')"><i class="fa-regular fa-heart"></i></div>
-            <div class="queue-btn" onclick="event.stopPropagation();addToQueue('${sid}')"><i class="fa-solid fa-list"></i></div>
-          </div>
-        </div>`;
-      }).join('')}</div>`;
+    resultsList.innerHTML = '';
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:1rem;';
+    header.innerHTML = `
+      <button class="back-inline" onclick="loadHomeContent()">← Home</button>
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang.charAt(0).toUpperCase() + lang.slice(1) : ''}</h3>`;
+    resultsList.appendChild(header);
+
+    const cardsDiv = document.createElement('div');
+    cardsDiv.className = 'cards';
+    songs.forEach(song => cardsDiv.appendChild(createSongCard(song, false, false)));
+    resultsList.appendChild(cardsDiv);
 
     markStateChanged(); saveState();
   } catch(e) {
@@ -2220,8 +2214,9 @@ function leaveSession() {
 
   hideChatButton();
 
+  // Restore Listen Together button
   const listenBtn = document.getElementById('listen-together-btn');
-  if (listenBtn) listenBtn.disabled = false;
+  if (listenBtn) { listenBtn.classList.remove('hidden'); listenBtn.disabled = false; }
 
   clearSessionMemory();
   showNotification('Left session');
@@ -2409,7 +2404,6 @@ function renderParticipants() {
       const name = (p.name && p.name.trim() && p.name !== 'Host') ? p.name : (p.isHost ? '' : `User ${userId.slice(0,4)}`);
 
       if (isHost && !p.isHost && currentSessionCode) {
-        // Host view: show kick button on each non-host participant
         li.className = 'participant-item participant-kickable';
         li.innerHTML = `
           <span class="participant-name">${name}</span>
@@ -2425,21 +2419,18 @@ function renderParticipants() {
     });
   }
 
-  // Update listener count badge
   const count = Object.keys(participants).length || 1;
   const numEl = document.getElementById('listener-num');
   if (numEl) numEl.textContent = count;
   const listenerEl = document.getElementById('listener-count');
   if (listenerEl) listenerEl.title = `${count} listener${count !== 1 ? 's' : ''}`;
 
-  // Show participants panel when in session
   const panel = document.getElementById('participants-list');
   if (panel && currentSessionCode) panel.classList.remove('hidden');
 }
 
 function kickParticipant(userId, name) {
   if (!isHost || !currentSessionCode) return;
-  if (!confirm(`Remove "${name}" from the session?`)) return;
   socket.emit('kick-participant', { code: currentSessionCode, userId });
   showNotification(`👟 ${name} removed from session`);
 }
@@ -3223,8 +3214,9 @@ socket.on('session-created', ({ code }) => {
   updateChatButtonVisibility();
   showChatButton();
 
-  // Register host's real name with server (create-session doesn't send name)
-  socket.emit('join-session', { code, name: userName || 'Host' }, () => {});
+  // Hide Listen Together button while in session
+  const listenBtn = document.getElementById('listen-together-btn');
+  if (listenBtn) listenBtn.classList.add('hidden');
 
   // Show host-only buttons
   const sugBtn = document.getElementById('suggestions-btn');
@@ -3301,21 +3293,23 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   isHost = host;
   closeListenModal();
 
+  // Hide Listen Together button while in session (both host and non-host)
+  const listenBtn = document.getElementById('listen-together-btn');
+  if (listenBtn) listenBtn.classList.add('hidden');
+
   const chatButton = document.getElementById('chat-open-btn');
   if (chatButton) chatButton.classList.remove('hidden');
 
   showNotification(`Joined session ${code}`);
 
   if (!isHost) {
-    // Non-host: lock controls
     disableControls();
     setSessionControlsDisabled(true);
     document.body.classList.add('nonhost-session');
   } else {
-    // Host: ensure controls stay fully enabled
+    // Host: keep controls fully enabled, re-wire onclicks
     setSessionControlsDisabled(false);
     document.body.classList.remove('nonhost-session');
-    // Re-wire onclick in case anything nulled them
     const pbBtn  = document.getElementById('play-pause-btn');
     const nxtBtn = document.getElementById('next-btn');
     const prvBtn = document.getElementById('prev-btn');
