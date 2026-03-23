@@ -184,6 +184,18 @@
       </div>
     </div>
 
+    <!-- Transfer Host Modal Backdrop -->
+    <div id="transfer-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:1999;" onclick="closeTransferModal()"></div>
+    <!-- Transfer Host Modal -->
+    <div id="transfer-modal" class="modal-content hidden">
+      <span class="close" onclick="closeTransferModal()">×</span>
+      <h2><i class="fas fa-crown" style="margin-right:8px;color:#ff9500;"></i>Transfer Host</h2>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0.5rem 0 1rem;">Choose a listener to become the new host.</p>
+      <ul id="transfer-list" class="transfer-list"></ul>
+      <div class="modal-buttons" style="margin-top:1rem;">
+        <button class="modal-btn cancel-btn" onclick="closeTransferModal()">Cancel</button>
+      </div>
+    </div>
     <!-- Home Content -->
     <div id="home-content" class="home-content">
 
@@ -198,17 +210,17 @@
               <i class="fa-solid fa-chevron-down" style="font-size:0.65rem;opacity:0.6;"></i>
             </button>
             <div class="lang-picker-dropdown hidden" id="lang-picker-dropdown">
-              <div class="lang-option active" data-lang="" onclick="selectLang(this,'')">🌐 All Languages</div>
-              <div class="lang-option" data-lang="hindi" onclick="selectLang(this,'hindi')">🇮🇳 Hindi</div>
-              <div class="lang-option" data-lang="english" onclick="selectLang(this,'english')">🇬🇧 English</div>
-              <div class="lang-option" data-lang="tamil" onclick="selectLang(this,'tamil')">Tamil</div>
-              <div class="lang-option" data-lang="telugu" onclick="selectLang(this,'telugu')">Telugu</div>
-              <div class="lang-option" data-lang="kannada" onclick="selectLang(this,'kannada')">Kannada</div>
-              <div class="lang-option" data-lang="malayalam" onclick="selectLang(this,'malayalam')">Malayalam</div>
-              <div class="lang-option" data-lang="punjabi" onclick="selectLang(this,'punjabi')">Punjabi</div>
-              <div class="lang-option" data-lang="marathi" onclick="selectLang(this,'marathi')">Marathi</div>
-              <div class="lang-option" data-lang="bengali" onclick="selectLang(this,'bengali')">Bengali</div>
-              <div class="lang-option" data-lang="gujarati" onclick="selectLang(this,'gujarati')">Gujarati</div>
+              <div class="lang-option active" data-lang="" onclick="selectLang(this,\'\')">🌐 All Languages</div>
+              <div class="lang-option" data-lang="hindi" onclick="selectLang(this,\'hindi\')">🇮🇳 Hindi</div>
+              <div class="lang-option" data-lang="english" onclick="selectLang(this,\'english\')">🇬🇧 English</div>
+              <div class="lang-option" data-lang="tamil" onclick="selectLang(this,\'tamil\')">Tamil</div>
+              <div class="lang-option" data-lang="telugu" onclick="selectLang(this,\'telugu\')">Telugu</div>
+              <div class="lang-option" data-lang="kannada" onclick="selectLang(this,\'kannada\')">Kannada</div>
+              <div class="lang-option" data-lang="malayalam" onclick="selectLang(this,\'malayalam\')">Malayalam</div>
+              <div class="lang-option" data-lang="punjabi" onclick="selectLang(this,\'punjabi\')">Punjabi</div>
+              <div class="lang-option" data-lang="marathi" onclick="selectLang(this,\'marathi\')">Marathi</div>
+              <div class="lang-option" data-lang="bengali" onclick="selectLang(this,\'bengali\')">Bengali</div>
+              <div class="lang-option" data-lang="gujarati" onclick="selectLang(this,\'gujarati\')">Gujarati</div>
             </div>
           </div>
         </div>
@@ -540,7 +552,6 @@
 
     /* ── LANGUAGE PICKER ── */
     window._selectedGenreLang = localStorage.getItem('vibron-genre-lang') || '';
-
     function toggleLangPicker() {
       document.getElementById('lang-picker-dropdown').classList.toggle('hidden');
     }
@@ -548,13 +559,11 @@
       window._selectedGenreLang = lang;
       localStorage.setItem('vibron-genre-lang', lang);
       document.getElementById('lang-picker-label').textContent = lang
-        ? lang.charAt(0).toUpperCase() + lang.slice(1)
-        : 'All Languages';
+        ? lang.charAt(0).toUpperCase() + lang.slice(1) : 'All Languages';
       document.querySelectorAll('.lang-option').forEach(o => o.classList.remove('active'));
       el.classList.add('active');
       document.getElementById('lang-picker-dropdown').classList.add('hidden');
     }
-    // Restore saved language on load
     (function() {
       const saved = window._selectedGenreLang;
       if (saved) {
@@ -565,12 +574,10 @@
         });
       }
     })();
-    // Close on outside click
     document.addEventListener('click', e => {
       const dd = document.getElementById('lang-picker-dropdown');
-      if (dd && !dd.classList.contains('hidden') && !e.target.closest('#lang-picker-wrap')) {
+      if (dd && !dd.classList.contains('hidden') && !e.target.closest('#lang-picker-wrap'))
         dd.classList.add('hidden');
-      }
     });
 
     /* ── FOCUS SEARCH ── */

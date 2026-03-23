@@ -852,9 +852,9 @@ function downloadPlaylist(songs, playlistName) {
 /* Genre Tiles */
 async function loadGenre(baseQuery) {
   const lang = window._selectedGenreLang || '';
-  const apiUrl = lang
-    ? `https://saavn.dev/api/search/songs?query=${encodeURIComponent(baseQuery)}&language=${encodeURIComponent(lang)}&limit=20`
-    : `https://saavn.dev/api/search/songs?query=${encodeURIComponent(baseQuery)}&limit=20`;
+  // Build search query — append language for proper filtering
+  const searchQuery = lang ? `${baseQuery} ${lang}` : baseQuery;
+  const displayLang = lang ? lang.charAt(0).toUpperCase() + lang.slice(1) : '';
 
   document.getElementById('home-content').style.display = 'none';
   const resultsList = document.getElementById('song-list');
@@ -863,7 +863,7 @@ async function loadGenre(baseQuery) {
   resultsList.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
       <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang.charAt(0).toUpperCase() + lang.slice(1) : ''}</h3>
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${displayLang ? ' · ' + displayLang : ''}</h3>
     </div>
     <div class="skeleton-list">${Array(6).fill(0).map(() => `
       <div class="skeleton-card">
@@ -876,12 +876,12 @@ async function loadGenre(baseQuery) {
     </div>`;
 
   try {
-    const res = await fetch(apiUrl);
+    const res = await fetch(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(searchQuery)}&page=1&limit=20`);
     const json = await res.json();
     const songs = (json?.data?.results || json?.results || []).map(normalizeSong).filter(s => s.audioUrl);
 
     if (!songs.length) {
-      resultsList.innerHTML = `<button class="back-inline" onclick="loadHomeContent()">← Home</button><p style="color:var(--muted);margin-top:1rem;">No songs found.</p>`;
+      resultsList.innerHTML = `<button class="back-inline" onclick="loadHomeContent()">← Home</button><p style="color:var(--muted);margin-top:1rem;">No songs found for "${searchQuery}"</p>`;
       return;
     }
 
@@ -891,14 +891,16 @@ async function loadGenre(baseQuery) {
 
     if (!currentSessionCode || isHost) playSong(songs[0], false);
 
+    // Build header
     resultsList.innerHTML = '';
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:1rem;';
     header.innerHTML = `
       <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang.charAt(0).toUpperCase() + lang.slice(1) : ''}</h3>`;
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${displayLang ? ' · ' + displayLang : ''}</h3>`;
     resultsList.appendChild(header);
 
+    // Use createSongCard so suggest btn works for non-hosts in session
     const cardsDiv = document.createElement('div');
     cardsDiv.className = 'cards';
     songs.forEach(song => cardsDiv.appendChild(createSongCard(song, false, false)));
@@ -2214,7 +2216,6 @@ function leaveSession() {
 
   hideChatButton();
 
-  // Restore Listen Together button
   const listenBtn = document.getElementById('listen-together-btn');
   if (listenBtn) { listenBtn.classList.remove('hidden'); listenBtn.disabled = false; }
 
@@ -2402,7 +2403,6 @@ function renderParticipants() {
     Object.entries(participants).forEach(([userId, p]) => {
       const li = document.createElement('li');
       const name = (p.name && p.name.trim() && p.name !== 'Host') ? p.name : (p.isHost ? '' : `User ${userId.slice(0,4)}`);
-
       if (isHost && !p.isHost && currentSessionCode) {
         li.className = 'participant-item participant-kickable';
         li.innerHTML = `
@@ -3215,8 +3215,8 @@ socket.on('session-created', ({ code }) => {
   showChatButton();
 
   // Hide Listen Together button while in session
-  const listenBtn = document.getElementById('listen-together-btn');
-  if (listenBtn) listenBtn.classList.add('hidden');
+  const listenBtnH = document.getElementById('listen-together-btn');
+  if (listenBtnH) listenBtnH.classList.add('hidden');
 
   // Show host-only buttons
   const sugBtn = document.getElementById('suggestions-btn');
@@ -3293,7 +3293,7 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   isHost = host;
   closeListenModal();
 
-  // Hide Listen Together button while in session (both host and non-host)
+  // Hide Listen Together button while in session
   const listenBtn = document.getElementById('listen-together-btn');
   if (listenBtn) listenBtn.classList.add('hidden');
 
@@ -3307,7 +3307,6 @@ socket.on('session-joined', ({ code, isHost: host }) => {
     setSessionControlsDisabled(true);
     document.body.classList.add('nonhost-session');
   } else {
-    // Host: keep controls fully enabled, re-wire onclicks
     setSessionControlsDisabled(false);
     document.body.classList.remove('nonhost-session');
     const pbBtn  = document.getElementById('play-pause-btn');
@@ -3692,9 +3691,15 @@ function handleOutsideClick(event) {
 }
 /* === Listen-Together UI helpers === */
 function openListenModal() {
-  // show the main listen-together modal, keep join-input hidden first
   document.getElementById('listen-together-modal').classList.remove('hidden');
+  // Always reset to the main options screen
+  document.getElementById('listen-options').classList.remove('hidden');
   document.getElementById('join-input').classList.add('hidden');
+  document.getElementById('name-input-modal').classList.add('hidden');
+  // Clear name input so it doesn't persist
+  const nameInput = document.getElementById('user-name-input');
+  if (nameInput) nameInput.value = '';
+  pendingAction = null;
 }
 
 function showJoinInput() {
