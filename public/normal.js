@@ -850,11 +850,8 @@ function downloadPlaylist(songs, playlistName) {
 
 /* =================== */
 /* Genre Tiles */
-async function loadGenre(baseQuery) {
-  // Append selected language to query
-  const lang = window._selectedGenreLang || '';
-  const query = lang ? `${baseQuery} ${lang}` : baseQuery;
-
+async function loadGenre(query) {
+  // Show skeleton in song list
   document.getElementById('home-content').style.display = 'none';
   const resultsList = document.getElementById('song-list');
   resultsList.classList.remove('hidden');
@@ -862,7 +859,7 @@ async function loadGenre(baseQuery) {
   resultsList.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
       <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang : ''}</h3>
+      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
     </div>
     <div class="skeleton-list">${Array(6).fill(0).map(() => `
       <div class="skeleton-card">
@@ -884,29 +881,34 @@ async function loadGenre(baseQuery) {
       return;
     }
 
+    // Add all to history and queue
     songs.forEach(s => { if (!songHistory.some(h => h.id === s.id)) songHistory.push(s); });
     queue = [...songs.slice(1)];
     renderQueue();
 
-    // Play first song (only if host or not in session)
-    if (!currentSessionCode || isHost) playSong(songs[0], false);
+    // Play first song
+    playSong(songs[0], false);
 
-    // Render using createSongCard so suggest btn works for non-hosts
-    resultsList.innerHTML = '';
-    const header = document.createElement('div');
-    header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:1rem;';
-    header.innerHTML = `
-      <button class="back-inline" onclick="loadHomeContent()">← Home</button>
-      <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${baseQuery}${lang ? ' · ' + lang : ''}</h3>`;
-    resultsList.appendChild(header);
-
-    const cardsDiv = document.createElement('div');
-    cardsDiv.className = 'cards';
-    songs.forEach(song => {
-      const card = createSongCard(song, false, false);
-      cardsDiv.appendChild(card);
-    });
-    resultsList.appendChild(cardsDiv);
+    // Render cards
+    resultsList.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
+        <button class="back-inline" onclick="loadHomeContent()">← Home</button>
+        <h3 style="margin:0;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:var(--muted);">${query}</h3>
+      </div>
+      <div class="cards">${songs.map(song => {
+        const t = (song.title.length > 30 ? song.title.slice(0,30)+'...' : song.title).replace(/'/g,"\\'");
+        const a = (song.artist.length > 20 ? song.artist.slice(0,20)+'...' : song.artist).replace(/'/g,"\\'");
+        const sid = encodeURIComponent(song.id);
+        return `<div class="card" onclick="playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)">
+          <img src="${song.image||'default.png'}" />
+          <div class="card-body"><div class="song-name">${t}</div><div class="artist-name">${a}</div></div>
+          <div class="play-down">
+            <div class="play-btn" onclick="event.stopPropagation();playSong({id:'${sid}',title:'${t}',artist:'${a}',image:'${song.image}',audioUrl:'${song.audioUrl}'},false)"><i class="fa-solid fa-play"></i></div>
+            <div class="add-fav" onclick="event.stopPropagation();toggleFavorites('${sid}')"><i class="fa-regular fa-heart"></i></div>
+            <div class="queue-btn" onclick="event.stopPropagation();addToQueue('${sid}')"><i class="fa-solid fa-list"></i></div>
+          </div>
+        </div>`;
+      }).join('')}</div>`;
 
     markStateChanged(); saveState();
   } catch(e) {
@@ -2405,7 +2407,20 @@ function renderParticipants() {
     Object.entries(participants).forEach(([userId, p]) => {
       const li = document.createElement('li');
       const name = (p.name && p.name.trim() && p.name !== 'Host') ? p.name : (p.isHost ? '' : `User ${userId.slice(0,4)}`);
-      li.textContent = `${name}${p.isHost ? ' 👑' : ''}`;
+
+      if (isHost && !p.isHost && currentSessionCode) {
+        // Host view: show kick button on each non-host participant
+        li.className = 'participant-item participant-kickable';
+        li.innerHTML = `
+          <span class="participant-name">${name}</span>
+          <button class="kick-btn" title="Remove from session"
+            onclick="event.stopPropagation(); kickParticipant('${userId}', '${name.replace(/'/g, "\\'")}')">
+            <i class="fa-solid fa-user-xmark"></i>
+          </button>`;
+      } else {
+        li.className = 'participant-item';
+        li.innerHTML = `<span class="participant-name">${name}${p.isHost ? ' 👑' : ''}</span>`;
+      }
       ul.appendChild(li);
     });
   }
@@ -2420,6 +2435,13 @@ function renderParticipants() {
   // Show participants panel when in session
   const panel = document.getElementById('participants-list');
   if (panel && currentSessionCode) panel.classList.remove('hidden');
+}
+
+function kickParticipant(userId, name) {
+  if (!isHost || !currentSessionCode) return;
+  if (!confirm(`Remove "${name}" from the session?`)) return;
+  socket.emit('kick-participant', { code: currentSessionCode, userId });
+  showNotification(`👟 ${name} removed from session`);
 }
 
 /* Update pinned now-playing strip in chat */
@@ -3275,23 +3297,32 @@ socket.on('session-joined', ({ code, isHost: host }) => {
   //rememberSession(sessionCode, false);
 });*/
 socket.on('session-joined', ({ code, isHost: host }) => {
-  //////////////console.log('Session joined, code:', code, 'isHost:', host);
   currentSessionCode = code;
   isHost = host;
   closeListenModal();
 
-  if (!isHost) disableControls();
-
   const chatButton = document.getElementById('chat-open-btn');
-  if (chatButton) {
-    chatButton.classList.remove('hidden');  // ✅ only this line
-    //////////////console.log('Chat button shown in session-joined');
-  } else {
-    console.error('Chat button not found in session-joined');
-  }
+  if (chatButton) chatButton.classList.remove('hidden');
 
   showNotification(`Joined session ${code}`);
-  setSessionControlsDisabled(true);
+
+  if (!isHost) {
+    // Non-host: lock controls
+    disableControls();
+    setSessionControlsDisabled(true);
+    document.body.classList.add('nonhost-session');
+  } else {
+    // Host: ensure controls stay fully enabled
+    setSessionControlsDisabled(false);
+    document.body.classList.remove('nonhost-session');
+    // Re-wire onclick in case anything nulled them
+    const pbBtn  = document.getElementById('play-pause-btn');
+    const nxtBtn = document.getElementById('next-btn');
+    const prvBtn = document.getElementById('prev-btn');
+    if (pbBtn)  { pbBtn.disabled  = false; pbBtn.onclick  = playPause; }
+    if (nxtBtn) { nxtBtn.disabled = false; nxtBtn.onclick = () => playNext(); }
+    if (prvBtn) { prvBtn.disabled = false; prvBtn.onclick = playPrevious; }
+  }
 });
 
 
@@ -3327,6 +3358,11 @@ socket.on('user-left', ({ userId, name }) => {
   renderParticipants();
   const who = (name && name.trim()) ? name : `User ${(userId || '????').slice(0, 4)}`;
   showNotification(`${who} left`);
+});
+
+socket.on('kicked', () => {
+  showNotification('🚫 You were removed from the session by the host.');
+  leaveSession();
 });
 
 
