@@ -1237,52 +1237,37 @@
       document.getElementById('fb-char-hint').textContent = len + ' / 500 chars';
       if (this.value.length > 500) this.value = this.value.slice(0, 500);
     });
+    function submitFeedback() {
+  const message = document.getElementById("feedback-text").value;
+  const email = document.getElementById("feedback-email").value;
 
-    async function submitFeedback() {
-      const text = document.getElementById('feedback-text').value.trim();
-      const email = document.getElementById('feedback-email').value.trim();
-      if (!text) {
-        document.getElementById('feedback-text').style.borderColor = 'rgba(236,72,153,0.7)';
-        setTimeout(() => document.getElementById('feedback-text').style.borderColor = 'rgba(168,85,247,0.25)', 1400);
-        return;
-      }
-      const btn = document.getElementById('fb-submit-btn');
-      btn.textContent = 'Sending…';
-      btn.disabled = true;
+  if (!message.trim()) {
+    alert("Write something first 😭");
+    return;
+  }
 
-      const payload = {
-        type: _fbType,
-        rating: _fbRating,
-        message: text,
-        email: email || '(not provided)',
-        page: location.pathname,
-        ua: navigator.userAgent.slice(0, 120),
-        ts: new Date().toISOString()
-      };
-
-      // ── Primary: Formspree (replace YOUR_FORM_ID with actual id from formspree.io) ──
-      try {
-        const r = await fetch('https://formspree.io/f/mqegqpkb', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        // ── Fallback: if Formspree not configured, silently log & show success ──
-        if (!r.ok && r.status !== 200) throw new Error('formspree');
-      } catch(_) {
-        // Fallback: open mailto so feedback is never lost
-        const sub = encodeURIComponent(`[Vibron Feedback] ${_fbType}`);
-        const body = encodeURIComponent(`Type: ${_fbType}\nRating: ${_fbRating}/5\n\n${text}\n\nEmail: ${email || 'N/A'}\nPage: ${location.pathname}`);
-        window.open(`mailto:gvardhan02@gmail.com?subject=${sub}&body=${body}`);
-      }
-
-      // Show success
-      document.getElementById('fb-success').style.display = 'block';
-      document.getElementById('feedback-text').parentElement.style.display = 'none';
-      btn.style.display = 'none';
-      document.getElementById('fb-char-hint').style.display = 'none';
-      setTimeout(closeFeedbackModal, 3200);
+  fetch("https://formspree.io/f/mqegqpkb", {  
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: email,
+      message: message,
+      type: _fbType,
+      rating: _fbRating
+    })
+  })
+  .then(res => {
+    if (res.ok) {
+      document.getElementById("fb-success").style.display = "block";
+    } else {
+      alert("Failed to send 😢");
     }
+  })
+  .catch(() => alert("Network error 😭"));
+}
+    
   </script>
 </body>
 </html>
