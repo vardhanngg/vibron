@@ -11,9 +11,7 @@ let pendingAction = null;
 let pendingMessage = null;
 
 let mySocketId = null;
-//let userName = localStorage.getItem('userName') || '';
-let userName = "";
-//let userName = localStorage.getItem("userName") || "";
+let userName = (function() { try { return localStorage.getItem('vibronUserName') || ''; } catch(_) { return ''; } })();
 
 
 //let isHost = false;
@@ -161,8 +159,14 @@ async function loadHomeContent() {
 function askForName(action = null) {
   pendingAction = action;
   document.getElementById('listen-options').classList.add('hidden');
-  document.getElementById('join-input').classList.add('hidden'); // ✅ hide code input
+  document.getElementById('join-input').classList.add('hidden');
   document.getElementById('name-input-modal').classList.remove('hidden');
+  // Pre-fill saved name so returning users can just hit "Let's go"
+  const nameInput = document.getElementById('user-name-input');
+  if (nameInput && userName && userName.trim()) {
+    nameInput.value = userName.trim();
+    nameInput.select();
+  }
 }
 
 
@@ -210,6 +214,7 @@ function saveUserName() {
   }
 
   userName = input;
+  try { localStorage.setItem('vibronUserName', userName); } catch(_) {}
   document.getElementById('name-input-modal').classList.add('hidden');
   ////////////////console.log('[CHAT DEBUG] userName set to ->', userName);
 
@@ -2188,9 +2193,7 @@ function leaveSession() {
   currentSessionCode = null;
   isHost = false;
   participants = {};
-
-  userName = "";
-  pendingAction = null;
+  // userName intentionally preserved so user doesn't have to re-enter their name
   pendingMessage = null;
 
   // 🔴 Old (breaks toggleChat)
@@ -3233,9 +3236,6 @@ socket.on('session-created', ({ code }) => {
   updateChatButtonVisibility();
   showChatButton();
 
-  // Register host's real name with server (create-session doesn't send name)
-  socket.emit('join-session', { code, name: userName || 'Host' }, () => {});
-
   // Show host-only buttons
   const sugBtn = document.getElementById('suggestions-btn');
   if (sugBtn) sugBtn.classList.remove('hidden');
@@ -3366,7 +3366,22 @@ socket.on('user-left', ({ userId, name }) => {
 socket.on('session-ended', ({ message }) => {
   showNotification(message);
   leaveSession();
+});
 
+// ── FIX: Handle being kicked by the host ──
+socket.on('kicked', () => {
+  showNotification('👟 You were removed from the session by the host.');
+  // Reset session state without emitting 'leave-session' (we're already removed server-side)
+  currentSessionCode = null;
+  isHost = false;
+  participants = {};
+  document.getElementById('session-code-display').classList.add('hidden');
+  document.getElementById('participants-list').classList.add('hidden');
+  const chatBtn = document.getElementById('chat-open-btn');
+  if (chatBtn) chatBtn.style.display = 'none';
+  document.getElementById('suggestions-btn').classList.add('hidden');
+  document.getElementById('transfer-host-btn').classList.add('hidden');
+  renderParticipants();
 });
 
 socket.on('playback-control', data => {
