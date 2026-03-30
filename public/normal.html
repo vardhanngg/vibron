@@ -184,18 +184,6 @@
       </div>
     </div>
 
-    <!-- Transfer Host Modal Backdrop -->
-    <div id="transfer-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:1999;" onclick="closeTransferModal()"></div>
-    <!-- Transfer Host Modal -->
-    <div id="transfer-modal" class="modal-content hidden">
-      <span class="close" onclick="closeTransferModal()">×</span>
-      <h2><i class="fas fa-crown" style="margin-right:8px;color:#ff9500;"></i>Transfer Host</h2>
-      <p style="color:var(--muted);font-size:0.88rem;margin:0.5rem 0 1rem;">Choose a listener to become the new host.</p>
-      <ul id="transfer-list" class="transfer-list"></ul>
-      <div class="modal-buttons" style="margin-top:1rem;">
-        <button class="modal-btn cancel-btn" onclick="closeTransferModal()">Cancel</button>
-      </div>
-    </div>
     <!-- Home Content -->
     <div id="home-content" class="home-content">
 
@@ -1007,5 +995,294 @@
     /* ── PWA install button wired via pwa.js triggerPWAInstall() ── */
   </script>
   <script src="/pwa.js"></script>
+
+  <!-- ═══════════════════════════════════════════════
+       VIBRON IMPROVING BANNER (right-side slide-in)
+  ═══════════════════════════════════════════════ -->
+  <div id="vibron-banner" style="
+    position:fixed;
+    bottom:calc(var(--player-h,80px) + 18px);
+    right:-340px;
+    width:310px;
+    background:linear-gradient(135deg,rgba(30,12,50,0.97),rgba(20,8,38,0.97));
+    border:1px solid rgba(168,85,247,0.35);
+    border-radius:16px;
+    padding:16px 18px 14px;
+    z-index:3500;
+    box-shadow:0 8px 40px rgba(0,0,0,0.55),0 0 0 1px rgba(168,85,247,0.1);
+    backdrop-filter:blur(16px);
+    transition:right 0.55s cubic-bezier(0.34,1.56,0.64,1);
+    font-family:'Outfit',sans-serif;
+  ">
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <span style="font-size:1.4rem;flex-shrink:0;margin-top:2px;">⚡</span>
+      <div style="flex:1;min-width:0;">
+        <p style="margin:0 0 4px;font-weight:700;font-size:0.93rem;background:linear-gradient(135deg,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Vibron is improving</p>
+        <p style="margin:0;font-size:0.8rem;color:rgba(255,255,255,0.65);line-height:1.5;">We're making some changes — you may hit a bug or two, but we're on it 🛠️</p>
+      </div>
+      <button onclick="document.getElementById('vibron-banner').style.right='-340px'" style="
+        background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;
+        font-size:1rem;padding:0;flex-shrink:0;line-height:1;margin-top:1px;
+        transition:color 0.2s;
+      " onmouseover="this.style.color='rgba(255,255,255,0.8)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+      <div style="flex:1;height:2px;background:linear-gradient(90deg,rgba(168,85,247,0.5),rgba(236,72,153,0.5));border-radius:2px;"></div>
+      <button onclick="document.getElementById('vibron-banner').style.right='-340px'; openFeedbackModal();" style="
+        background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(236,72,153,0.2));
+        border:1px solid rgba(168,85,247,0.4);
+        color:#c084fc;font-size:0.75rem;font-weight:600;
+        padding:5px 12px;border-radius:20px;cursor:pointer;
+        font-family:'Outfit',sans-serif;
+        transition:all 0.2s;white-space:nowrap;
+      " onmouseover="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.35),rgba(236,72,153,0.35))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.2),rgba(236,72,153,0.2))'">
+        Share Feedback →
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       FLOATING FEEDBACK BUTTON
+  ═══════════════════════════════════════════════ -->
+  <button id="feedback-fab" onclick="openFeedbackModal()" title="Share Feedback" style="
+    position:fixed;
+    bottom:calc(var(--player-h,80px) + 18px);
+    right:18px;
+    width:46px;height:46px;
+    background:linear-gradient(135deg,#a855f7,#ec4899);
+    border:none;border-radius:50%;
+    color:#fff;font-size:1.1rem;
+    cursor:pointer;z-index:3400;
+    box-shadow:0 4px 18px rgba(168,85,247,0.45);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform 0.2s,box-shadow 0.2s;
+  " onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 24px rgba(168,85,247,0.6)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 18px rgba(168,85,247,0.45)'">
+    <i class="fa-solid fa-comment-dots"></i>
+  </button>
+
+  <!-- ═══════════════════════════════════════════════
+       FEEDBACK MODAL
+  ═══════════════════════════════════════════════ -->
+  <div id="feedback-backdrop" onclick="closeFeedbackModal()" style="
+    display:none;position:fixed;inset:0;
+    background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);
+    z-index:5000;
+  "></div>
+
+  <div id="feedback-modal" style="
+    display:none;position:fixed;
+    top:50%;left:50%;transform:translate(-50%,-50%) scale(0.92);
+    width:min(460px,94vw);
+    background:linear-gradient(145deg,rgba(22,10,40,0.98),rgba(15,7,28,0.98));
+    border:1px solid rgba(168,85,247,0.3);
+    border-radius:20px;padding:28px;
+    z-index:5001;
+    box-shadow:0 24px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(168,85,247,0.08);
+    font-family:'Outfit',sans-serif;
+    opacity:0;transition:opacity 0.25s,transform 0.25s;
+  ">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <h2 style="margin:0 0 4px;font-size:1.15rem;font-weight:700;background:linear-gradient(135deg,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Share your thoughts 💬</h2>
+        <p style="margin:0;font-size:0.78rem;color:rgba(255,255,255,0.45);">Help us make Vibron better for you</p>
+      </div>
+      <button onclick="closeFeedbackModal()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">✕</button>
+    </div>
+
+    <!-- Type chips -->
+    <div id="feedback-type-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+      <button class="fb-chip fb-chip-active" data-type="bug" onclick="selectFbType(this)">🐛 Bug</button>
+      <button class="fb-chip" data-type="idea" onclick="selectFbType(this)">💡 Idea</button>
+      <button class="fb-chip" data-type="love" onclick="selectFbType(this)">❤️ Love it</button>
+      <button class="fb-chip" data-type="other" onclick="selectFbType(this)">💬 Other</button>
+    </div>
+
+    <!-- Rating -->
+    <div style="margin-bottom:18px;">
+      <p style="margin:0 0 8px;font-size:0.8rem;color:rgba(255,255,255,0.5);font-weight:500;">How would you rate Vibron so far?</p>
+      <div id="star-row" style="display:flex;gap:6px;">
+        <span class="fb-star" data-v="1" onclick="setRating(1)">★</span>
+        <span class="fb-star" data-v="2" onclick="setRating(2)">★</span>
+        <span class="fb-star" data-v="3" onclick="setRating(3)">★</span>
+        <span class="fb-star" data-v="4" onclick="setRating(4)">★</span>
+        <span class="fb-star" data-v="5" onclick="setRating(5)">★</span>
+      </div>
+    </div>
+
+    <!-- Message -->
+    <textarea id="feedback-text" placeholder="Tell us what's on your mind — a bug you hit, a feature you'd love, or just a vibe check…" style="
+      width:100%;min-height:110px;resize:vertical;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(168,85,247,0.25);
+      border-radius:12px;padding:12px 14px;
+      color:#f0e6ff;font-family:'Outfit',sans-serif;font-size:0.88rem;
+      line-height:1.6;outline:none;
+      transition:border-color 0.2s;box-sizing:border-box;
+    " onfocus="this.style.borderColor='rgba(168,85,247,0.6)'" onblur="this.style.borderColor='rgba(168,85,247,0.25)'"></textarea>
+
+    <!-- Optional email -->
+    <input id="feedback-email" type="email" placeholder="Your email (optional — for follow-ups)" style="
+      width:100%;margin-top:10px;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(168,85,247,0.2);
+      border-radius:10px;padding:10px 14px;
+      color:#f0e6ff;font-family:'Outfit',sans-serif;font-size:0.85rem;
+      outline:none;transition:border-color 0.2s;box-sizing:border-box;
+    " onfocus="this.style.borderColor='rgba(168,85,247,0.5)'" onblur="this.style.borderColor='rgba(168,85,247,0.2)'"/>
+
+    <!-- Submit -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:10px;">
+      <p id="fb-char-hint" style="margin:0;font-size:0.73rem;color:rgba(255,255,255,0.3);">0 / 500 chars</p>
+      <button id="fb-submit-btn" onclick="submitFeedback()" style="
+        background:linear-gradient(135deg,#a855f7,#ec4899);
+        border:none;border-radius:30px;
+        color:#fff;font-family:'Outfit',sans-serif;font-weight:700;
+        font-size:0.88rem;padding:10px 26px;
+        cursor:pointer;
+        box-shadow:0 4px 18px rgba(168,85,247,0.4);
+        transition:opacity 0.2s,transform 0.15s;
+        white-space:nowrap;
+      " onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+        Send Feedback 🚀
+      </button>
+    </div>
+
+    <!-- Success state (hidden) -->
+    <div id="fb-success" style="display:none;text-align:center;padding:12px 0 4px;">
+      <div style="font-size:2.5rem;margin-bottom:10px;">🎉</div>
+      <p style="font-weight:700;font-size:1rem;color:#c084fc;margin:0 0 6px;">Thanks for the feedback!</p>
+      <p style="font-size:0.82rem;color:rgba(255,255,255,0.5);margin:0;">We read every single one. You're helping shape Vibron.</p>
+    </div>
+  </div>
+
+  <style>
+    .fb-chip {
+      padding:6px 14px;border-radius:20px;border:1px solid rgba(168,85,247,0.3);
+      background:rgba(168,85,247,0.08);color:rgba(255,255,255,0.55);
+      font-family:'Outfit',sans-serif;font-size:0.8rem;font-weight:600;
+      cursor:pointer;transition:all 0.18s;
+    }
+    .fb-chip:hover { background:rgba(168,85,247,0.18);color:#c084fc; }
+    .fb-chip-active { background:rgba(168,85,247,0.25);border-color:rgba(168,85,247,0.7);color:#d8b4fe; }
+    .fb-star {
+      font-size:1.6rem;color:rgba(255,255,255,0.2);cursor:pointer;
+      transition:color 0.15s,transform 0.12s;user-select:none;
+    }
+    .fb-star:hover, .fb-star.lit { color:#f59e0b; }
+    .fb-star:hover { transform:scale(1.2); }
+  </style>
+
+  <script>
+    /* ── BANNER ── */
+    (function() {
+      const shown = sessionStorage.getItem('vibronBannerShown');
+      if (!shown) {
+        setTimeout(() => {
+          const b = document.getElementById('vibron-banner');
+          if (b) b.style.right = '18px';
+          sessionStorage.setItem('vibronBannerShown', '1');
+          // Auto-hide after 9s
+          setTimeout(() => { if (b) b.style.right = '-340px'; }, 9000);
+        }, 2200);
+      }
+    })();
+
+    /* ── FEEDBACK MODAL ── */
+    let _fbRating = 0;
+    let _fbType = 'bug';
+
+    function openFeedbackModal() {
+      document.getElementById('feedback-backdrop').style.display = 'block';
+      const m = document.getElementById('feedback-modal');
+      m.style.display = 'block';
+      requestAnimationFrame(() => {
+        m.style.opacity = '1';
+        m.style.transform = 'translate(-50%,-50%) scale(1)';
+      });
+      // Reset form
+      document.getElementById('feedback-text').value = '';
+      document.getElementById('feedback-email').value = '';
+      document.getElementById('fb-success').style.display = 'none';
+      document.getElementById('fb-char-hint').textContent = '0 / 500 chars';
+      document.querySelectorAll('.fb-star').forEach(s => s.classList.remove('lit'));
+      _fbRating = 0;
+    }
+
+    function closeFeedbackModal() {
+      const m = document.getElementById('feedback-modal');
+      m.style.opacity = '0';
+      m.style.transform = 'translate(-50%,-50%) scale(0.92)';
+      setTimeout(() => {
+        m.style.display = 'none';
+        document.getElementById('feedback-backdrop').style.display = 'none';
+      }, 220);
+    }
+
+    function selectFbType(btn) {
+      document.querySelectorAll('.fb-chip').forEach(c => c.classList.remove('fb-chip-active'));
+      btn.classList.add('fb-chip-active');
+      _fbType = btn.dataset.type;
+    }
+
+    function setRating(v) {
+      _fbRating = v;
+      document.querySelectorAll('.fb-star').forEach(s => {
+        s.classList.toggle('lit', parseInt(s.dataset.v) <= v);
+      });
+    }
+
+    document.getElementById('feedback-text').addEventListener('input', function() {
+      const len = Math.min(this.value.length, 500);
+      document.getElementById('fb-char-hint').textContent = len + ' / 500 chars';
+      if (this.value.length > 500) this.value = this.value.slice(0, 500);
+    });
+
+    async function submitFeedback() {
+      const text = document.getElementById('feedback-text').value.trim();
+      const email = document.getElementById('feedback-email').value.trim();
+      if (!text) {
+        document.getElementById('feedback-text').style.borderColor = 'rgba(236,72,153,0.7)';
+        setTimeout(() => document.getElementById('feedback-text').style.borderColor = 'rgba(168,85,247,0.25)', 1400);
+        return;
+      }
+      const btn = document.getElementById('fb-submit-btn');
+      btn.textContent = 'Sending…';
+      btn.disabled = true;
+
+      const payload = {
+        type: _fbType,
+        rating: _fbRating,
+        message: text,
+        email: email || '(not provided)',
+        page: location.pathname,
+        ua: navigator.userAgent.slice(0, 120),
+        ts: new Date().toISOString()
+      };
+
+      // ── Primary: Formspree (replace YOUR_FORM_ID with actual id from formspree.io) ──
+      try {
+        const r = await fetch('https://formspree.io/f/mqegqpkb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        // ── Fallback: if Formspree not configured, silently log & show success ──
+        if (!r.ok && r.status !== 200) throw new Error('formspree');
+      } catch(_) {
+        // Fallback: open mailto so feedback is never lost
+        const sub = encodeURIComponent(`[Vibron Feedback] ${_fbType}`);
+        const body = encodeURIComponent(`Type: ${_fbType}\nRating: ${_fbRating}/5\n\n${text}\n\nEmail: ${email || 'N/A'}\nPage: ${location.pathname}`);
+        window.open(`mailto:gvardhan02@gmail.com?subject=${sub}&body=${body}`);
+      }
+
+      // Show success
+      document.getElementById('fb-success').style.display = 'block';
+      document.getElementById('feedback-text').parentElement.style.display = 'none';
+      btn.style.display = 'none';
+      document.getElementById('fb-char-hint').style.display = 'none';
+      setTimeout(closeFeedbackModal, 3200);
+    }
+  </script>
 </body>
 </html>
