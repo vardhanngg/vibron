@@ -12,6 +12,12 @@
   ],
   "routes": [
     {
+      "src": "/(.*)",
+      "status": 503,
+      "dest": "/public/maintenance.html"
+    },
+
+    {
       "src": "/api/songByMood",
       "dest": "/api/songByMood.js"
     },
