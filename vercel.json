@@ -11,11 +11,7 @@
     }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "status": 503,
-      "dest": "/public/home.html"
-    },
+    
 
     {
       "src": "/api/songByMood",
