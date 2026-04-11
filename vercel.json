@@ -14,7 +14,7 @@
     {
       "src": "/(.*)",
       "status": 503,
-      "dest": "/public/maintenance.html"
+      "dest": "/public/home.html"
     },
 
     {
