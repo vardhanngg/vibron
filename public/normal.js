@@ -57,6 +57,13 @@ let currentQuery = '';
 let currentPage = 0;
 let isPlaying = false;
 
+/* ── Song-ended: auto-advance from queue (registered ONCE, not per-song) ── */
+audioPlayer.addEventListener('ended', () => {
+  if (!currentSessionCode || isHost) {
+    playNext(true); // true = auto-advance
+  }
+});
+
 /* =================== */
 /* State Management */
 function markStateChanged() {
@@ -1000,7 +1007,7 @@ function loadSongWithoutPlaying(song) {
   saveState();
 }
 
-function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = false) {
+function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = false, fromAutoAdvance = false) {
   if (!isHost && currentSessionCode) {
     showNotification('Only the host can control playback.');
     return;
@@ -1044,13 +1051,6 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   isPlaying = true;
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
   updateFavoriteButton();
-
-  // --- On song end, play next ---
-  audioPlayer.onended = () => {
-    if (!currentSessionCode || isHost) {
-      playNext(true); // auto-advance only for solo OR host
-    }
-  };
 
   // --- 🔥 Ensure current song never stays in queue ---
   queue = queue.filter(q => q.id !== song.id);
@@ -1133,7 +1133,7 @@ function playNext(auto = false) {
 
   if (nextSong) {
     ////////////////console.log('▶️ Playing next song:', nextSong.title || nextSong);
-    playSong(nextSong, false);
+    playSong(nextSong, false, false, false, auto);
   } else {
     ////////////////console.log('⛔ No next song found');
     showNotification('No next song. Try searching more!');
@@ -3630,7 +3630,7 @@ document.getElementById('host-session-btn').addEventListener('click', hostSessio
     if (npmPlay) npmPlay.innerHTML = '<i class="fa-solid fa-play"></i>';
   });
 
-  audioPlayer.addEventListener('ended', playNext);
+  // 'ended' listener is registered at module level above (calls playNext with auto=true)
 
   searchInput.addEventListener('keypress', e => {
     if (e.key === 'Enter') searchSongs();
