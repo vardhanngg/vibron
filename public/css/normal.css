@@ -22,6 +22,8 @@
   --radius-sm: 11px;
   --topbar-h: 64px;
   --player-h: 92px;
+  --sidebar-w: 240px;
+  --content-max: 1080px;
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -118,7 +120,7 @@ body::before {
 .sidebar {
   position: fixed;
   top: var(--topbar-h); bottom: var(--player-h);
-  left: 0; width: 240px;
+  left: 0; width: var(--sidebar-w);
   background: rgba(8,8,18,0.98);
   backdrop-filter: blur(24px);
   border-right: 1px solid rgba(168,85,247,0.12);
@@ -145,9 +147,10 @@ body::before {
 /* ── MAIN ── */
 main {
   position: relative; z-index: 1;
-  max-width: 780px;
+  max-width: var(--content-max);
   margin: 0 auto;
   padding: 1.5rem 1rem;
+  transition: margin-left 0.3s cubic-bezier(.4,0,.2,1), max-width 0.3s ease;
 }
 
 /* ── SEARCH ── */
@@ -577,6 +580,86 @@ main {
   cursor: pointer; transition: all 0.2s;
 }
 .back-inline:hover { background: var(--accent); color: #fff; border-color: transparent; }
+
+/* ── ARTIST PAGE BANNER ── */
+.artist-banner {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  background: linear-gradient(135deg, rgba(168,85,247,0.14), rgba(99,102,241,0.08) 60%, transparent);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.4s ease;
+}
+.artist-banner::before {
+  /* soft glow behind the artist photo, echoes the rest of the app's
+     purple/cyan ambient-blob language instead of a flat panel */
+  content: '';
+  position: absolute; top: -40%; left: -10%;
+  width: 50%; height: 180%;
+  background: radial-gradient(circle, rgba(168,85,247,0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+.artist-banner-art-wrap { flex-shrink: 0; position: relative; z-index: 1; }
+.artist-banner-art {
+  width: 144px; height: 144px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), var(--glow-purple);
+}
+.artist-banner-info { position: relative; z-index: 1; min-width: 0; flex: 1; }
+.artist-banner-kicker {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--accent-3);
+}
+.artist-banner-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+  font-weight: 700; line-height: 1.15;
+  margin: 4px 0 8px;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.artist-banner-meta {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  font-size: 0.85rem; color: var(--muted); margin-bottom: 10px;
+}
+.artist-banner-meta span:not(:last-child)::after { content: '•'; margin-left: 14px; color: var(--glass-border); }
+.artist-banner-bio {
+  font-size: 0.85rem; color: var(--muted); line-height: 1.5;
+  max-width: 640px; margin-bottom: 14px;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.artist-banner-bio:empty { display: none; }
+.artist-banner-actions { display: flex; gap: 10px; }
+.artist-play-all-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border: none; border-radius: 24px;
+  padding: 10px 26px; font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: var(--glow-purple);
+  transition: all 0.2s;
+}
+.artist-play-all-btn:hover { transform: translateY(-2px); box-shadow: var(--glow-pink); }
+.artist-play-all-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+@media (max-width: 640px) {
+  .artist-banner { flex-direction: column; text-align: center; padding: 1.5rem 1.25rem; gap: 1rem; }
+  .artist-banner-art { width: 108px; height: 108px; }
+  .artist-banner-meta { justify-content: center; }
+  .artist-banner-bio { margin-left: auto; margin-right: auto; }
+  .artist-banner-actions { justify-content: center; }
+}
+
+
 
 /* ── LIBRARY / FAVORITES / PLAYLISTS ── */
 .playlist-view-header {
@@ -1273,6 +1356,76 @@ main {
   .genre-tile span { font-size: 1.3rem; }
 }
 
+/* ── HOME DISCOVERY ROWS (Trending Now, Coke Studio Pakistan) ── */
+.discovery-section { margin-top: 2rem; }
+.discovery-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+.discovery-section-header h3 { margin: 0; }
+.discovery-see-all {
+  background: none; border: none; color: var(--accent-2);
+  font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; padding: 4px 8px; border-radius: 8px;
+  transition: all 0.15s;
+}
+.discovery-see-all:hover { background: rgba(168,85,247,0.1); color: var(--accent); }
+
+.discovery-row {
+  display: flex; gap: 14px;
+  overflow-x: auto; overflow-y: hidden;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.discovery-row-skeleton { display: flex; gap: 14px; width: 100%; }
+.discovery-tile-skeleton {
+  flex: 0 0 132px; height: 132px; border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--panel-2) 25%, var(--panel-3) 50%, var(--panel-2) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+.discovery-row-error { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
+
+.discovery-tile {
+  flex: 0 0 132px;
+  scroll-snap-align: start;
+  cursor: pointer;
+  user-select: none;
+}
+.discovery-tile-art-wrap {
+  position: relative;
+  width: 132px; height: 132px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--panel-2);
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
+}
+.discovery-tile:hover .discovery-tile-art-wrap { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
+.discovery-tile-art-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.discovery-tile-play {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(4,4,10,0.45);
+  color: #fff; font-size: 1.6rem;
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.discovery-tile:hover .discovery-tile-play { opacity: 1; }
+.discovery-tile-title {
+  font-family: 'Outfit', sans-serif; font-size: 0.85rem; font-weight: 600;
+  color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.discovery-tile-artist {
+  font-size: 0.76rem; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .discovery-tile, .discovery-tile-skeleton { flex-basis: 108px; }
+  .discovery-tile-art-wrap { width: 108px; height: 108px; }
+}
+
 /* ── FUN FACT UPDATED STYLE ── */
 #fun-fact {
   background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08));
@@ -1451,6 +1604,21 @@ body.nonhost-session .player-progress:hover { height: 4px; }
 }
 .npm-close:hover { background: rgba(236,72,153,0.2); color: #ec4899; border-color: #ec4899; }
 
+.npm-lyrics-toggle {
+  position: absolute; top: 16px; left: 16px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid var(--glass-border);
+  color: var(--muted); width: 38px; height: 38px;
+  border-radius: 50%; font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; z-index: 2;
+}
+.npm-lyrics-toggle:hover { background: rgba(168,85,247,0.18); color: var(--accent); border-color: var(--accent); }
+.npm-lyrics-toggle.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border-color: transparent;
+}
+
 .npm-art-wrap {
   position: relative;
   width: min(270px, 72vw); height: min(270px, 72vw);
@@ -1472,6 +1640,30 @@ body.nonhost-session .player-progress:hover { height: 4px; }
 
 .npm-song-info {
   text-align: center; margin-bottom: 1.5rem; width: 100%;
+}
+
+.npm-lyrics-panel {
+  width: 100%;
+  height: calc(min(270px, 72vw) + 64px);
+  max-height: calc(min(270px, 72vw) + 64px);
+  margin-bottom: 1.5rem;
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  border: 1px solid var(--glass-border);
+  padding: 1.25rem 1.5rem;
+  scrollbar-width: thin;
+}
+.npm-lyrics-content { text-align: center; }
+.npm-lyrics-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem; line-height: 1.9;
+  color: var(--text); white-space: normal;
+}
+.npm-lyrics-loading,
+.npm-lyrics-empty {
+  color: var(--muted); font-size: 0.88rem;
+  padding: 2.5rem 1rem; text-align: center;
 }
 .npm-title {
   font-family: 'Space Grotesk', sans-serif;
@@ -1575,14 +1767,36 @@ body.nonhost-session .player-progress:hover { height: 4px; }
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {
   .player-volume { display: none; }
-  .player-info { max-width: 140px; }
-  #now-playing, #artist-name { max-width: 110px; }
+  .player-info { max-width: 120px; }
+  #now-playing, #artist-name { max-width: 100px; }
   .queue-container { width: calc(100vw - 32px); right: 16px; }
   #chat-container { width: calc(100vw - 32px); right: 16px; }
   .modal-content { width: 95vw; padding: 1.5rem; }
   .switch-btn { padding: 6px 12px; font-size: 0.8rem; }
+
+  /* Mini player: keep only essential transport controls visible — loop,
+     favorite, download, and sleep timer are one tap away in the full
+     Now Playing sheet (tap the album art / song info to open it), so the
+     bar itself doesn't need to cram all 8 buttons into ~320px of width. */
+  #player-bar { gap: 6px; padding: 0 10px; }
+  .player-controls { gap: 2px; }
   .player-controls button { padding: 6px; font-size: 0.95rem; }
-  #sleep-timer-btn, #shuffle-btn { display: none; }
+  #sleep-timer-btn, #shuffle-btn, #loop-btn, #fav-btn, #download-btn { display: none; }
+  #play-pause-btn { width: 40px; height: 40px; font-size: 1rem !important; }
+}
+
+@media (max-width: 380px) {
+  .player-info { max-width: 88px; }
+  #now-playing, #artist-name { max-width: 70px; }
+  .player-progress-area { display: none; } /* full progress lives in the Now Playing sheet */
+  #player-bar { justify-content: space-between; }
+
+  /* Top bar: "Mood Player" label collapses to icon-only so the brand
+     name, sidebar toggle and theme picker all keep their tap targets */
+  .switch-btn { font-size: 0; padding: 8px 10px; gap: 0; }
+  .switch-btn i { font-size: 1rem; }
+  .brand-name { font-size: 1.2rem; }
+  .theme-picker-panel { left: auto; right: 0; width: 200px; }
 }
 /* ── SESSION ACTION TRANSFER BUTTON ── */
 .session-action-transfer { color: #ff9500; border-color: rgba(255,149,0,0.2); }
@@ -1674,41 +1888,6 @@ body.nonhost-session #shuffle-btn {
 .lang-option:hover { background: rgba(168,85,247,0.12); color: var(--text); }
 .lang-option.active { background: rgba(168,85,247,0.15); color: var(--accent); font-weight: 700; }
 
-/* ── SESSION ACTION TRANSFER ── */
-.session-action-transfer { color: #ff9500; border-color: rgba(255,149,0,0.2); }
-.session-action-transfer:hover { background: rgba(255,149,0,0.1); border-color: #ff9500; }
-
-/* ── TRANSFER HOST MODAL ── */
-.transfer-list {
-  list-style: none; padding: 0; margin: 0;
-  display: flex; flex-direction: column; gap: 10px;
-  max-height: 300px; overflow-y: auto;
-}
-.transfer-list-empty { color: var(--muted); font-size: 0.88rem; text-align: center; padding: 1.5rem 0; }
-.transfer-list-item {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--panel-2); border: 1px solid var(--glass-border);
-  border-radius: var(--radius); padding: 12px 14px; gap: 12px;
-  transition: border-color 0.2s; cursor: default;
-}
-.transfer-list-item:hover { border-color: var(--accent); }
-.transfer-user-info { display: flex; align-items: center; gap: 10px; }
-.transfer-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-2), var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Space Grotesk', sans-serif; font-weight: 700;
-  font-size: 0.95rem; color: #fff; flex-shrink: 0;
-}
-.transfer-name { font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 600; color: var(--text); }
-.transfer-pick-btn {
-  background: linear-gradient(135deg, #ff9500, #ff4500) !important;
-  color: #fff !important; padding: 8px 14px !important; font-size: 0.82rem !important;
-  white-space: nowrap; flex-shrink: 0; border: none; border-radius: var(--radius-sm);
-  cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; transition: all 0.2s;
-}
-.transfer-pick-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
-
 /* ── PARTICIPANT KICK BUTTON ── */
 .participant-item {
   display: flex; align-items: center;
@@ -1732,12 +1911,48 @@ body.nonhost-session #shuffle-btn {
 }
 .kick-btn:hover { background: rgba(255,107,107,0.25) !important; border-color: #ff6b6b !important; transform: scale(1.1); }
 
-/* ── NON-HOST: only dim playback controls ── */
-body.nonhost-session #play-pause-btn,
-body.nonhost-session #next-btn,
-body.nonhost-session #prev-btn { opacity: 0.35 !important; cursor: not-allowed !important; }
-body.nonhost-session #fav-btn,
-body.nonhost-session #loop-btn,
-body.nonhost-session #download-btn,
-body.nonhost-session #sleep-timer-btn,
-body.nonhost-session #shuffle-btn { opacity: 1 !important; cursor: pointer !important; pointer-events: auto !important; }
+/* ════════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT — desktop docked sidebar, tablet, refined mobile
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Desktop (≥1024px): sidebar is docked permanently, no overlay ── */
+@media (min-width: 1024px) {
+  .sidebar-toggle { display: none; }
+  .sidebar {
+    transform: translateX(0);
+    box-shadow: none;
+  }
+  main {
+    margin-left: var(--sidebar-w);
+    max-width: calc(var(--content-max) + var(--sidebar-w));
+    padding: 2rem 2.5rem;
+  }
+  #player-bar { left: var(--sidebar-w); }
+  .genre-grid { grid-template-columns: repeat(8, 1fr); }
+  /* Keep content visually centered within the remaining space rather than
+     hugging the sidebar edge. NOTE: #main-content is excluded here — it's
+     the same <main> element as the rule above, and an ID selector's
+     margin-left:auto would otherwise win on specificity and cancel out
+     main's margin-left:var(--sidebar-w), causing the sidebar to overlap it. */
+  .home-content,
+  .search-container,
+  .listen-wrapper,
+  #participants-list,
+  #library-view,
+  #song-list {
+    max-width: var(--content-max);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ── Tablet (641px–1023px): overlay sidebar still, comfortable padding ── */
+@media (min-width: 641px) and (max-width: 1023px) {
+  main { padding: 1.5rem 1.5rem; }
+  .genre-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* ── Large desktop (≥1440px): cap line-length, don't stretch rows too wide ── */
+@media (min-width: 1440px) {
+  main { padding: 2.5rem 3rem; }
+}

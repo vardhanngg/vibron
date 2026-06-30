@@ -19,6 +19,9 @@
   <script type="module">
     import { EmojiButton } from 'https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.js';
     window.EmojiButton = EmojiButton;
+    import('https://cdn.jsdelivr.net/npm/browser-id3-writer@6.3.1/+esm')
+      .then(mod => { window.ID3Writer = mod.ID3Writer; })
+      .catch(() => { /* downloads still work without tags if this fails to load */ });
   </script>
   <!-- Analytics -->
   <script defer data-domain="vibron.vercel.app" src="https://plausible.io/js/script.js"></script>
@@ -231,6 +234,28 @@
         <p id="fact-text">Loading fun fact…</p>
         <button id="change-fact-btn">Refresh</button>
       </section>
+
+      <!-- Trending Now -->
+      <section class="home-section discovery-section" id="trending-section">
+        <div class="discovery-section-header">
+          <h3>🔥 Trending Now</h3>
+          <button class="discovery-see-all" onclick="loadGenre('trending hit songs 2026')">See all</button>
+        </div>
+        <div class="discovery-row" id="trending-row">
+          <div class="discovery-row-skeleton"><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div></div>
+        </div>
+      </section>
+
+      <!-- Coke Studio Pakistan -->
+      <section class="home-section discovery-section" id="coke-studio-section">
+        <div class="discovery-section-header">
+          <h3>🎙️ Coke Studio Pakistan</h3>
+          <button class="discovery-see-all" onclick="loadGenre('Coke Studio Pakistan')">See all</button>
+        </div>
+        <div class="discovery-row" id="coke-studio-row">
+          <div class="discovery-row-skeleton"><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div><div class="discovery-tile-skeleton"></div></div>
+        </div>
+      </section>
     </div>
 
     <!-- Library View -->
@@ -405,6 +430,9 @@
       <!-- Swipe handle -->
       <div class="npm-swipe-handle"></div>
       <button class="npm-close" onclick="closeNowPlayingModal()"><i class="fa-solid fa-chevron-down"></i></button>
+      <button class="npm-lyrics-toggle" id="npm-lyrics-toggle" onclick="toggleLyricsView()" title="Lyrics">
+        <i class="fa-solid fa-quote-left"></i>
+      </button>
       <div class="npm-art-wrap">
         <img id="npm-album-art" src="default.png" alt="Album Art" />
       </div>
@@ -414,6 +442,12 @@
       </div>
       <!-- Waveform visualizer -->
       <canvas id="npm-waveform" width="380" height="64" style="width:100%;height:64px;margin-bottom:0.75rem;border-radius:12px;opacity:0.85;"></canvas>
+      <!-- Lyrics panel — swaps in for the art/waveform area, toggled via the quote icon above -->
+      <div id="npm-lyrics-panel" class="npm-lyrics-panel hidden">
+        <div class="npm-lyrics-content" id="npm-lyrics-content">
+          <p class="npm-lyrics-loading">Loading lyrics…</p>
+        </div>
+      </div>
       <div class="npm-progress-area">
         <div class="npm-progress-bar" id="npm-progress-bar">
           <div class="npm-progress-fill" id="npm-progress-fill"></div>
@@ -729,6 +763,7 @@
       document.getElementById('npm-title').textContent = song.title || 'Unknown';
       document.getElementById('npm-artist').textContent = song.artist || '—';
       syncNpmFavBtn();
+      resetLyricsForNewSong(song);
     }
 
     function syncNpmFavBtn() {
@@ -744,6 +779,90 @@
           favBtn.querySelector('i').className = 'fa-regular fa-heart';
         }
       } catch(e) {}
+    }
+
+    /* ── Lyrics panel ──
+       Toggled via the quote-icon button; swaps in for the art/waveform
+       area instead of stacking on top of everything else, so the modal
+       doesn't get crowded for people who never open it. */
+    let _lyricsCache = {};      // songId -> { lyrics, available }
+    let _lyricsCurrentSongId = null;
+    let _lyricsViewOpen = false;
+
+    function resetLyricsForNewSong(song) {
+      _lyricsCurrentSongId = song.id || null;
+      const panel = document.getElementById('npm-lyrics-panel');
+      const content = document.getElementById('npm-lyrics-content');
+      if (_lyricsViewOpen && panel && content) {
+        content.innerHTML = '<p class="npm-lyrics-loading">Loading lyrics…</p>';
+        loadLyricsForCurrentSong();
+      }
+    }
+
+    function toggleLyricsView() {
+      const panel = document.getElementById('npm-lyrics-panel');
+      const artWrap = document.querySelector('.npm-art-wrap');
+      const waveform = document.getElementById('npm-waveform');
+      const toggleBtn = document.getElementById('npm-lyrics-toggle');
+      if (!panel) return;
+
+      _lyricsViewOpen = !_lyricsViewOpen;
+      panel.classList.toggle('hidden', !_lyricsViewOpen);
+      if (artWrap) artWrap.classList.toggle('hidden', _lyricsViewOpen);
+      if (waveform) waveform.classList.toggle('hidden', _lyricsViewOpen);
+      if (toggleBtn) toggleBtn.classList.toggle('active', _lyricsViewOpen);
+
+      if (_lyricsViewOpen) loadLyricsForCurrentSong();
+    }
+
+    async function loadLyricsForCurrentSong() {
+      const song = window.songHistory && window.songHistory[window.currentSongIndex];
+      const content = document.getElementById('npm-lyrics-content');
+      if (!song || !content) return;
+
+      if (_lyricsCache[song.id]) {
+        renderLyrics(_lyricsCache[song.id], content);
+        return;
+      }
+
+      content.innerHTML = '<p class="npm-lyrics-loading">Loading lyrics…</p>';
+      try {
+        const res = await fetch(`https://apivibron.vercel.app/api/songs/${encodeURIComponent(song.id)}/lyrics`, { mode: 'cors' });
+        // Bail out quietly if this song changed while the request was in flight
+        if (_lyricsCurrentSongId !== song.id) return;
+
+        if (!res.ok) {
+          _lyricsCache[song.id] = { available: false };
+          renderLyrics(_lyricsCache[song.id], content);
+          return;
+        }
+        const json = await res.json();
+        const data = json.data || json;
+        const lyricsText = data?.lyrics || data?.lyrics_text || null;
+        _lyricsCache[song.id] = lyricsText
+          ? { available: true, text: lyricsText }
+          : { available: false };
+      } catch (err) {
+        _lyricsCache[song.id] = { available: false };
+      }
+
+      if (_lyricsCurrentSongId === song.id) {
+        renderLyrics(_lyricsCache[song.id], content);
+      }
+    }
+
+    function renderLyrics(result, content) {
+      if (!result || !result.available) {
+        content.innerHTML = '<p class="npm-lyrics-empty">Lyrics aren\'t available for this song.</p>';
+        return;
+      }
+      // JioSaavn-style lyrics come pre-formatted with <br> line breaks already
+      // HTML-escaped on their end; render as-is inside a plain text block to
+      // keep line breaks without risking unescaped markup from the API.
+      const safe = String(result.text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+      content.innerHTML = `<p class="npm-lyrics-text">${safe}</p>`;
     }
 
     // Sync progress bar in modal

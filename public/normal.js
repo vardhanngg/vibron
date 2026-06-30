@@ -29,6 +29,13 @@ let isHost = false;
 let participants = {};
 let stateChanged = false; // For optimized state saving
 
+/* ── Listen Together: latency + drift correction ── */
+let _clockOffsetMs = 0;          // estimated serverTime - localTime, via ping/pong
+let _lastSyncedSongId = null;    // last song id we actually loaded via sync, avoids needless reloads
+let _driftCheckInterval = null;  // periodic correction timer (listeners only)
+const SYNC_DRIFT_TOLERANCE = 0.6; // seconds of allowed drift before correcting
+const SYNC_HEARTBEAT_MS = 4000;   // host re-broadcasts state at this interval
+
 let _searchDebounceTimer = null;
 
 const searchInput = document.getElementById('searchInput');
@@ -159,7 +166,11 @@ async function loadHomeContent() {
   if (moreBtn) moreBtn.style.display = 'none';
   hideBackButton();
 
-  await Promise.all([loadFunFact()]);
+  await Promise.all([
+    loadFunFact(),
+    loadDiscoveryRow('trending-row', 'trending hit songs 2026'),
+    loadDiscoveryRow('coke-studio-row', 'Coke Studio Pakistan'),
+  ]);
   ////////////////console.log('loadHomeContent completed');
 }
 
@@ -383,7 +394,7 @@ if (hasMoreSongs) {
 
 
 
-async function fetchArtistSongs(artistId, artistName, page = 0, append = false) {
+async function fetchArtistSongs(artistId, artistName, page = 0, append = false, artistImage = null) {
   ////////////////console.log('fetchArtistSongs called with artistId:', artistId, 'artistName:', artistName, 'page:', page, 'append:', append);
   if (!artistId || artistId === 'undefined') {
     resultsList.innerHTML = '<span>Invalid artist ID.</span>';
@@ -434,9 +445,8 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
 
     let cards;
     if (!append) {
-      const titleHeader = document.createElement('h3');
-      titleHeader.textContent = `Songs by ${artistName}`;
-      resultsList.appendChild(titleHeader);
+      resultsList.appendChild(buildArtistBanner(artistId, artistName, artistImage, songs));
+      fetchArtistBio(artistId); // best-effort, fills in once it resolves — never blocks song rendering
 
       const container = document.createElement('div');
       container.className = 'song-container';
@@ -452,19 +462,7 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
         return;
       }
     }
-/*
-    if (!append && songs.length) {
-      try {
-        queue = songs.map(normalizeSong).filter(song => !queue.some(q => q.id === song.id));
-        //////////////////console.log('Artist queue updated:', queue.map(q => q.id));
-        renderQueue();
-      } catch (err) {
-        //console.error('Error updating queue:', err);
-        resultsList.innerHTML = '<span>Error rendering queue. Please try again.</span>';
-        return;
-      }
-    }
-*/
+
     try {
       songs.slice(0, visibleArtistSongCount).forEach(song => {
         const normalizedSong = normalizeSong(song);
@@ -508,6 +506,78 @@ async function fetchArtistSongs(artistId, artistName, page = 0, append = false) 
     resultsList.innerHTML = '<span>Error loading artist songs. Please try again.</span>';
     //console.error(`Error fetching artist songs for ID ${artistId}:`, err.message);
     showNotification('Failed to load artist songs.');
+  }
+}
+
+/* ── Artist page banner ──
+   Builds the hero header: image, name, song count, and a Play All action
+   that queues every loaded song and starts playback from the first one. */
+function buildArtistBanner(artistId, artistName, artistImage, songs) {
+  const banner = document.createElement('div');
+  banner.className = 'artist-banner';
+  banner.id = 'artist-banner';
+
+  const safeName = (artistName || 'Unknown Artist').replace(/</g, '&lt;');
+  const img = artistImage || (songs[0] ? normalizeSong(songs[0]).image : null) || 'default.png';
+  const songCountLabel = songs.length ? `${songs.length} song${songs.length === 1 ? '' : 's'}` : '';
+
+  banner.innerHTML = `
+    <div class="artist-banner-art-wrap">
+      <img src="${img}" alt="${safeName}" class="artist-banner-art" onerror="this.src='default.png'" />
+    </div>
+    <div class="artist-banner-info">
+      <span class="artist-banner-kicker">Artist</span>
+      <h2 class="artist-banner-name">${safeName}</h2>
+      <div class="artist-banner-meta">
+        ${songCountLabel ? `<span>${songCountLabel}</span>` : ''}
+      </div>
+      <p class="artist-banner-bio" id="artist-banner-bio"></p>
+      <div class="artist-banner-actions">
+        <button class="artist-play-all-btn" id="artist-play-all-btn" ${songs.length ? '' : 'disabled'}>
+          <i class="fa-solid fa-play"></i> Play All
+        </button>
+      </div>
+    </div>
+  `;
+
+  const playAllBtn = banner.querySelector('#artist-play-all-btn');
+  if (playAllBtn && songs.length) {
+    playAllBtn.addEventListener('click', () => {
+      const normalized = songs.map(normalizeSong);
+      queue = normalized.slice(1);
+      renderQueue();
+      playSong(normalized[0], false, true, false);
+    });
+  }
+
+  return banner;
+}
+
+// Best-effort fetch of a short artist bio/fan count from the richer
+// /api/artists/{id} endpoint. The song list already rendered by the time
+// this resolves, so a slow or missing response never blocks the page —
+// it just quietly fills in the bio line if/when it arrives.
+async function fetchArtistBio(artistId) {
+  try {
+    const res = await fetch(`https://apivibron.vercel.app/api/artists/${artistId}`, { mode: 'cors' });
+    if (!res.ok) return;
+    const json = await res.json();
+    const info = json.data || json;
+    const bio = (Array.isArray(info?.bio) ? info.bio[0]?.text : info?.bio) || null;
+    const fanCount = info?.fanCount || info?.followerCount;
+
+    const bioEl = document.getElementById('artist-banner-bio');
+    const metaEl = document.querySelector('#artist-banner .artist-banner-meta');
+    if (bio && bioEl) {
+      bioEl.textContent = bio.length > 220 ? bio.slice(0, 220).trim() + '…' : bio;
+    }
+    if (fanCount && metaEl) {
+      const span = document.createElement('span');
+      span.textContent = `${Number(fanCount).toLocaleString()} fans`;
+      metaEl.appendChild(span);
+    }
+  } catch (_) {
+    // Silently ignore — the artist page already works fine without this.
   }
 }
 
@@ -721,6 +791,36 @@ function normalizeSong(song) {
   };
 }
 
+// Compact tile for horizontal discovery rows (Trending, Coke Studio, etc.)
+// on the home screen — deliberately lighter than createSongCard's full row
+// (no favorite/queue/playlist/download buttons) so these rows stay glanceable
+// instead of crowding the home screen with five action icons per song.
+function createDiscoveryTile(song, fromArtist = false, fromAlbum = false) {
+  const tile = document.createElement('div');
+  tile.className = 'discovery-tile';
+  const safeTitle = (song.title.length > 28 ? song.title.slice(0, 28) + '…' : song.title);
+  const safeArtist = (song.artist.length > 24 ? song.artist.slice(0, 24) + '…' : song.artist);
+
+  tile.innerHTML = `
+    <div class="discovery-tile-art-wrap">
+      <img src="${song.image || 'default.png'}" alt="${safeTitle.replace(/"/g, '&quot;')}" loading="lazy" />
+      <div class="discovery-tile-play"><i class="fa-solid fa-play"></i></div>
+    </div>
+    <div class="discovery-tile-title">${safeTitle}</div>
+    <div class="discovery-tile-artist">${safeArtist}</div>
+  `;
+
+  tile.addEventListener('click', () => {
+    if (!isHost && currentSessionCode) {
+      suggestSong({ id: song.id, title: song.title, artist: song.artist, image: song.image, audioUrl: song.audioUrl });
+    } else {
+      playSong(song, false, fromArtist, fromAlbum);
+    }
+  });
+
+  return tile;
+}
+
 function createSongCard(song, fromArtist = false, fromAlbum = false) {
   const isFavorited = favorites.some(f => f.id === song.id);
   const safeId = encodeURIComponent(song.id);
@@ -798,6 +898,45 @@ function createSongCard(song, fromArtist = false, fromAlbum = false) {
 
 /* =================== */
 /* Download Functions */
+
+// Embeds title/artist/album-art ID3 tags into a downloaded MP3 blob.
+// Falls back to the untagged blob on any failure (missing library, CORS
+// issue fetching the cover image, malformed audio, etc.) so a download
+// never breaks just because tagging didn't work.
+async function tagMp3Blob(blob, song) {
+  if (!window.ID3Writer) return blob; // library didn't load — download untagged
+  try {
+    const songBuffer = await blob.arrayBuffer();
+    const writer = new window.ID3Writer(songBuffer);
+    writer.setFrame('TIT2', song.title || 'Unknown Title');
+    writer.setFrame('TPE1', [song.artist || 'Unknown Artist']);
+    if (song.album) writer.setFrame('TALB', song.album);
+
+    if (song.image) {
+      try {
+        const coverRes = await fetch(song.image, { mode: 'cors' });
+        if (coverRes.ok) {
+          const coverBuffer = await coverRes.arrayBuffer();
+          writer.setFrame('APIC', {
+            type: 3, // front cover
+            data: coverBuffer,
+            description: 'Cover',
+          });
+        }
+      } catch (_) {
+        // No cover art available (e.g. CORS-blocked image host) — tag
+        // everything else and move on rather than failing the download.
+      }
+    }
+
+    writer.addTag();
+    return writer.getBlob();
+  } catch (err) {
+    console.error('ID3 tagging failed, downloading untagged file:', err);
+    return blob;
+  }
+}
+
 function downloadSong(songId) {
   const song = songHistory.find(s => s.id === songId);
   if (song && song.audioUrl) {
@@ -806,6 +945,7 @@ function downloadSong(songId) {
         if (!response.ok) throw new Error(`Failed to fetch song: ${response.statusText}`);
         return response.blob();
       })
+      .then(blob => tagMp3Blob(blob, song))
       .then(blob => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -839,6 +979,7 @@ function downloadPlaylist(songs, playlistName) {
           if (!response.ok) throw new Error(`Failed to fetch ${song.title}`);
           return response.blob();
         })
+        .then(blob => tagMp3Blob(blob, song))
         .then(blob => zip.file(`${index + 1}. ${song.title} - ${song.artist}.mp3`, blob))
         .catch(err => console.error(`Failed to fetch ${song.title}:`, err))
     )
@@ -1069,14 +1210,7 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   }
 
   // --- 🔄 Sync playback for host sessions ---
-  if (isHost && currentSessionCode) {
-    socket.emit('playback-control', { action: 'play-song', song });
-    socket.emit('sync-state', { 
-      song, 
-      currentTime: audioPlayer.currentTime, 
-      isPlaying: true 
-    });
-  }
+  broadcastPlaybackState(song, audioPlayer.currentTime, true);
 
   markStateChanged();
   saveState();
@@ -1084,6 +1218,37 @@ function playSong(song, fromSearch = false, fromArtist = false, fromAlbum = fals
   updateChatPinnedSong(song.title, song.artist);
 }
 
+
+function broadcastPlaybackState(song, currentTime, isPlaying) {
+  if (!isHost || !currentSessionCode) return;
+  // Single source of truth for session sync — carries an emittedAt timestamp
+  // so listeners can compensate for network latency instead of just
+  // snapping to a stale currentTime.
+  socket.emit('sync-state', {
+    song,
+    currentTime,
+    isPlaying,
+    emittedAt: Date.now(),
+  });
+}
+
+// Periodic re-sync so a listener that drifts (e.g. a brief buffering
+// hiccup) gets corrected even if the host doesn't take any action for a
+// while. Host-only; listeners just receive the resulting 'sync-state'.
+function startSyncHeartbeat() {
+  stopSyncHeartbeat();
+  _driftCheckInterval = setInterval(() => {
+    if (!isHost || !currentSessionCode) return;
+    broadcastPlaybackState(songHistory[currentSongIndex], audioPlayer.currentTime, !audioPlayer.paused);
+  }, SYNC_HEARTBEAT_MS);
+}
+
+function stopSyncHeartbeat() {
+  if (_driftCheckInterval) {
+    clearInterval(_driftCheckInterval);
+    _driftCheckInterval = null;
+  }
+}
 
 function playPause() {
   if (!isHost && currentSessionCode) {
@@ -1104,12 +1269,7 @@ function playPause() {
   isPlaying = !isPlaying;
 
   if (isHost && currentSessionCode) {
-    socket.emit('playback-control', { action: isPlaying ? 'play' : 'pause' });
-    socket.emit('sync-state', {
-      song: songHistory[currentSongIndex],
-      currentTime: audioPlayer.currentTime,
-      isPlaying
-    });
+    broadcastPlaybackState(songHistory[currentSongIndex], audioPlayer.currentTime, isPlaying);
   }
 }
 
@@ -1142,15 +1302,6 @@ function playNext(auto = false) {
   renderQueue();
   markStateChanged();
   saveState();
-
-  if (isHost && currentSessionCode && nextSong) {
-    socket.emit('playback-control', { action: 'next' });
-    socket.emit('sync-state', {
-      song: nextSong,
-      currentTime: 0,
-      isPlaying: true
-    });
-  }
 }
 
 
@@ -1162,10 +1313,6 @@ function playPrevious() {
   if (currentSongIndex > 0) {
     currentSongIndex--;
     playSong(songHistory[currentSongIndex], false);
-  }
-  if (isHost && currentSessionCode) {
-    socket.emit('playback-control', { action: 'previous' });
-    socket.emit('sync-state', { song: songHistory[currentSongIndex], currentTime: audioPlayer.currentTime, isPlaying: true });
   }
 }
 function showChatButton() {
@@ -1379,13 +1526,7 @@ function seek(event) {
   const rect = event.currentTarget.getBoundingClientRect();
   const percent = (event.clientX - rect.left) / rect.width;
   audioPlayer.currentTime = percent * audioPlayer.duration;
-  if (isHost && currentSessionCode) {
-    socket.emit('sync-state', {
-      song: songHistory[currentSongIndex],
-      currentTime: audioPlayer.currentTime,
-      isPlaying: !audioPlayer.paused,
-    });
-  }
+  broadcastPlaybackState(songHistory[currentSongIndex], audioPlayer.currentTime, !audioPlayer.paused);
 }
 function downloadCurrentSong() {
   const currentSong = songHistory[currentSongIndex];
@@ -1399,6 +1540,7 @@ function downloadCurrentSong() {
       if (!response.ok) throw new Error(`Failed to fetch song: ${response.statusText}`);
       return response.blob();
     })
+    .then(blob => tagMp3Blob(blob, currentSong))
     .then(blob => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -2106,6 +2248,7 @@ function hostSession() {
    // rememberSession(sessionCode, true);
     showSessionControls(sessionCode);
     document.getElementById('chat-open-btn').style.display = 'flex';
+    startSyncHeartbeat();
   });
   updateSessionControls();
 
@@ -2129,6 +2272,7 @@ function joinSession() {
     showChatButton();
     setSessionControlsDisabled(true);
     isHost = false;
+    _lastSyncedSongId = null; // force a real load on the next sync-state
     document.body.classList.add('nonhost-session');
   } else {
     showNotification("Invalid session code");
@@ -2185,6 +2329,8 @@ function leaveSession() {
   //////////////console.log('Leaving session, currentSessionCode:', currentSessionCode);
 
   leaveSessionUIReset();
+  stopSyncHeartbeat();
+  _lastSyncedSongId = null;
 
   if (currentSessionCode) {
     socket.emit('leave-session', { code: currentSessionCode });
@@ -2356,11 +2502,14 @@ socket.on("host-transferred", ({ newHostId }) => {
     if (sugBtn) sugBtn.classList.remove('hidden');
 
     showNotification("🎉 You are now the host!");
+    startSyncHeartbeat();
 
   } else {
     // ── I am NO LONGER HOST ──
     isHost = false;
     if (participants[socket.id]) participants[socket.id].isHost = false;
+    stopSyncHeartbeat();
+    _lastSyncedSongId = null; // force a real load on the next sync-state from the new host
 
     hideSessionControls(); // adds nonhost-session, disables play/next/prev, hides btns
     setSessionControlsDisabled(true);
@@ -3037,7 +3186,7 @@ function displayResults(data, appendSongs = false) {
           <div class="artist-name">${artist.role || 'Artist'}</div>
         </div>
       `;
-      card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name));
+      card.addEventListener('click', () => fetchArtistSongs(artist.id, artist.name, 0, false, artist.image));
       cards.appendChild(card);
     });
     artistsSection.appendChild(cards);
@@ -3400,25 +3549,58 @@ socket.on('playback-control', data => {
   }
 });
 
-socket.on('sync-state', state => {
+function applySyncState(state) {
   if (isHost) return;
-  if (state.song) {
-    loadSongWithoutPlaying(state.song);
-    audioPlayer.currentTime = state.currentTime || 0;
+  if (!state.song) return;
 
-    if (state.isPlaying) {
-      audioPlayer.play().catch(err => console.error('Playback error:', err));
-      playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-      playerBar.classList.add('playing');
-    } else {
-      audioPlayer.pause();
-      playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-      playerBar.classList.remove('playing');
-    }
-
-    isPlaying = state.isPlaying;
+  // Latency compensation: the host's currentTime was a snapshot taken at
+  // emittedAt. Time has passed in transit, so if it's still playing we
+  // advance currentTime by however long the message took to arrive.
+  let targetTime = state.currentTime || 0;
+  if (state.isPlaying && state.emittedAt) {
+    const transitSeconds = Math.max(0, (Date.now() - state.emittedAt) / 1000);
+    // Cap the compensation so a clock skew or a stalled tab doesn't cause a
+    // wild jump — beyond ~3s we just trust the raw value instead.
+    targetTime += Math.min(transitSeconds, 3);
   }
-});
+
+  const sameSong = _lastSyncedSongId === state.song.id && audioPlayer.src && !audioPlayer.error;
+
+  if (!sameSong) {
+    // Real song change (or first sync after joining) — full (re)load needed.
+    loadSongWithoutPlaying(state.song);
+    _lastSyncedSongId = state.song.id;
+    audioPlayer.currentTime = targetTime;
+  } else {
+    // Same track already loaded locally — this is just a play/pause/seek
+    // event. Only correct the position if we've actually drifted, instead
+    // of unconditionally reassigning currentTime (which can cause a tiny
+    // stutter as the browser re-seeks the buffer every time).
+    const drift = Math.abs(audioPlayer.currentTime - targetTime);
+    if (drift > SYNC_DRIFT_TOLERANCE) {
+      audioPlayer.currentTime = targetTime;
+    }
+  }
+
+  if (state.isPlaying) {
+    audioPlayer.play().catch(err => console.error('Playback error:', err));
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    playerBar.classList.add('playing');
+  } else {
+    audioPlayer.pause();
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    playerBar.classList.remove('playing');
+  }
+
+  isPlaying = state.isPlaying;
+
+  const npmPlay = document.getElementById('npm-play-btn');
+  if (npmPlay) npmPlay.innerHTML = isPlaying
+    ? '<i class="fa-solid fa-pause"></i>'
+    : '<i class="fa-solid fa-play"></i>';
+}
+
+socket.on('sync-state', applySyncState);
 
 
 socket.on('request-state', ({ forUser }) => {
@@ -3427,8 +3609,16 @@ socket.on('request-state', ({ forUser }) => {
     song: songHistory[currentSongIndex],
     currentTime: audioPlayer.currentTime,
     isPlaying: !audioPlayer.paused,
+    emittedAt: Date.now(),
   };
   socket.emit('provide-state', { forUser, state });
+});
+
+// Defensive: in case the server relays this back to the requester directly
+// (rather than via 'sync-state'), make sure a newly-joined listener still
+// picks up the host's current position instead of staying silent.
+socket.on('provide-state', ({ state }) => {
+  applySyncState(state);
 });
 /*
 socket.on('chat-message', ({ user, message }) => {
@@ -3464,6 +3654,7 @@ function handlePlaybackControl(data) {
       if (data.song) {
         // Load song directly without the host-check in playSong
         loadSongWithoutPlaying(data.song);
+        _lastSyncedSongId = data.song.id; // keep sync-state's "same song" check accurate
         audioPlayer.play().catch(() => {});
         isPlaying = true;
         playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
@@ -3889,3 +4080,41 @@ async function loadFunFact() {
 
 document.getElementById('change-fact-btn').addEventListener('click', loadFunFact);
 // loadFunFact is already called by loadHomeContent() on page load - no need to call again here
+
+/* ── Home screen discovery rows (Trending Now, Coke Studio Pakistan) ──
+   Compact horizontal-scroll rows, populated once per session and cached
+   so navigating back to Home doesn't re-fetch every time. */
+let _discoveryRowCache = {};
+
+async function loadDiscoveryRow(containerId, query) {
+  const row = document.getElementById(containerId);
+  if (!row) return;
+
+  if (_discoveryRowCache[query]) {
+    renderDiscoveryRow(row, _discoveryRowCache[query]);
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://apivibron.vercel.app/api/search/songs?query=${encodeURIComponent(query)}&page=1&limit=12`);
+    const json = await res.json();
+    const songs = (json?.data?.results || json?.results || []).map(normalizeSong).filter(s => s.audioUrl);
+    _discoveryRowCache[query] = songs;
+    renderDiscoveryRow(row, songs);
+  } catch (err) {
+    console.error(`Error loading discovery row "${query}":`, err);
+    row.innerHTML = `<p class="discovery-row-error">Couldn't load this right now.</p>`;
+  }
+}
+
+function renderDiscoveryRow(row, songs) {
+  if (!songs.length) {
+    row.innerHTML = `<p class="discovery-row-error">Nothing found right now — try again later.</p>`;
+    return;
+  }
+  row.innerHTML = '';
+  songs.forEach(song => {
+    if (!songHistory.some(s => s.id === song.id)) songHistory.push(song);
+    row.appendChild(createDiscoveryTile(song));
+  });
+}
