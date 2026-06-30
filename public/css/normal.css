@@ -810,6 +810,19 @@ main {
   display: flex; align-items: center; justify-content: center;
 }
 .queue-open-btn:hover { transform: scale(1.1); }
+
+/* The chat/suggestions/queue buttons float fixed at bottom-right, above
+   the player bar. Their right-edge action icons (favorite, queue,
+   download) would otherwise end up directly underneath that button
+   stack — reserve a strip of space so song cards and the participants
+   list always stay clear of it, at every screen size. */
+#song-list, #library-view, #participants-list {
+  padding-right: 64px;
+}
+@media (max-width: 480px) {
+  #song-list, #library-view, #participants-list { padding-right: 58px; }
+}
+
 .chat-open-btn {
   background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
 }
